@@ -1,6 +1,6 @@
 {
   "name": "@soksak/plugin-files",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "description": "Files plugin: sidebar sections for the project directory.",
@@ -10,7 +10,7 @@
     "url": "git+file://~/Projects/soksak/plugins/files"
   },
   "engines": {
-    "soksak": "^0.0.1"
+    "soksak": "^0.0.2"
   },
   "soksak": {
     "sidecars": {
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
-    "@soksak/plugin-api": "git+file://~/Projects/soksak/core#v0.0.1&path:/packages/plugin-api",
+    "@soksak/plugin-api": "git+file://~/Projects/soksak/core#v0.0.2&path:/packages/plugin-api",
     "esbuild": "0.28.2"
   }
 }
