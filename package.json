@@ -3,6 +3,7 @@
   "version": "0.0.3",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.24.0",
   "description": "Files plugin: sidebar sections for the project directory.",
   "license": "MIT",
   "repository": {

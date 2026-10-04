@@ -1,0 +1,32 @@
+name: release
+# build-machine: skip test reason=the ci workflow tests the tagged commit on main before the tag is pushed
+# build-machine: skip smoke reason=a plugin runs only inside the application; the core window checks start it
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      # sok plugin pack 은 core 의 같은 version tag 에서 빌드한다.
+      - uses: actions/checkout@v4
+        with:
+          repository: soksak-app/core
+          ref: ${{ github.ref_name }}
+          path: core
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/packages/sok/wailsv3/go.mod
+      - name: Build sok
+        run: go build -C core/packages/sok/wailsv3 -o "$RUNNER_TEMP/sok" ./src/cmd/sok
+      - name: Pack
+        run: make pack SOK="$RUNNER_TEMP/sok" OUT=dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
