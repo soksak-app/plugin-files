@@ -24,9 +24,9 @@
   "state": {
     "module": "ui/state.js"
   },
-  "sidecars": [
-    "@soksak/sidecar-files"
-  ],
+  "dependencies": {
+    "@soksak/sidecar-files": "^0.0.3"
+  },
   "data": {
     "bookmarks": {
       "schema": {

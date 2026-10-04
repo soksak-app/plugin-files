@@ -13,11 +13,6 @@
   "engines": {
     "soksak": "^0.0.3"
   },
-  "soksak": {
-    "sidecars": {
-      "@soksak/sidecar-files": "^0.0.3"
-    }
-  },
   "files": [
     "plugin.json",
     "ui"
@@ -28,7 +23,7 @@
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
-    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#22162a748982f5cbef22a7eff13a833790649142&path:/packages/plugin-api",
+    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#75709f2abc07fc99e0ba2985a0e51db245ceef3f&path:/packages/plugin-api",
     "esbuild": "0.28.2"
   }
 }

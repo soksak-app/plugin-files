@@ -17,15 +17,6 @@ test("the package publishes the manifest and surface module", () => {
   assert.ok(pkg.files.some((entry) => manifest.surface.module === entry || manifest.surface.module.startsWith(`${entry}/`)));
 });
 
-test("every sidecar the plugin uses has a version range for installation", () => {
-  // 설치는 package.json 의 soksak.sidecars 범위로 sidecar 를 고른다(docs/spec/installation.md).
-  const ranges = pkg.soksak?.sidecars ?? {};
-  for (const name of manifest.sidecars ?? []) {
-    assert.ok(typeof ranges[name] === "string" && ranges[name] !== "", `${name} has no soksak.sidecars range`);
-  }
-  assert.deepEqual(Object.keys(ranges).sort(), [...(manifest.sidecars ?? [])].sort(), "soksak.sidecars names a sidecar the plugin does not use");
-});
-
 /** 섹션 모듈이 쓰는 문서 기능만 흉내 낸다. */
 const element = (tag) => ({ tag, children: [], dataset: {}, className: "", style: {}, parent: null, _text: "",
   get textContent() { return this._text + this.children.map((item) => item.textContent).join(""); },
