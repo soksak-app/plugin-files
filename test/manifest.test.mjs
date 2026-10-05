@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { validateManifest } from "@soksak/plugin-api";
+import { JSDOM } from "jsdom";
 
 const manifest = JSON.parse(readFileSync(new URL("../plugin.json", import.meta.url), "utf8"));
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -17,20 +18,16 @@ test("the package publishes the manifest and surface module", () => {
   assert.ok(pkg.files.some((entry) => manifest.surface.module === entry || manifest.surface.module.startsWith(`${entry}/`)));
 });
 
-/** 섹션 모듈이 쓰는 문서 기능만 흉내 낸다. */
-const element = (tag) => ({ tag, children: [], dataset: {}, className: "", style: {}, parent: null, _text: "",
-  get textContent() { return this._text + this.children.map((item) => item.textContent).join(""); },
-  set textContent(value) { this._text = value; this.children = []; },
-  append(...items) { for (const item of items) { item.parent = this; this.children.push(item); } },
-  replaceChildren(...items) { this.children = []; this._text = ""; this.append(...items); },
-  remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); } });
-
 async function mountSection(id, orientation = "vertical") {
   const section = manifest.sections.find((item) => item.id === id);
   // 섹션이 문서에 더하는 stylesheet 를 기록한다.
+  // 섹션은 실제 문서에서 실행한다. JSDOM 에 없는 생성 가능한 스타일시트만 기록하는 것으로 준다.
+  const dom = new JSDOM("<body></body>");
   globalThis.CSSStyleSheet = class { replaceSync(text) { this.text = text; } };
-  globalThis.document = { createElement: element, adoptedStyleSheets: [] };
-  const root = element("div");
+  globalThis.document = dom.window.document;
+  dom.window.document.adoptedStyleSheets = [];
+  const root = dom.window.document.createElement("div");
+  dom.window.document.body.append(root);
   const observers = new Map();
   const bound = [];
   const context = { card: null, surface: null, orientation,
@@ -39,7 +36,7 @@ async function mountSection(id, orientation = "vertical") {
   const mounted = await (await import(`../${typeof section.module === "string" ? section.module : section.module[orientation]}`)).mount(root, context);
   const send = (name, value, source = "state") => { bound.length = 0; observers.get(name)(value, source); };
   const sheets = () => globalThis.document.adoptedStyleSheets;
-  return { root, observers, bound, send, sheets, dispose: () => { mounted.dispose(); delete globalThis.document; delete globalThis.CSSStyleSheet; } };
+  return { root, observers, bound, send, sheets, dispose: () => { mounted.dispose(); delete globalThis.document; delete globalThis.CSSStyleSheet; dom.window.close(); } };
 }
 
 test("every section and the state module are published", () => {
@@ -64,7 +61,7 @@ test("the bookmarks section lists files.bookmarks with remove controls", async (
   assert.deepEqual(s.bound.map(({ name, params }) => [name, params]), [["files.bookmarks.remove", { path: "a.txt" }]]);
   // 경로와 삭제 단추는 각자의 class 로 행 안에 떨어져 놓인다.
   const row = s.root.children[0].children[0];
-  assert.deepEqual([row.className, ...row.children.map((child) => child.className)],
+  assert.deepEqual([row.className, ...[...row.children].map((child) => child.className)],
     ["files-bookmarks__row", "files-bookmarks__path", "files-bookmarks__remove"]);
   assert.equal(s.sheets().length, 1, "the bookmarks section did not install its style");
   const document = globalThis.document;

@@ -8,6 +8,8 @@ const STYLE = `
 .files-bookmarks__remove:hover{color:var(--fg)}
 `;
 
+import { drawList } from "@soksak/plugin-api";
+
 export function mount(root, context) {
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(STYLE);
@@ -21,9 +23,10 @@ export function mount(root, context) {
     const key = JSON.stringify([paths, source]);
     if (key === drawn) return;
     drawn = key;
-    if (source === null) { list.replaceChildren(); list.textContent = "프로젝트 없음"; return; }
-    if (!paths.length) { list.replaceChildren(); list.textContent = "북마크 없음"; return; }
-    list.replaceChildren(...paths.map((path) => {
+    if (source === null) { list.textContent = "프로젝트 없음"; return; }
+    if (!paths.length) { list.textContent = "북마크 없음"; return; }
+    // 경로마다 행을 문서에 둔다. 새 경로의 행만 만든다(core docs/spec/exposure.md).
+    drawList(list, paths, { key: (path) => path, update: () => {}, create: (path) => {
       const item = document.createElement("li");
       item.className = "files-bookmarks__row";
       const name = document.createElement("span");
@@ -35,7 +38,7 @@ export function mount(root, context) {
       remove.textContent = "삭제";
       item.append(name, context.bind(remove, "files.bookmarks.remove", { path }));
       return item;
-    }));
+    } });
   });
   return {
     dispose() {
