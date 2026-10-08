@@ -11,7 +11,7 @@
     "url": "git+https://github.com/soksak-app/plugin-files.git"
   },
   "engines": {
-    "soksak": "*"
+    "soksak": ">=0.0.6"
   },
   "files": [
     "plugin.json",
@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
-    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.4&path:/packages/plugin-api",
+    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.6&path:/packages/plugin-api",
     "esbuild": "0.28.2",
     "jsdom": "^30.1.1"
   }
