@@ -30,9 +30,9 @@ async function mountSection(id, orientation = "vertical") {
   dom.window.document.body.append(root);
   const observers = new Map();
   const bound = [];
-  const context = { card: null, surface: null, orientation,
+  const context = { card: null, surface: null, orientation, icon: () => "<svg></svg>",
     status(name, fn) { observers.set(name, fn); return () => observers.delete(name); },
-    bind(el, name, params) { bound.push({ el, name, params }); return el; } };
+    bind(el, name, params, options = {}) { bound.push({ el, name, params, event: options.event ?? "click" }); return el; } };
   const mounted = await (await import(`../${typeof section.module === "string" ? section.module : section.module[orientation]}`)).mount(root, context);
   const send = (name, value, source = "state") => { bound.length = 0; observers.get(name)(value, source); };
   const sheets = () => globalThis.document.adoptedStyleSheets;
@@ -49,7 +49,7 @@ test("every section and the state module are published", () => {
 test("the file tree section imports only its package's files and the bundled tree library", () => {
   const source = readFileSync(new URL("../ui/sections/tree.js", import.meta.url), "utf8");
   const imports = [...source.matchAll(/from "([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(imports, ["../vendor/trees.js", "./tree-paths.js"]);
+  assert.deepEqual(imports, ["../vendor/trees.js", "./tree-paths.js", "./tree-open.js"]);
 });
 
 test("the bookmarks section lists files.bookmarks with remove controls", async () => {
@@ -86,6 +86,9 @@ test('horizontal file output exposes every path and directory/select commands an
   assert.ok(s.root.textContent.includes('readme.md'));
   assert.ok(s.bound.some(item=>item.name==='files.tree.toggle'&&item.params.path==='src'));
   assert.ok(s.bound.some(item=>item.name==='files.select'&&item.params.path==='readme.md'));
+  // A double click on a file opens it in the plugin that declares its extension (core.file.open).
+  assert.ok(s.bound.some(item=>item.name==='core.file.open'&&item.params.path==='readme.md'&&item.event==='dblclick'));
+  assert.ok(!s.bound.some(item=>item.name==='core.file.open'&&item.params.path==='src'));
   s.send('files.tree',{root:'/project',error:'listing failed',entries:[]});
   assert.ok(s.root.textContent.includes('listing failed'));
  } finally {s.dispose();}
@@ -124,3 +127,4 @@ test('the virtual file tree reserves its toolbar and one visible row',()=>{
  assert.ok(minimum('.files-tree')>=48,'tree must retain its toolbar plus a row');
  assert.ok(minimum('.files-tree__holder')>=20,'virtual list must retain one visible row');
 });
+

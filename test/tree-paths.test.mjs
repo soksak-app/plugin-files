@@ -1,4 +1,5 @@
 // 파일 트리 섹션이 files.tree 의 행을 트리 라이브러리의 경로와 펼침으로 옮기는 규칙을 검사한다.
+import { openablePath } from "../ui/sections/tree-open.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PLACEHOLDER, pathDiff, treePaths, expansionRequests } from "../ui/sections/tree-paths.js";
@@ -39,4 +40,12 @@ test("a directory opened or closed in the tree asks for files.tree.toggle once u
   const followed = rows.map((row) => (row.path === "src/lib" ? { ...row, expanded: true } : row));
   assert.deepEqual(expansionRequests(followed, (path) => open.has(path), pending), [], "empty stays pending");
   assert.equal(pending.has("src/lib"), false, "a followed request leaves pending");
+});
+
+test("a double click or Enter on the tree opens the selected file and not a folder", () => {
+  const rows = [{ path: "src", directory: true }, { path: "readme.md", directory: false }];
+  assert.equal(openablePath(rows, "readme.md"), "readme.md");
+  assert.equal(openablePath(rows, "src"), null);
+  assert.equal(openablePath(rows, null), null);
+  assert.equal(openablePath(rows, "gone.md"), null);
 });

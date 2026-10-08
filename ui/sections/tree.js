@@ -4,6 +4,7 @@
 // 그 폴더를 나열하면 바뀐 경로만 트리에 더하거나 뺀다. 색은 앱의 테마 토큰에 묶는다.
 import { FileTree, themeToTreeStyles } from "../vendor/trees.js";
 import { PLACEHOLDER, expansionRequests, pathDiff, treePaths } from "./tree-paths.js";
+import { openablePath } from "./tree-open.js";
 
 /* 트리 안의 4pt 스크롤 막대. */
 const SCROLLBAR = `
@@ -104,6 +105,14 @@ export function mount(root, context) {
   context.bind(refresh, "files.refresh", {}, { failed });
   // 트리의 shadow root 안에서 연 폴더와 닫은 폴더는 holder 의 이벤트로 명령에 닿는다(docs/spec/plugins.md#sections).
   context.bind(holder, "files.tree.toggle", (event) => ({ path: event.detail.path }), { event: "files-toggle", failed });
+  // A double click or Enter on the selected file opens it in the plugin that declares its extension (core.file.open).
+  context.bind(box, "core.file.open", (event) => ({ path: event.detail.path }), { event: "files-open", failed });
+  const openSelection = () => {
+    const path = openablePath(rows, selection);
+    if (path !== null) box.dispatchEvent(new CustomEvent("files-open", { detail: { path } }));
+  };
+  holder.addEventListener("dblclick", openSelection);
+  holder.addEventListener("keydown", (event) => { if (event.key === "Enter") openSelection(); });
 
   const tree = new FileTree({
     paths: [],

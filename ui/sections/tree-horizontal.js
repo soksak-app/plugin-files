@@ -47,6 +47,8 @@ export function mount(root, context) {
         }
         const select=document.createElement('button');select.type='button';select.textContent=entry.path;select.dataset.part='select';
         item.append(context.bind(select,'files.select',{path:entry.path}));
+        // A double click on a file opens it in the plugin that declares its extension.
+        if(!entry.directory) context.bind(select,'core.file.open',{path:entry.path},{event:'dblclick'});
         const marker=document.createElement('span');marker.dataset.part='git';item.append(marker);
         if(!entry.directory) {
           const bookmark=document.createElement('button');bookmark.type='button';bookmark.textContent='북마크';
