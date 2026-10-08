@@ -1,6 +1,6 @@
 {
   "name": "@soksak/plugin-files",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
-    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.6&path:/packages/plugin-api",
+    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.8&path:/packages/plugin-api",
     "esbuild": "0.28.2",
     "jsdom": "^30.1.1"
   }

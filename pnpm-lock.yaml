@@ -12,8 +12,8 @@ importers:
         specifier: 1.0.0-beta.4
         version: 1.0.0-beta.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@soksak/plugin-api':
-        specifier: git+https://github.com/soksak-app/core.git#v0.0.6&path:/packages/plugin-api
-        version: https://codeload.github.com/soksak-app/core/tar.gz/4ebdf95b2f0028ee3512e9ac765ac89c69e2eecc#path:/packages/plugin-api
+        specifier: git+https://github.com/soksak-app/core.git#v0.0.8&path:/packages/plugin-api
+        version: https://codeload.github.com/soksak-app/core/tar.gz/b20f71a2de3a0e335355fcaec71b4754c8a46a33#path:/packages/plugin-api
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
@@ -242,9 +242,9 @@ packages:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
 
-  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/4ebdf95b2f0028ee3512e9ac765ac89c69e2eecc#path:/packages/plugin-api':
-    resolution: {gitHosted: true, path: /packages/plugin-api, tarball: https://codeload.github.com/soksak-app/core/tar.gz/4ebdf95b2f0028ee3512e9ac765ac89c69e2eecc}
-    version: 0.0.6
+  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/b20f71a2de3a0e335355fcaec71b4754c8a46a33#path:/packages/plugin-api':
+    resolution: {gitHosted: true, path: /packages/plugin-api, tarball: https://codeload.github.com/soksak-app/core/tar.gz/b20f71a2de3a0e335355fcaec71b4754c8a46a33}
+    version: 0.0.8
     hasBin: true
 
   bidi-js@1.1.0:
@@ -510,7 +510,7 @@ snapshots:
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
 
-  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/4ebdf95b2f0028ee3512e9ac765ac89c69e2eecc#path:/packages/plugin-api': {}
+  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/b20f71a2de3a0e335355fcaec71b4754c8a46a33#path:/packages/plugin-api': {}
 
   bidi-js@1.1.0:
     dependencies:
