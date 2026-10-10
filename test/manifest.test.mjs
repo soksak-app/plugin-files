@@ -49,7 +49,7 @@ test("every section and the state module are published", () => {
 test("the file tree section imports only its package's files and the bundled tree library", () => {
   const source = readFileSync(new URL("../ui/sections/tree.js", import.meta.url), "utf8");
   const imports = [...source.matchAll(/from "([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(imports, ["../vendor/trees.js", "./tree-paths.js", "./tree-open.js"]);
+  assert.deepEqual(imports, ["../vendor/trees.js", "./tree-paths.js", "./tree-open.js", "./tree-message.js"]);
 });
 
 test("the bookmarks section lists files.bookmarks with remove controls", async () => {

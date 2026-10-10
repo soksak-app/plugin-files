@@ -10,9 +10,16 @@ export async function mount(context) {
   let git = [];
   const pending = new Map();
   let next = 0;
-  const listeners = { tree: new Set(), bookmarks: new Set(), git: new Set(), selection: new Set() };
+  const listeners = { tree: new Set(), bookmarks: new Set(), git: new Set(), selection: new Set(), open: new Set() };
   /* 고른 경로. 프로젝트의 모든 트리가 같은 선택을 보인다. */
   let selection = null;
+  /* The failure to open a file, or null: it ends when the tree is listed again or another path is selected. */
+  let openError = null;
+  const endOpenFailure = () => {
+    if (openError === null) return;
+    openError = null;
+    notify("open", () => ({ error: openError }));
+  };
 
   await context.sidecar.on((body) => {
     // 감시한 디렉터리가 바뀌었거나 감시가 도중에 실패했다(docs/spec/sidecars.md#files).
@@ -92,14 +99,23 @@ export async function mount(context) {
   context.exposure.status("files.bookmarks", bookmarks, watch("bookmarks"));
   context.exposure.status("files.git", () => git, watch("git"));
   context.exposure.status("files.selection", () => selection, watch("selection"));
+  context.exposure.status("files.open", () => ({ error: openError }), watch("open"));
+  context.exposure.command("files.open.failed", async ({ error } = {}) => {
+    if (typeof error !== "string" || error === "") throw new Error("files.open.failed requires error, a non-empty string");
+    if (error === openError) return null;
+    openError = error;
+    notify("open", () => ({ error: openError }));
+    return null;
+  });
   context.exposure.command("files.select", async ({ path }) => {
     // 선택을 지우는 요청은 path 를 null 로 보낸다. path 가 빠진 요청을 지우기로 바꾸지 않는다.
     if (path === undefined) throw new Error("files.select requires path, a string or null");
     selection = path;
+    endOpenFailure();
     notify("selection", () => selection);
     return null;
   });
-  context.exposure.command("files.refresh", () => inTurn(async () => { await refresh(); return null; }));
+  context.exposure.command("files.refresh", () => inTurn(async () => { endOpenFailure(); await refresh(); return null; }));
   context.exposure.command("files.tree.toggle", ({ path }) => inTurn(async () => {
     const row = rows().find((entry) => entry.path === path);
     if (!row?.directory) throw new Error(`${path} is not a listed directory`);
@@ -133,6 +149,7 @@ export async function mount(context) {
       listeners.bookmarks.clear();
       listeners.git.clear();
       listeners.selection.clear();
+      listeners.open.clear();
       await inTurn(() => request({ operation: "watch", paths: [] }));
     },
   };

@@ -1,5 +1,6 @@
 // 가로 파일 섹션은 경로를 한 줄로 나열하고 같은 파일 상태와 선언된 명령을 사용한다.
 import { drawList } from '@soksak/plugin-api';
+import { openFailure, treeMessage } from './tree-message.js';
 
 export function mount(root, context) {
   if (context.orientation !== 'horizontal') throw new Error('horizontal file tree requires horizontal orientation');
@@ -10,7 +11,10 @@ export function mount(root, context) {
   const title = document.createElement('span');
   Object.assign(title.style,{flex:'1 1 auto',minWidth:'0',whiteSpace:'nowrap',overflowX:'auto'});
   const refresh = document.createElement('button');refresh.type='button';refresh.textContent='새로고침';
-  header.append(title,context.bind(refresh,'files.refresh',{}));
+  // The failure to open a file is shown beside the title and not in the error display of the main document.
+  const notice = document.createElement('span');notice.hidden=true;
+  Object.assign(notice.style,{flex:'0 1 auto',color:'var(--muted)',whiteSpace:'nowrap'});
+  header.append(title,notice,context.bind(refresh,'files.refresh',{}));
   const paths = document.createElement('div');
   Object.assign(paths.style,{display:'flex',alignItems:'center',gap:'8px',overflowX:'auto',minHeight:'0',flex:'1 1 auto'});
   box.append(header,paths);root.append(box);
@@ -18,6 +22,12 @@ export function mount(root, context) {
   const controls = new Map();
   const gitMarkers = new Map();
   let git = [];
+  const openFailed = (error) => box.dispatchEvent(new CustomEvent('files-open-failed',{detail:{error:openFailure(error)}}));
+  context.bind(box,'files.open.failed',(event)=>({error:event.detail.error}),{event:'files-open-failed'});
+  const stopOpen = context.status('files.open',(value,source)=>{
+    const text = source===null?null:treeMessage('main',{error:null},value.error);
+    notice.textContent=text??'';notice.hidden=text===null;
+  });
   const applySelection = () => {
     for (const [path,button] of controls) {
       const selected = path === selection;
@@ -48,7 +58,7 @@ export function mount(root, context) {
         const select=document.createElement('button');select.type='button';select.textContent=entry.path;select.dataset.part='select';
         item.append(context.bind(select,'files.select',{path:entry.path}));
         // A double click on a file opens it in the plugin that declares its extension.
-        if(!entry.directory) context.bind(select,'core.file.open',{path:entry.path},{event:'dblclick'});
+        if(!entry.directory) context.bind(select,'core.file.open',{path:entry.path},{event:'dblclick',failed:openFailed});
         const marker=document.createElement('span');marker.dataset.part='git';item.append(marker);
         if(!entry.directory) {
           const bookmark=document.createElement('button');bookmark.type='button';bookmark.textContent='북마크';
@@ -67,5 +77,5 @@ export function mount(root, context) {
   });
   const stopSelection=context.status('files.selection',(value,source)=>{selection=source===null?null:value;applySelection();});
   const stopGit=context.status('files.git',(value,source)=>{git=source===null?[]:value;applyGit();});
-  return {dispose(){stopTree();stopSelection();stopGit();box.remove();}};
+  return {dispose(){stopTree();stopSelection();stopGit();stopOpen();box.remove();}};
 }

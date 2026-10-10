@@ -118,6 +118,21 @@
             "null"
           ]
         }
+      },
+      {
+        "name": "files.open",
+        "description": "The failure to open a file from the file tree, or null: the text of the error that core.file.open refused, for example that no plugin opens the file. It ends when the tree is listed again or another path is selected. Every mounted tree shows it in its message row.",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
       }
     ],
     "commands": [
@@ -188,6 +203,21 @@
                 "string",
                 "null"
               ]
+            }
+          }
+        },
+        "result": {
+          "type": "null"
+        }
+      },
+      {
+        "name": "files.open.failed",
+        "description": "Records the failure to open a file from the file tree as files.open. The same text again changes nothing.",
+        "params": {
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "string"
             }
           }
         },

@@ -149,3 +149,24 @@ test("files.tree read during a refresh shows the previous listing, not an empty 
   assert.deepEqual(f.statuses.get("files.tree").read().entries.map((entry) => entry.path), ["src", "a.txt"]);
   await refreshing;
 });
+
+test("a failure to open a file is the status files.open until the tree is listed again or another path is selected", async () => {
+  const f = fakeContext(listing());
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  const open = () => f.statuses.get("files.open").read();
+  const seen = [];
+  f.statuses.get("files.open").subscribe(() => seen.push(open()));
+  assert.deepEqual(open(), { error: null });
+  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
+  assert.deepEqual(open(), { error: "no plugin opens a.txt" });
+  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
+  assert.equal(seen.length, 1, "the same failure again changes nothing");
+  await f.commands.get("files.select")({ path: "src" });
+  assert.deepEqual(open(), { error: null }, "selecting another path ends the failure");
+  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
+  await f.commands.get("files.refresh")({});
+  assert.deepEqual(open(), { error: null }, "listing the tree again ends the failure");
+  await assert.rejects(f.commands.get("files.open.failed")({ error: "" }), /files\.open\.failed requires error, a non-empty string/);
+  await assert.rejects(f.commands.get("files.open.failed")({}), /files\.open\.failed requires error, a non-empty string/);
+});

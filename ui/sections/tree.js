@@ -5,6 +5,7 @@
 import { FileTree, themeToTreeStyles } from "../vendor/trees.js";
 import { PLACEHOLDER, expansionRequests, pathDiff, treePaths } from "./tree-paths.js";
 import { openablePath } from "./tree-open.js";
+import { openFailure, treeMessage } from "./tree-message.js";
 
 /* 트리 안의 4pt 스크롤 막대. */
 const SCROLLBAR = `
@@ -100,13 +101,28 @@ export function mount(root, context) {
   let selection = null;
   let syncingSelection = false;
   const failed = (error) => reportError(error);
+  // The failure to open a file is the status files.open, which every tree shows in its message row; the error display of the main
+  // document does not show it.
+  let openError = null;
+  let current = { source: null, value: undefined };
+  const showMessage = () => {
+    const text = treeMessage(current.source, current.value, openError);
+    message.textContent = text ?? "";
+    message.hidden = text === null;
+  };
+  const openFailed = (error) => box.dispatchEvent(new CustomEvent("files-open-failed", { detail: { error: openFailure(error) } }));
+  context.bind(box, "files.open.failed", (event) => ({ error: event.detail.error }), { event: "files-open-failed", failed });
+  const stopOpen = context.status("files.open", (value, source) => {
+    openError = source === null ? null : value.error;
+    showMessage();
+  });
   context.bind(star, "files.bookmarks.add", () => ({ path: selection }), { failed });
   context.bind(box, "files.select", (event) => ({ path: event.detail.path }), { event: "files-select", failed });
   context.bind(refresh, "files.refresh", {}, { failed });
   // 트리의 shadow root 안에서 연 폴더와 닫은 폴더는 holder 의 이벤트로 명령에 닿는다(docs/spec/plugins.md#sections).
   context.bind(holder, "files.tree.toggle", (event) => ({ path: event.detail.path }), { event: "files-toggle", failed });
   // A double click or Enter on the selected file opens it in the plugin that declares its extension (core.file.open).
-  context.bind(box, "core.file.open", (event) => ({ path: event.detail.path }), { event: "files-open", failed });
+  context.bind(box, "core.file.open", (event) => ({ path: event.detail.path }), { event: "files-open", failed: openFailed });
   const openSelection = () => {
     const path = openablePath(rows, selection);
     if (path !== null) box.dispatchEvent(new CustomEvent("files-open", { detail: { path } }));
@@ -152,12 +168,9 @@ export function mount(root, context) {
   });
 
   const stopTree = context.status("files.tree", (value, source) => {
-    if (source === null || value.error !== null) {
-      message.textContent = source === null ? "프로젝트 없음" : `오류: ${value.error}`;
-      message.hidden = false;
-      return;
-    }
-    message.hidden = true;
+    current = { source, value };
+    showMessage();
+    if (source === null || value.error !== null) return;
     // 기본값: 루트 폴더(/)에는 이름 조각이 없으므로 경로 전체를 보인다.
     title.textContent = value.root.split("/").filter(Boolean).at(-1) ?? value.root;
     title.title = value.root;
@@ -208,6 +221,7 @@ export function mount(root, context) {
   return {
     dispose() {
       stopTree();
+      stopOpen();
       stopGit();
       stopSelection();
       unsubscribe();
