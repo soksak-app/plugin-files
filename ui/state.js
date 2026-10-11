@@ -75,7 +75,7 @@ export async function mount(context) {
   const join = (parent, name) => (parent ? `${parent}/${name}` : name);
 
   function rows(path = "", depth = 0) {
-    // 기본값: 아직 나열하지 않은(접힌) 디렉터리에는 보일 하위 행이 없다.
+    // default: 아직 나열하지 않은(접힌) 디렉터리에는 보일 하위 행이 없다.
     return (listings.get(path) ?? []).flatMap((entry) => {
       const child = join(path, entry.name);
       const open = entry.directory && expanded.has(child);
@@ -96,7 +96,7 @@ export async function mount(context) {
     let failed = null;
     for (const path of [...expanded].sort((a, b) => a.length - b.length)) {
       const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
-      // 기본값: 새 목록에 부모가 없으면(부모가 사라졌거나 나열에 실패했으면) 이 폴더도 없는 것으로 보고 접는다.
+      // default: 새 목록에 부모가 없으면(부모가 사라졌거나 나열에 실패했으면) 이 폴더도 없는 것으로 보고 접는다.
       if (path && !(fresh.get(parent) ?? []).some((entry) => entry.directory && join(parent, entry.name) === path)) {
         expanded.delete(path);
         continue;
@@ -123,6 +123,7 @@ export async function mount(context) {
   let turn = Promise.resolve();
   const inTurn = (work) => {
     const done = turn.then(work);
+    // silent: the failure of this work reaches its caller through done; the chain only keeps the order of the next work.
     turn = done.then(() => undefined, () => undefined);
     return done;
   };
