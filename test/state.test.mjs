@@ -9,7 +9,10 @@ function fakeContext(listing, git = []) {
   const stored = {};
   let reply = null;
   const sent = [];
+  const logged = [];
+  const log = Object.fromEntries(["error", "warn", "info", "debug", "trace"].map((level) => [level, (event, fields) => logged.push({ level, event, fields })]));
   const context = {
+    runtime: { log },
     project: { id: "p1", root: "/work/p1" },
     exposure: {
       status: (name, read, subscribe) => statuses.set(name, { read, subscribe }),
@@ -30,7 +33,7 @@ function fakeContext(listing, git = []) {
       set: async (key, value) => { stored[key] = value; },
     },
   };
-  return { context, statuses, commands, stored, sent, emit: (body) => reply(body) };
+  return { context, statuses, commands, stored, sent, logged, emit: (body) => reply(body) };
 }
 
 const listing = () => ({
@@ -169,4 +172,69 @@ test("a failure to open a file is the status files.open until the tree is listed
   assert.deepEqual(open(), { error: null }, "listing the tree again ends the failure");
   await assert.rejects(f.commands.get("files.open.failed")({ error: "" }), /files\.open\.failed requires error, a non-empty string/);
   await assert.rejects(f.commands.get("files.open.failed")({}), /files\.open\.failed requires error, a non-empty string/);
+});
+
+const micros = (value) => Number.isInteger(value) && value >= 0;
+
+test("each request to the sidecar, each listing and the git status are events with their result", async () => {
+  const f = fakeContext(listing(), [{ path: "a.txt", status: "modified" }]);
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  const named = (event) => f.logged.filter((entry) => entry.event === event);
+  assert.deepEqual(named("sidecar.request").map((entry) => [entry.level, entry.fields.operation, entry.fields.ok]),
+    [["debug", "list", true], ["debug", "watch", true], ["debug", "git", true]]);
+  assert.ok(named("sidecar.request").every((entry) => micros(entry.fields.micros)));
+  const [listed] = named("list");
+  assert.deepEqual([listed.level, listed.fields.path, listed.fields.entries, micros(listed.fields.micros)], ["debug", "", 2, true]);
+  const [status] = named("git");
+  assert.deepEqual([status.level, status.fields.entries, micros(status.fields.micros)], ["debug", 1, true]);
+});
+
+test("a failed request is a warning that names its error in the form code and text", async () => {
+  const f = fakeContext({ "": "permission denied" });
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  const failed = f.logged.find((entry) => entry.event === "sidecar.request" && !entry.fields.ok);
+  assert.equal(failed.level, "warn");
+  assert.equal(failed.fields.operation, "list");
+  assert.equal(failed.fields.error, "-32603: permission denied");
+  assert.ok(micros(failed.fields.micros));
+});
+
+test("a change that the watch reports and a failure that no request caused are events", async () => {
+  const f = fakeContext(listing());
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  f.logged.length = 0;
+  f.emit({ changed: "src" });
+  assert.deepEqual(f.logged[0], { level: "debug", event: "watch.changed", fields: { path: "src" } });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  f.emit({ error: "watch broke" });
+  const failure = f.logged.find((entry) => entry.event === "watch.failed");
+  assert.deepEqual(failure, { level: "warn", event: "watch.failed", fields: { error: "watch broke" } });
+});
+
+test("the result of a command is an event with its time and, when it failed, its error", async () => {
+  const f = fakeContext(listing());
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  f.logged.length = 0;
+  await f.commands.get("files.refresh")({});
+  await assert.rejects(f.commands.get("files.tree.toggle")({ path: "a.txt" }), /a.txt is not a listed directory/);
+  const results = f.logged.filter((entry) => entry.event === "command");
+  assert.deepEqual(results.map((entry) => [entry.level, entry.fields.name, entry.fields.ok]),
+    [["debug", "files.refresh", true], ["warn", "files.tree.toggle", false]]);
+  assert.ok(results.every((entry) => micros(entry.fields.micros)));
+  assert.equal(results[1].fields.error, "-32000: a.txt is not a listed directory");
+  assert.equal(results[0].fields.error, undefined);
+});
+
+test("the failure to open a file is a warning event", async () => {
+  const f = fakeContext(listing());
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  f.logged.length = 0;
+  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
+  const failure = f.logged.find((entry) => entry.event === "open.failed");
+  assert.deepEqual(failure, { level: "warn", event: "open.failed", fields: { error: "no plugin opens a.txt" } });
 });

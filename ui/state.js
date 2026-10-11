@@ -1,6 +1,11 @@
 // 파일 플러그인의 상태 모듈(docs/spec/plugins.md#plugin-state). 파일 사이드카로 프로젝트 폴더를 나열해
 // files.tree 를 만들고, 펼친 디렉터리를 감시해 바뀌면 다시 나열하며, 북마크를 프로젝트 데이터 bookmarks 에 저장해 files.bookmarks 로 공개한다.
+import { createEmitter } from "./events.js";
+
 export async function mount(context) {
+  const emitEvent = createEmitter(context.runtime, "files");
+  /** 단조 시계로 잰 경과 시간(마이크로초, 음이 아닌 정수). */
+  const since = (started) => Math.round((performance.now() - started) * 1000);
   /* 펼친 디렉터리의 상대 경로. "" 는 프로젝트 폴더다. */
   const expanded = new Set([""]);
   /* 나열한 디렉터리마다 항목. */
@@ -23,15 +28,23 @@ export async function mount(context) {
 
   await context.sidecar.on((body) => {
     // 감시한 디렉터리가 바뀌었거나 감시가 도중에 실패했다(docs/spec/sidecars.md#files).
-    if (body.changed !== undefined) { inTurn(refresh).catch(showFailure); return; }
-    if (body.id === undefined) { showFailure(new Error(body.error)); return; }
+    if (body.changed !== undefined) {
+      emitEvent("debug", "plugin.files.watch.changed", { path: body.changed });
+      inTurn(refresh).catch(showFailure);
+      return;
+    }
+    if (body.id === undefined) {
+      emitEvent("warn", "plugin.files.watch.failed", { error: body.error });
+      showFailure(new Error(body.error));
+      return;
+    }
     const request = pending.get(body.id);
     if (!request) return;
     pending.delete(body.id);
     if (body.error !== undefined) request.reject(new Error(body.error));
     else request.resolve(body.entries);
   });
-  const request = (body) => new Promise((resolve, reject) => {
+  const send = (body) => new Promise((resolve, reject) => {
     const id = `${body.operation}-${++next}`;
     pending.set(id, { resolve, reject });
     context.sidecar.send({ ...body, id }).catch((failure) => {
@@ -39,7 +52,24 @@ export async function mount(context) {
       reject(failure);
     });
   });
-  const list = (path) => request({ operation: "list", path });
+  /** 요청의 결과와 시간을 event 로 남긴다. 실패는 호출한 쪽으로 그대로 넘어간다. */
+  const request = async (body) => {
+    const started = performance.now();
+    try {
+      const result = await send(body);
+      emitEvent("debug", "plugin.files.sidecar.request", { operation: body.operation, ok: true, micros: since(started) });
+      return result;
+    } catch (failure) {
+      emitEvent("warn", "plugin.files.sidecar.request", { operation: body.operation, ok: false, micros: since(started), error: `-32603: ${failure.message}` });
+      throw failure;
+    }
+  };
+  const list = async (path) => {
+    const started = performance.now();
+    const entries = await request({ operation: "list", path });
+    emitEvent("debug", "plugin.files.list", { path, entries: entries.length, micros: since(started) });
+    return entries;
+  };
   /** 사이드카가 감시하는 디렉터리를 펼친 디렉터리로 바꾼다. */
   const watchExpanded = () => request({ operation: "watch", paths: [...expanded] });
   const join = (parent, name) => (parent ? `${parent}/${name}` : name);
@@ -83,7 +113,9 @@ export async function mount(context) {
     error = failed;
     await watchExpanded();
     notify("tree", tree);
+    const gitStarted = performance.now();
     git = await request({ operation: "git" });
+    emitEvent("debug", "plugin.files.git", { entries: git.length, micros: since(gitStarted) });
     notify("git", () => git);
   }
 
@@ -100,23 +132,36 @@ export async function mount(context) {
   context.exposure.status("files.git", () => git, watch("git"));
   context.exposure.status("files.selection", () => selection, watch("selection"));
   context.exposure.status("files.open", () => ({ error: openError }), watch("open"));
-  context.exposure.command("files.open.failed", async ({ error } = {}) => {
+  /** 명령의 실행마다 결과와 시간을 event 로 남기는 처리기를 돌려 준다. 명령 이름은 등록하는 곳에 그대로 적는다. */
+  const measured = (name, run) => async (params) => {
+    const started = performance.now();
+    try {
+      const result = await run(params);
+      emitEvent("debug", "plugin.files.command", { name, ok: true, micros: since(started) });
+      return result;
+    } catch (failure) {
+      emitEvent("warn", "plugin.files.command", { name, ok: false, micros: since(started), error: `-32000: ${failure.message}` });
+      throw failure;
+    }
+  };
+  context.exposure.command("files.open.failed", measured("files.open.failed", async ({ error } = {}) => {
     if (typeof error !== "string" || error === "") throw new Error("files.open.failed requires error, a non-empty string");
     if (error === openError) return null;
     openError = error;
+    emitEvent("warn", "plugin.files.open.failed", { error });
     notify("open", () => ({ error: openError }));
     return null;
-  });
-  context.exposure.command("files.select", async ({ path }) => {
+  }));
+  context.exposure.command("files.select", measured("files.select", async ({ path }) => {
     // 선택을 지우는 요청은 path 를 null 로 보낸다. path 가 빠진 요청을 지우기로 바꾸지 않는다.
     if (path === undefined) throw new Error("files.select requires path, a string or null");
     selection = path;
     endOpenFailure();
     notify("selection", () => selection);
     return null;
-  });
-  context.exposure.command("files.refresh", () => inTurn(async () => { endOpenFailure(); await refresh(); return null; }));
-  context.exposure.command("files.tree.toggle", ({ path }) => inTurn(async () => {
+  }));
+  context.exposure.command("files.refresh", measured("files.refresh", () => inTurn(async () => { endOpenFailure(); await refresh(); return null; })));
+  context.exposure.command("files.tree.toggle", measured("files.tree.toggle", ({ path }) => inTurn(async () => {
     const row = rows().find((entry) => entry.path === path);
     if (!row?.directory) throw new Error(`${path} is not a listed directory`);
     if (expanded.has(path)) {
@@ -128,20 +173,20 @@ export async function mount(context) {
     await watchExpanded();
     notify("tree", tree);
     return null;
-  }));
-  context.exposure.command("files.bookmarks.add", async ({ path }) => {
+  })));
+  context.exposure.command("files.bookmarks.add", measured("files.bookmarks.add", async ({ path }) => {
     const current = bookmarks();
     if (!current.includes(path)) await context.data.set("bookmarks", [...current, path]);
     notify("bookmarks", bookmarks);
     return null;
-  });
-  context.exposure.command("files.bookmarks.remove", async ({ path }) => {
+  }));
+  context.exposure.command("files.bookmarks.remove", measured("files.bookmarks.remove", async ({ path }) => {
     const current = bookmarks();
     if (!current.includes(path)) throw new Error(`${path} is not bookmarked`);
     await context.data.set("bookmarks", current.filter((item) => item !== path));
     notify("bookmarks", bookmarks);
     return null;
-  });
+  }));
   await inTurn(refresh);
   return {
     async dispose() {
