@@ -14,6 +14,7 @@
     "soksak": ">=0.0.6"
   },
   "files": [
+    "events.json",
     "plugin.json",
     "ui"
   ],

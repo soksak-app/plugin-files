@@ -227,5 +227,6 @@
       }
     ],
     "dom": []
-  }
+  },
+  "events": "events.json"
 }

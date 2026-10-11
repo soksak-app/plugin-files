@@ -1,0 +1,86 @@
+{
+  "schema": 2,
+  "layers": [
+    "plugin"
+  ],
+  "events": {
+    "plugin.files.sidecar.request": {
+      "layer": "plugin",
+      "class": "call",
+      "level": [
+        "debug",
+        "warn"
+      ],
+      "fields": {
+        "operation": "string",
+        "ok": "boolean",
+        "micros": "number",
+        "error?": "string"
+      },
+      "description": "One request to the files sidecar (list, watch or git) and its result; error is the text of the failure and the level is warn for a failed request."
+    },
+    "plugin.files.list": {
+      "layer": "plugin",
+      "class": "io",
+      "level": "debug",
+      "fields": {
+        "path": "string",
+        "entries": "number",
+        "micros": "number"
+      },
+      "description": "A directory of the project was listed; path is relative to the project folder and entries is the number of entries."
+    },
+    "plugin.files.watch.changed": {
+      "layer": "plugin",
+      "class": "io",
+      "level": "debug",
+      "fields": {
+        "path": "string"
+      },
+      "description": "The sidecar reported a change in a watched directory; path is the changed directory relative to the project folder."
+    },
+    "plugin.files.watch.failed": {
+      "layer": "plugin",
+      "class": "io",
+      "level": "warn",
+      "fields": {
+        "error": "string"
+      },
+      "description": "The sidecar reported a failure that no request caused, such as a watch that failed; error is its text."
+    },
+    "plugin.files.git": {
+      "layer": "plugin",
+      "class": "io",
+      "level": "debug",
+      "fields": {
+        "entries": "number",
+        "micros": "number"
+      },
+      "description": "The git status of the project folder was read; entries is the number of changed paths."
+    },
+    "plugin.files.open.failed": {
+      "layer": "plugin",
+      "class": "call",
+      "level": "warn",
+      "fields": {
+        "error": "string"
+      },
+      "description": "A file of the tree did not open; error is the refusal that the message row shows."
+    },
+    "plugin.files.command": {
+      "layer": "plugin",
+      "class": "call",
+      "level": [
+        "debug",
+        "warn"
+      ],
+      "fields": {
+        "name": "string",
+        "ok": "boolean",
+        "micros": "number",
+        "error?": "string"
+      },
+      "description": "The result of a command of the plugin; error is present only when ok is false and the level is warn then."
+    }
+  }
+}
