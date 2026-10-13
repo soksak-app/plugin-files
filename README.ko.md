@@ -7,6 +7,7 @@ Plugin 형식은 soksak core spec(`docs/spec/plugins.md`)이 정한다.
 ```sh
 make test                                   # test
 make pack OUT=<folder> SOK=<core>/target/debug/sok   # plugin release
+make hooks                                  # clone 후 한 번: commit 때 commit message와 record를 검사
 ```
 
 Checklist는 [docs/features.md](docs/features.md)다.

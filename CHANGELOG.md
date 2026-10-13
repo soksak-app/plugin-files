@@ -2,6 +2,10 @@
 
 [한국어](CHANGELOG.ko.md)
 
+## Unreleased
+
+- P24: `make hooks` sets `.githooks` as the hook folder, so a commit whose message breaks the commit form or the term rules, or whose records break the record rules, is refused when it is made.
+
 ## 0.0.6 (2026-10-13)
 
 - P23: Release version 0.0.6 with the event contract (P21) and the record checks (P22); the tag `v0.0.6` publishes `files-0.0.6.tgz`.

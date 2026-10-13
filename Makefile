@@ -1,5 +1,5 @@
 # files plugin repository 의 test 와 pack(docs/features.md). pack 은 core 의 sok 를 쓴다.
-.PHONY: test pack
+.PHONY: test pack hooks
 
 SOK ?= sok
 # DIAGNOSTICS=1 이면 diagnostics.json 을 담은 진단 package 를 쓴다.
@@ -23,3 +23,7 @@ test: node_modules
 pack:
 	@test -n "$(OUT)" || { echo "make pack OUT=<folder>" >&2; exit 2; }
 	$(SOK) plugin pack . $(OUT) $(PACK_FLAGS)
+
+# Sets this repository to use .githooks, which checks commit messages and records at commit time.
+hooks:
+	@git config core.hooksPath .githooks

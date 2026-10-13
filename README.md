@@ -7,6 +7,7 @@ Files plugin: sidebar sections for the project directory. The plugin format is d
 ```sh
 make test                                   # tests
 make pack OUT=<folder> SOK=<core>/target/debug/sok   # the plugin release
+make hooks                                  # once after cloning: check commit messages and records at commit time
 ```
 
 The checklist is [docs/features.md](docs/features.md).

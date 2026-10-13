@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md)
 
+## 미배포
+
+- P24: `make hooks`가 `.githooks`를 hook 폴더로 정해, commit message의 형식이나 용어 규칙, record 규칙을 어긴 commit이 만들어질 때 거부된다.
+
 ## 0.0.6 (2026-10-13)
 
 - P23: 이벤트 계약(P21)과 record 검사(P22)를 담은 version 0.0.6을 release한다. tag `v0.0.6`이 `files-0.0.6.tgz`를 게시한다.
