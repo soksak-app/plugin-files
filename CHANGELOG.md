@@ -2,8 +2,9 @@
 
 [한국어](CHANGELOG.ko.md)
 
-## Unreleased
+## 0.0.6 (2026-10-13)
 
+- P23: Release version 0.0.6 with the event contract (P21) and the record checks (P22); the tag `v0.0.6` publishes `files-0.0.6.tgz`.
 - P22: `make test` runs the record check `soksak-records`, and CI checks the form of each pushed commit message with `soksak-commits`.
 - P21.4: `@soksak/plugin-api` comes from the core release 0.0.11 and `engines.soksak` is `>=0.0.11`, so `make test` runs the event guard from the installed dependency.
 - P21: the forwarder `ui/events.js` marks the event name it passes with `events: forwarded`, so the catalog check of core reads the names at the calls of `emitEvent`.
