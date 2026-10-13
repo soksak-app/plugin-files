@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- P22: `make test` runs the record check `soksak-records`, and CI checks the form of each pushed commit message with `soksak-commits`.
 - P21.4: `@soksak/plugin-api` comes from the core release 0.0.11 and `engines.soksak` is `>=0.0.11`, so `make test` runs the event guard from the installed dependency.
 - P21: the forwarder `ui/events.js` marks the event name it passes with `events: forwarded`, so the catalog check of core reads the names at the calls of `emitEvent`.
 - P21.3: `make test` runs `soksak-events` with `census.json` and `events.json`; the reason comments have the form `default: <reason>` and the rejection that `inTurn` drops states why it is not recorded.
