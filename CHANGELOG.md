@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- P25: new commits are authored as `min-0-max <max@blue.tools>`; `.mailmap` maps the former name `min-median-max`, and published commits are not rewritten.
+
 - P24: `make hooks` sets `.githooks` as the hook folder, so a commit whose message breaks the commit form or the term rules, or whose records break the record rules, is refused when it is made.
 
 ## 0.0.6 (2026-10-13)
