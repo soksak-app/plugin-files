@@ -1,7 +1,6 @@
 // The plugin-host page entry (docs/spec/plugin-host.md).
 import { expose, page } from "@soksak/plugin-api/page";
 import { mountFilesHost } from "./host-runtime.js";
+import { startFilesHost } from "./host-entry.js";
 
-if (page && expose) {
-  await mountFilesHost({ page, expose, project: page.project });
-}
+await startFilesHost({ page, expose, mount: mountFilesHost });
