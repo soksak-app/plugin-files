@@ -21,3 +21,5 @@
 - P18: the documents and comments call plugins, sidecars and releases by those words.
 
 - F238-d-17: add a DOM-free check for the files state module and a fixture that verifies DOM API detection. The module passes (2/2 tests); the target boundary remains subject to F238-d-20.
+
+- F238-d-24: add a regression check that files sidebar sections use no view-only interactions; the check detects forbidden interactions in a fixture (2/2 tests).
