@@ -20,6 +20,8 @@
 - P19: 세로 트리와 가로 트리가 파일을 열지 못한 실패(`열 수 없음: <오류 글>`)를 status `files.open`과 명령 `files.open.failed`로 메시지 행에 보이고, main document의 오류 표시는 더 이상 그것을 보이지 않는다.
 - P18: 문서와 주석이 plugin, sidecar, release를 그 말로 부른다.
 
-- F238-d-17: files state module의 DOM-free 검사와 DOM API를 찾는 fixture를 추가한다. module이 검사(2/2)를 통과한다. fixture는 guard를 확인하며 production defect의 Red 증거는 아니다. 대상 경계는 F238-d-20 결정에 달려 있다.
+- F238-d-17: files declared data module의 DOM-free 검사와 DOM API를 찾는 fixture를 추가한다. declared data module이 검사(2/2)를 통과하고 DOM을 주입한 fixture는 같은 assertion에서 거부된다. 이는 명시된 DOM-free 경계의 검증이며 production defect의 Red는 아니다.
 
 - F238-d-24: files sidebar section이 view 전용 조작을 쓰지 않는지 검사하는 regression test를 더한다. fixture에서 금지 조작을 감지한다(2/2).
+
+- F238-d-15: 선언된 file tree와 bookmark value를 만드는 DOM-free 함수를 추가한다. tree 값은 toolbar binding, 선택 경로, descendant detail, no-project 상태, 제한된 tree 행을 포함한다. manifest/status source 통합은 남아 있다.
