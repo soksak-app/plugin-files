@@ -20,6 +20,6 @@
 - P19: the vertical and the horizontal file tree show the failure to open a file (`열 수 없음: <text of the error>`) in their message row from the status `files.open` and the command `files.open.failed`, and the error display of the main document no longer shows it.
 - P18: the documents and comments call plugins, sidecars and releases by those words.
 
-- F238-d-17: add a DOM-free check for the files state module and a fixture that verifies DOM API detection. The module passes (2/2 tests); the target boundary remains subject to F238-d-20.
+- F238-d-17: add a DOM-free check for the files state module and a fixture that verifies DOM API detection. The module passes (2/2 tests); fixture coverage checks the guard, not production-defect Red. The target boundary remains subject to F238-d-20.
 
 - F238-d-24: add a regression check that files sidebar sections use no view-only interactions; the check detects forbidden interactions in a fixture (2/2 tests).
