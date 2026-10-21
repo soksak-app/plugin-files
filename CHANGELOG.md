@@ -31,3 +31,5 @@
 - F238-d-15: move `files.tree` and `files.bookmarks` to the declared UI value schema; remove the standalone git, selection and open statuses. The state source and module consumers now use the tree/list values, with the project label/path preserved. Listing failures do not claim the folder is empty. The declared open command and global listing-error display remain open with their owning contracts.
 
 - F238-d-15: update the manifest, state status providers, and module consumers to use the declared tree and bookmark list values. Preserve the project path label; blank the tree empty text on listing failure so it is not shown as an empty folder. The plugin-open command binding and core listing-error display remain pending their owning contracts.
+
+- F238-d-16: add a DOM-free plugin-host consumer for the files sidecar snapshot/expand/collapse/select protocol, including ordered subscriptions, fresh declared-tree values, and application error reporting. Raise the sidecar dependency floor to 0.0.7. The host page and manifest operation declarations await the published SDK host fields.

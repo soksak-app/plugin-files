@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { validateManifest } from "@soksak/plugin-api";
+import { PAGE_IMPORTS, pageImports, validateManifest } from "@soksak/plugin-api";
 import { JSDOM } from "jsdom";
 import { bookmarkValue, treeValue } from "../ui/declared-data.js";
 
@@ -15,6 +15,13 @@ test("files tree and bookmarks declare the declared UI schemas", () => {
   assert.deepEqual(manifest.exposes.status.find(({ name }) => name === "files.bookmarks").schema, schema);
   assert.equal(manifest.sections.find(({ id }) => id === "files.tree").module.vertical, "ui/sections/tree.js");
   assert.equal(manifest.sections.find(({ id }) => id === "files.bookmarks").module.vertical, "ui/sections/bookmarks.js");
+});
+
+test("the DOM-free host page uses the documented plugin-page import map", () => {
+  const html = readFileSync(new URL("../ui/host.html", import.meta.url), "utf8");
+  assert.deepEqual(pageImports(html), PAGE_IMPORTS);
+  assert.match(html, /host.js/);
+  assert.ok(existsSync(new URL("../ui/host.js", import.meta.url)));
 });
 
 test("plugin.json satisfies the manifest format", () => {
