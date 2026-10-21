@@ -26,6 +26,10 @@ test("treeValue emits only the no-project status line when root is null", () => 
   assert.deepEqual(treeValue({ root: null, entries: [] }), { elements: [{ kind: "status-line", key: "project", text: "프로젝트 없음" }] });
 });
 
+test("treeValue rejects rows when no project root exists", () => {
+  assert.throws(() => treeValue({ root: null, entries: [{ path: "x", name: "x", directory: false, depth: 0 }] }), /no entries/);
+});
+
 test("treeValue cuts excess rows and reports their count", () => {
   const entries = Array.from({ length: 5001 }, (_, index) => ({ path: `f${index}`, name: `f${index}`, directory: false, depth: 0 }));
   const value = treeValue({ root: "/project", entries });
@@ -35,9 +39,61 @@ test("treeValue cuts excess rows and reports their count", () => {
 });
 
 test("treeValue cuts rows deeper than the declared tree limit", () => {
-  const entry = { path: "a/".repeat(16) + "leaf", name: "leaf", directory: false, depth: 16 };
-  const value = treeValue({ root: "/project", entries: [{ path: "a", name: "a", directory: true, depth: 0 }, entry] });
+  const ancestors = Array.from({ length: 16 }, (_, depth) => ({ path: ["a", ...Array(depth).fill("b")].join("/"), name: depth === 0 ? "a" : "b", directory: true, depth, expanded: true }));
+  const entry = { path: `${ancestors.at(-1).path}/leaf`, name: "leaf", directory: false, depth: 16 };
+  const value = treeValue({ root: "/project", entries: [...ancestors, entry] });
   assert.equal(value.elements.at(-1).text, "1개 항목을 표시하지 않았습니다.");
+});
+
+test("treeValue fills the node budget after skipping valid over-depth rows", () => {
+  const chain = Array.from({ length: 16 }, (_, depth) => ({ path: ["deep", ...Array(depth).fill("child")].join("/"), name: depth === 0 ? "deep" : "child", directory: true, depth, expanded: true }));
+  const tooDeep = { path: `${chain.at(-1).path}/leaf`, name: "leaf", directory: false, depth: 16 };
+  const later = Array.from({ length: 5000 }, (_, index) => ({ path: `f${index}`, name: `f${index}`, directory: false, depth: 0 }));
+  const value = treeValue({ root: "/project", entries: [...chain, tooDeep, ...later] });
+  const count = (nodes) => nodes.reduce((total, node) => total + 1 + count(node.children ?? []), 0);
+  assert.equal(count(value.elements.find((element) => element.kind === "tree").nodes), 5000);
+  assert.equal(value.elements.at(-1).text, "17개 항목을 표시하지 않았습니다.");
+});
+
+test("treeValue rejects malformed rows even when a row would be cut", () => {
+  assert.throws(() => treeValue({ root: "/project", entries: [{ path: "bad", name: "bad", directory: "yes", depth: 16 }] }), /directory/);
+});
+
+test("treeValue validates malformed entries after the node cut", () => {
+  const entries = Array.from({ length: 5000 }, (_, index) => ({ path: `f${index}`, name: `f${index}`, directory: false, depth: 0 }));
+  entries.push({ path: "bad", name: "bad", directory: "no", depth: 0 });
+  assert.throws(() => treeValue({ root: "/project", entries }), /directory must be a boolean/);
+});
+
+test("treeValue rejects an orphan depth and a child below a file", () => {
+  assert.throws(() => treeValue({ root: "/project", entries: [{ path: "orphan/child", name: "child", directory: false, depth: 1 }] }), /parent/);
+  assert.throws(() => treeValue({ root: "/project", entries: [
+    { path: "file", name: "file", directory: false, depth: 0 },
+    { path: "file/child", name: "child", directory: false, depth: 1 },
+  ] }), /non-directory/);
+});
+
+test("treeValue rejects duplicate sibling keys and uses valid keys for ordinary filenames", () => {
+  assert.throws(() => treeValue({ root: "/project", entries: [
+    { path: "same", name: "same", directory: false, depth: 0 },
+    { path: "same", name: "same", directory: false, depth: 0 },
+  ] }), /duplicates path/);
+  const tree = treeValue({ root: "/project", entries: [{ path: "a file.txt", name: "a file.txt", directory: false, depth: 0 }] }).elements.find((item) => item.kind === "tree");
+  assert.match(tree.nodes[0].key, /^[A-Za-z0-9._:-]{1,128}$/);
+});
+
+test("treeValue accepts only a plugin-owned open command", () => {
+  assert.throws(() => treeValue({ root: "/project", entries: [], openCommand: "core.file.open" }), /command of this plugin/);
+});
+
+test("bookmarkValue cuts excess items and reports their count", () => {
+  const value = bookmarkValue(Array.from({ length: 1001 }, (_, index) => `f${index}`));
+  assert.equal(value.elements[0].items.length, 1000);
+  assert.equal(value.elements.at(-1).text, "1개 북마크를 표시하지 않았습니다.");
+});
+
+test("bookmarkValue rejects labels beyond the declared text limit", () => {
+  assert.throws(() => bookmarkValue(["a".repeat(501)]), /bookmark label/);
 });
 
 test("bookmarkValue builds a declared list with removal commands", () => {

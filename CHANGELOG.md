@@ -25,3 +25,5 @@
 - F238-d-24: add a regression check that files sidebar sections use no view-only interactions; the check detects forbidden interactions in a fixture (2/2 tests).
 
 - F238-d-15: add DOM-free constructors for the declared file-tree and bookmark values. Tree values include toolbar bindings, selected path, descendant detail, no-project state, and bounded tree rows; manifest/source integration remains open.
+
+- F238-d-15: validate every tree row before applying row/depth cuts; reject orphan paths, non-directory parents, duplicates and malformed fields. Generate schema-safe node keys and cut bookmark lists at 1000 with a status line. Red/Green: the owning malformed-row cases fail against the prior builder and pass in `test/declared-data.test.mjs` (14/14), including use of the remaining node budget after valid deep rows are cut.
