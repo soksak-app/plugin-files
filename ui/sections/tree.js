@@ -5,7 +5,7 @@
 import { FileTree, themeToTreeStyles } from "../vendor/trees.js";
 import { PLACEHOLDER, expansionRequests, pathDiff, treePaths } from "./tree-paths.js";
 import { openablePath } from "./tree-open.js";
-import { openFailure, treeMessage } from "./tree-message.js";
+import { openFailure } from "./open-failure.js";
 
 /* 트리 안의 4pt 스크롤 막대. */
 const SCROLLBAR = `
@@ -97,25 +97,33 @@ export function mount(root, context) {
   box.append(head, holder, message);
   root.append(box);
 
-  // 선택은 상태 모듈의 files.selection 이다. 트리에서 고른 경로는 box 의 이벤트로 files.select 에 닿는다.
+  // Selection is part of the accepted files.tree value.
   let selection = null;
   let syncingSelection = false;
   const failed = (error) => reportError(error);
-  // The failure to open a file is the status files.open, which every tree shows in its message row; the error display of the main
-  // document does not show it.
-  let openError = null;
   let current = { source: null, value: undefined };
+  const declaredTree = () => current.value?.elements?.find((element) => element.kind === "tree") ?? null;
   const showMessage = () => {
-    const text = treeMessage(current.source, current.value, openError);
+    const lines = current.value?.elements?.filter((element) => element.kind === "status-line") ?? [];
+    const project = lines.find((element) => element.key === "project");
+    const notice = lines.find((element) => element.key !== "project");
+    const treeValue = declaredTree();
+    if (project && project.text !== "프로젝트 없음") {
+      title.textContent = project.text.split(/[\\/]/).filter(Boolean).at(-1) ?? project.text;
+      title.title = project.text;
+    } else {
+      title.textContent = project?.text ?? "프로젝트 없음";
+      title.title = "";
+    }
+    const text = notice?.text ?? (treeValue?.nodes.length === 0 ? treeValue.empty : null);
     message.textContent = text ?? "";
-    message.hidden = text === null;
+    message.hidden = !text;
   };
-  const openFailed = (error) => box.dispatchEvent(new CustomEvent("files-open-failed", { detail: { error: openFailure(error) } }));
+  const openFailed = (error) => {
+    reportError(error);
+    box.dispatchEvent(new CustomEvent("files-open-failed", { detail: { error: openFailure(error) } }));
+  };
   context.bind(box, "files.open.failed", (event) => ({ error: event.detail.error }), { event: "files-open-failed", failed });
-  const stopOpen = context.status("files.open", (value, source) => {
-    openError = source === null ? null : value.error;
-    showMessage();
-  });
   context.bind(star, "files.bookmarks.add", () => ({ path: selection }), { failed });
   context.bind(box, "files.select", (event) => ({ path: event.detail.path }), { event: "files-select", failed });
   context.bind(refresh, "files.refresh", {}, { failed });
@@ -167,14 +175,18 @@ export function mount(root, context) {
     }
   });
 
+  const flatten = (nodes, depth = 0) => nodes.flatMap((node) => {
+    if (typeof node.params?.path !== "string") throw new Error("files.tree node has no path parameter");
+    const row = { path: node.params.path, name: node.label, directory: node.branch === true, depth, expanded: node.expanded === true, selected: node.selected === true, detail: node.detail };
+    return [row, ...(node.children ? flatten(node.children, depth + 1) : [])];
+  });
   const stopTree = context.status("files.tree", (value, source) => {
     current = { source, value };
     showMessage();
-    if (source === null || value.error !== null) return;
-    // default: 루트 폴더(/)에는 이름 조각이 없으므로 경로 전체를 보인다.
-    title.textContent = value.root.split("/").filter(Boolean).at(-1) ?? value.root;
-    title.title = value.root;
-    rows = value.entries;
+    const declared = declaredTree();
+    rows = declared === null ? [] : flatten(declared.nodes);
+    selection = rows.find((row) => row.selected)?.path ?? null;
+    tree.setGitStatus(rows.filter((row) => row.detail).map((row) => ({ path: row.path, status: row.detail })));
     const next = treePaths(rows);
     syncing = true;
     try {
@@ -198,8 +210,6 @@ export function mount(root, context) {
     }
     applySelection();
   });
-  // default: files 상태를 등록한 표면이 없으면(프로젝트가 없으면) 값이 없고, 보일 git 상태도 없다.
-  const stopGit = context.status("files.git", (entries) => tree.setGitStatus(entries ?? []));
   /** 트리의 선택을 files.selection 에 맞추고, 파일이 골라져 있을 때만 별을 켠다. */
   const applySelection = () => {
     syncingSelection = true;
@@ -212,18 +222,10 @@ export function mount(root, context) {
     }
     star.disabled = !rows.some((row) => row.path === selection && !row.directory);
   };
-  const stopSelection = context.status("files.selection", (value) => {
-    // default: files 상태를 등록한 표면이 없으면(프로젝트가 없으면) 값이 없고, 고른 경로도 없다.
-    selection = value ?? null;
-    applySelection();
-  });
 
   return {
     dispose() {
       stopTree();
-      stopOpen();
-      stopGit();
-      stopSelection();
       unsubscribe();
       themeWatch.disconnect();
       tree.cleanUp();

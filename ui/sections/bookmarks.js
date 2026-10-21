@@ -19,24 +19,26 @@ export function mount(root, context) {
   root.append(list);
   // 같은 값이면 다시 그리지 않는다. 누르는 동안 요소를 바꾸면 그 누름은 명령을 실행하지 않는다.
   let drawn;
-  const stop = context.status("files.bookmarks", (paths, source) => {
-    const key = JSON.stringify([paths, source]);
+  const stop = context.status("files.bookmarks", (value, source) => {
+    const key = JSON.stringify([value, source]);
     if (key === drawn) return;
     drawn = key;
-    if (source === null) { list.textContent = "프로젝트 없음"; return; }
-    if (!paths.length) { list.textContent = "북마크 없음"; return; }
-    // 경로마다 행을 문서에 둔다. 새 경로의 행만 만든다(core docs/spec/exposure.md).
-    drawList(list, paths, { key: (path) => path, update: () => {}, create: (path) => {
+    const listValue = value?.elements?.find((element) => element.kind === "list");
+    if (listValue === undefined) { list.textContent = "프로젝트 없음"; return; }
+    if (listValue.items.length === 0) { list.textContent = listValue.empty; return; }
+    // Keep each row in the document across status updates.
+    drawList(list, listValue.items, { key: (item) => item.key, update: () => {}, create: (entry) => {
+      const path = entry.params.path;
       const item = document.createElement("li");
       item.className = "files-bookmarks__row";
       const name = document.createElement("span");
       name.className = "files-bookmarks__path";
-      name.textContent = path;
+      name.textContent = entry.label;
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "files-bookmarks__remove";
       remove.textContent = "삭제";
-      item.append(name, context.bind(remove, "files.bookmarks.remove", { path }));
+      item.append(name, context.bind(remove, entry.command, entry.params));
       return item;
     } });
   });

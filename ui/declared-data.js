@@ -63,19 +63,21 @@ function validateEntries(entries) {
 }
 
 /** Build the plugin-authored declared UI value for the project file tree. */
-export function treeValue({ root, entries = [], selected = null, openCommand } = {}) {
+export function treeValue({ root, entries = [], selected = null, openCommand, declaredCommands = [], listingFailed = false } = {}) {
   if (root === null) {
     if (!Array.isArray(entries) || entries.length !== 0) throw new TypeError("treeValue requires no entries when root is null");
     if (selected !== null) throw new TypeError("treeValue requires no selection when root is null");
     return { elements: [{ kind: "status-line", key: "project", text: "프로젝트 없음" }] };
   }
   if (typeof root !== "string" || root === "" || !Array.isArray(entries)) throw new TypeError("treeValue requires a non-empty string root and an entries array");
+  text(root, "project root");
   const markedSelection = validateEntries(entries);
   if (selected !== null && typeof selected !== "string") throw new TypeError("selected must be a string or null");
   if (selected !== null) relativePath(selected, "selected");
   if (markedSelection !== null && selected !== null && markedSelection !== selected) throw new TypeError("selected disagrees with the selected entry");
   const selectedPath = selected ?? markedSelection;
-  if (openCommand !== undefined && (typeof openCommand !== "string" || !/^files\.[A-Za-z0-9._-]+$/.test(openCommand))) throw new TypeError("openCommand must name a command of this plugin");
+  if (!Array.isArray(declaredCommands) || declaredCommands.some((name) => typeof name !== "string")) throw new TypeError("declaredCommands must be an array of command names");
+  if (openCommand !== undefined && (typeof openCommand !== "string" || !/^files\.[A-Za-z0-9._-]+$/.test(openCommand) || !declaredCommands.includes(openCommand))) throw new TypeError("openCommand must name a declared command of this plugin");
 
   const visible = [];
   for (const entry of entries) {
@@ -111,17 +113,19 @@ export function treeValue({ root, entries = [], selected = null, openCommand } =
     stack[entry.depth] = node;
     stack.length = entry.depth + 1;
   }
+  if (typeof listingFailed !== "boolean") throw new TypeError("listingFailed must be a boolean");
   const elements = [
+    { kind: "status-line", key: "project", text: root },
     { kind: "button", key: "bookmark", label: "북마크 추가", command: "files.bookmarks.add", params: { path: selectedPath ?? "" }, enabled: bookmarkEnabled },
     { kind: "button", key: "refresh", label: "새로 고침", command: "files.refresh" },
-    { kind: "tree", key: "files", empty: "파일이 없습니다.", nodes: roots },
+    { kind: "tree", key: "files", empty: listingFailed ? "" : "파일이 없습니다.", nodes: roots },
   ];
   if (omitted > 0) elements.push({ kind: "status-line", key: "cut", text: `${omitted}개 항목을 표시하지 않았습니다.` });
   return { elements };
 }
 
 /** Build the plugin-authored declared UI list for project bookmarks. */
-export function bookmarkValue(paths) {
+export function bookmarkValue(paths, root = "/project") {
   if (!Array.isArray(paths)) throw new TypeError("bookmarkValue requires an array of paths");
   const seenPaths = new Set();
   const seenKeys = new Set();
@@ -136,7 +140,7 @@ export function bookmarkValue(paths) {
     seenKeys.add(key);
     if (items.length < 1000) items.push({ key, label: path, command: "files.bookmarks.remove", params: { path } });
   }
-  const elements = [{ kind: "list", key: "bookmarks", empty: "북마크 없음", items }];
+  const elements = [{ kind: "list", key: "bookmarks", empty: root === null ? "프로젝트 없음" : "북마크 없음", items }];
   if (paths.length > items.length) elements.push({ kind: "status-line", key: "cut", text: `${paths.length - items.length}개 북마크를 표시하지 않았습니다.` });
   return { elements };
 }

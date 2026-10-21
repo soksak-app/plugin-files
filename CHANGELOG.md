@@ -27,3 +27,7 @@
 - F238-d-15: add DOM-free constructors for the declared file-tree and bookmark values. Tree values include toolbar bindings, selected path, descendant detail, no-project state, and bounded tree rows; manifest/source integration remains open.
 
 - F238-d-15: validate every tree row before applying row/depth cuts; reject orphan paths, non-directory parents, duplicates and malformed fields. Generate schema-safe node keys and cut bookmark lists at 1000 with a status line. Red/Green: the owning malformed-row cases fail against the prior builder and pass in `test/declared-data.test.mjs` (14/14), including use of the remaining node budget after valid deep rows are cut.
+
+- F238-d-15: move `files.tree` and `files.bookmarks` to the declared UI value schema; remove the standalone git, selection and open statuses. The state source and module consumers now use the tree/list values, with the project label/path preserved. Listing failures do not claim the folder is empty. The declared open command and global listing-error display remain open with their owning contracts.
+
+- F238-d-15: update the manifest, state status providers, and module consumers to use the declared tree and bookmark list values. Preserve the project path label; blank the tree empty text on listing failure so it is not shown as an empty folder. The plugin-open command binding and core listing-error display remain pending their owning contracts.

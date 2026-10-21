@@ -1,6 +1,7 @@
 // 파일 플러그인의 상태 모듈(docs/spec/plugins.md#plugin-state). 파일 사이드카로 프로젝트 폴더를 나열해
 // files.tree 를 만들고, 펼친 디렉터리를 감시해 바뀌면 다시 나열하며, 북마크를 프로젝트 데이터 bookmarks 에 저장해 files.bookmarks 로 공개한다.
 import { createEmitter } from "./events.js";
+import { bookmarkValue, treeValue } from "./declared-data.js";
 
 export async function mount(context) {
   const emitEvent = createEmitter(context.runtime, "files");
@@ -15,16 +16,9 @@ export async function mount(context) {
   let git = [];
   const pending = new Map();
   let next = 0;
-  const listeners = { tree: new Set(), bookmarks: new Set(), git: new Set(), selection: new Set(), open: new Set() };
+  const listeners = { tree: new Set(), bookmarks: new Set() };
   /* 고른 경로. 프로젝트의 모든 트리가 같은 선택을 보인다. */
   let selection = null;
-  /* The failure to open a file, or null: it ends when the tree is listed again or another path is selected. */
-  let openError = null;
-  const endOpenFailure = () => {
-    if (openError === null) return;
-    openError = null;
-    notify("open", () => ({ error: openError }));
-  };
 
   await context.sidecar.on((body) => {
     // 감시한 디렉터리가 바뀌었거나 감시가 도중에 실패했다(docs/spec/sidecars.md#files).
@@ -83,8 +77,16 @@ export async function mount(context) {
       return open ? [row, ...rows(child, depth + 1)] : [row];
     });
   }
-  const tree = () => ({ root: context.project.root, error, entries: rows() });
-  const bookmarks = () => context.data.get("bookmarks");
+  const gitPriority = { deleted: 5, modified: 4, added: 3, renamed: 2, untracked: 1 };
+  const detailFor = (entry) => {
+    const candidates = git.filter((change) => change.path === entry.path || (entry.directory && change.path.startsWith(`${entry.path}/`)));
+    for (const change of candidates) if (!Object.hasOwn(gitPriority, change.status)) throw new Error(`unknown git status ${change.status}`);
+    candidates.sort((a, b) => gitPriority[b.status] - gitPriority[a.status] || a.path.localeCompare(b.path));
+    return candidates[0]?.status;
+  };
+  const tree = () => treeValue({ root: context.project.root, entries: rows().map((entry) => ({ ...entry, selected: entry.path === selection, detail: detailFor(entry) })), selected: selection, listingFailed: error !== null });
+  const storedBookmarks = () => context.data.get("bookmarks");
+  const bookmarks = () => bookmarkValue(storedBookmarks(), context.project.root);
   const notify = (name, read) => { const value = read(); for (const fn of listeners[name]) fn(value); };
   /** 요청 없이 생긴 실패는 files.tree 의 error 로 보인다. */
   const showFailure = (failure) => { error = failure.message; notify("tree", tree); };
@@ -112,11 +114,10 @@ export async function mount(context) {
     for (const [path, entries] of fresh) listings.set(path, entries);
     error = failed;
     await watchExpanded();
-    notify("tree", tree);
     const gitStarted = performance.now();
     git = await request({ operation: "git" });
     emitEvent("debug", "plugin.files.git", { entries: git.length, micros: since(gitStarted) });
-    notify("git", () => git);
+    notify("tree", tree);
   }
 
   // 새로 고침, 펼침, 변경 알림은 나열 결과를 함께 바꾸므로 받은 순서대로 하나씩 실행한다.
@@ -130,9 +131,6 @@ export async function mount(context) {
   const watch = (name) => (fn) => { listeners[name].add(fn); return () => listeners[name].delete(fn); };
   context.exposure.status("files.tree", tree, watch("tree"));
   context.exposure.status("files.bookmarks", bookmarks, watch("bookmarks"));
-  context.exposure.status("files.git", () => git, watch("git"));
-  context.exposure.status("files.selection", () => selection, watch("selection"));
-  context.exposure.status("files.open", () => ({ error: openError }), watch("open"));
   /** 명령의 실행마다 결과와 시간을 event 로 남기는 처리기를 돌려 준다. 명령 이름은 등록하는 곳에 그대로 적는다. */
   const measured = (name, run) => async (params) => {
     const started = performance.now();
@@ -147,21 +145,17 @@ export async function mount(context) {
   };
   context.exposure.command("files.open.failed", measured("files.open.failed", async ({ error } = {}) => {
     if (typeof error !== "string" || error === "") throw new Error("files.open.failed requires error, a non-empty string");
-    if (error === openError) return null;
-    openError = error;
     emitEvent("warn", "plugin.files.open.failed", { error });
-    notify("open", () => ({ error: openError }));
     return null;
   }));
   context.exposure.command("files.select", measured("files.select", async ({ path }) => {
     // 선택을 지우는 요청은 path 를 null 로 보낸다. path 가 빠진 요청을 지우기로 바꾸지 않는다.
     if (path === undefined) throw new Error("files.select requires path, a string or null");
     selection = path;
-    endOpenFailure();
-    notify("selection", () => selection);
+    notify("tree", tree);
     return null;
   }));
-  context.exposure.command("files.refresh", measured("files.refresh", () => inTurn(async () => { endOpenFailure(); await refresh(); return null; })));
+  context.exposure.command("files.refresh", measured("files.refresh", () => inTurn(async () => { await refresh(); return null; })));
   context.exposure.command("files.tree.toggle", measured("files.tree.toggle", ({ path }) => inTurn(async () => {
     const row = rows().find((entry) => entry.path === path);
     if (!row?.directory) throw new Error(`${path} is not a listed directory`);
@@ -176,13 +170,13 @@ export async function mount(context) {
     return null;
   })));
   context.exposure.command("files.bookmarks.add", measured("files.bookmarks.add", async ({ path }) => {
-    const current = bookmarks();
+    const current = storedBookmarks();
     if (!current.includes(path)) await context.data.set("bookmarks", [...current, path]);
     notify("bookmarks", bookmarks);
     return null;
   }));
   context.exposure.command("files.bookmarks.remove", measured("files.bookmarks.remove", async ({ path }) => {
-    const current = bookmarks();
+    const current = storedBookmarks();
     if (!current.includes(path)) throw new Error(`${path} is not bookmarked`);
     await context.data.set("bookmarks", current.filter((item) => item !== path));
     notify("bookmarks", bookmarks);
@@ -193,9 +187,6 @@ export async function mount(context) {
     async dispose() {
       listeners.tree.clear();
       listeners.bookmarks.clear();
-      listeners.git.clear();
-      listeners.selection.clear();
-      listeners.open.clear();
       await inTurn(() => request({ operation: "watch", paths: [] }));
     },
   };

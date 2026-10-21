@@ -11,6 +11,7 @@ test("treeValue builds the declared sidebar tree from sidecar rows", () => {
       { path: "README.md", name: "README.md", directory: false, depth: 0 },
     ],
   }), { elements: [
+    { kind: "status-line", key: "project", text: "/work/project" },
     { kind: "button", key: "bookmark", label: "북마크 추가", command: "files.bookmarks.add", params: { path: "src/a.js" }, enabled: true },
     { kind: "button", key: "refresh", label: "새로 고침", command: "files.refresh" },
     { kind: "tree", key: "files", empty: "파일이 없습니다.", nodes: [
@@ -24,6 +25,11 @@ test("treeValue builds the declared sidebar tree from sidecar rows", () => {
 
 test("treeValue emits only the no-project status line when root is null", () => {
   assert.deepEqual(treeValue({ root: null, entries: [] }), { elements: [{ kind: "status-line", key: "project", text: "프로젝트 없음" }] });
+});
+
+test("treeValue leaves no empty-folder label after a listing failure", () => {
+  const tree = treeValue({ root: "/project", entries: [], listingFailed: true }).elements.find((element) => element.kind === "tree");
+  assert.equal(tree.empty, "");
 });
 
 test("treeValue rejects rows when no project root exists", () => {
@@ -82,8 +88,11 @@ test("treeValue rejects duplicate sibling keys and uses valid keys for ordinary 
   assert.match(tree.nodes[0].key, /^[A-Za-z0-9._:-]{1,128}$/);
 });
 
-test("treeValue accepts only a plugin-owned open command", () => {
-  assert.throws(() => treeValue({ root: "/project", entries: [], openCommand: "core.file.open" }), /command of this plugin/);
+test("treeValue requires an open command declared by this plugin", () => {
+  assert.throws(() => treeValue({ root: "/project", entries: [], openCommand: "core.file.open", declaredCommands: ["core.file.open"] }), /declared command of this plugin/);
+  assert.throws(() => treeValue({ root: "/project", entries: [], openCommand: "files.open" }), /declared command of this plugin/);
+  const value = treeValue({ root: "/project", entries: [{ path: "a.txt", name: "a.txt", directory: false, depth: 0 }], openCommand: "files.open", declaredCommands: ["files.open"] });
+  assert.equal(value.elements.find((element) => element.kind === "tree").nodes[0].open, "files.open");
 });
 
 test("bookmarkValue cuts excess items and reports their count", () => {

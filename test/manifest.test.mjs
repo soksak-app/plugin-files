@@ -3,9 +3,19 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { validateManifest } from "@soksak/plugin-api";
 import { JSDOM } from "jsdom";
+import { bookmarkValue, treeValue } from "../ui/declared-data.js";
 
 const manifest = JSON.parse(readFileSync(new URL("../plugin.json", import.meta.url), "utf8"));
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+
+test("files tree and bookmarks declare the declared UI schemas", () => {
+  assert.deepEqual(manifest.exposes.status.map(({ name }) => name), ["files.tree", "files.bookmarks"]);
+  const schema = { type: "object", properties: { elements: { type: "array" } } };
+  assert.deepEqual(manifest.exposes.status.find(({ name }) => name === "files.tree").schema, schema);
+  assert.deepEqual(manifest.exposes.status.find(({ name }) => name === "files.bookmarks").schema, schema);
+  assert.equal(manifest.sections.find(({ id }) => id === "files.tree").module.vertical, "ui/sections/tree.js");
+  assert.equal(manifest.sections.find(({ id }) => id === "files.bookmarks").module.vertical, "ui/sections/bookmarks.js");
+});
 
 test("plugin.json satisfies the manifest format", () => {
   assert.equal(validateManifest(manifest), manifest);
@@ -49,14 +59,14 @@ test("every section and the state module are published", () => {
 test("the file tree section imports only its package's files and the bundled tree library", () => {
   const source = readFileSync(new URL("../ui/sections/tree.js", import.meta.url), "utf8");
   const imports = [...source.matchAll(/from "([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(imports, ["../vendor/trees.js", "./tree-paths.js", "./tree-open.js", "./tree-message.js"]);
+  assert.deepEqual(imports, ["../vendor/trees.js", "./tree-paths.js", "./tree-open.js", "./open-failure.js"]);
 });
 
 test("the bookmarks section lists files.bookmarks with remove controls", async () => {
   const s = await mountSection("files.bookmarks");
-  s.send("files.bookmarks", []);
+  s.send("files.bookmarks", bookmarkValue([]));
   assert.equal(s.root.textContent, "북마크 없음");
-  s.send("files.bookmarks", ["a.txt"]);
+  s.send("files.bookmarks", bookmarkValue(["a.txt"]));
   assert.equal(s.root.textContent, "a.txt삭제");
   assert.deepEqual(s.bound.map(({ name, params }) => [name, params]), [["files.bookmarks.remove", { path: "a.txt" }]]);
   // 경로와 삭제 단추는 각자의 class 로 행 안에 떨어져 놓인다.
@@ -81,7 +91,7 @@ test('file sections declare separate horizontal and vertical implementations',()
 test('horizontal file output exposes every path and directory/select commands and cleans up',async()=>{
  const s=await mountSection('files.tree','horizontal');
  try {
-  s.send('files.tree',{root:'/project',error:null,entries:[{path:'src',name:'src',directory:true,expanded:false,depth:0},{path:'readme.md',name:'readme.md',directory:false,expanded:false,depth:0}]});
+  s.send('files.tree',treeValue({root:'/project',entries:[{path:'src',name:'src',directory:true,expanded:false,depth:0},{path:'readme.md',name:'readme.md',directory:false,expanded:false,depth:0}]}));
   assert.ok(s.root.textContent.includes('src'));
   assert.ok(s.root.textContent.includes('readme.md'));
   assert.ok(s.bound.some(item=>item.name==='files.tree.toggle'&&item.params.path==='src'));
@@ -89,8 +99,8 @@ test('horizontal file output exposes every path and directory/select commands an
   // A double click on a file opens it in the plugin that declares its extension (core.file.open).
   assert.ok(s.bound.some(item=>item.name==='core.file.open'&&item.params.path==='readme.md'&&item.event==='dblclick'));
   assert.ok(!s.bound.some(item=>item.name==='core.file.open'&&item.params.path==='src'));
-  s.send('files.tree',{root:'/project',error:'listing failed',entries:[]});
-  assert.ok(s.root.textContent.includes('listing failed'));
+  s.send('files.tree',treeValue({root:'/project',entries:[],listingFailed:true}));
+  assert.ok(!s.root.textContent.includes('파일이 없습니다.'), 'a listing failure was presented as an empty folder');
  } finally {s.dispose();}
  assert.equal(s.observers.size,0);
 });
@@ -98,18 +108,18 @@ test('horizontal file output exposes every path and directory/select commands an
 test('horizontal bookmarks retain all paths and declared removal commands',async()=>{
  const s=await mountSection('files.bookmarks','horizontal');
  try {
-  s.send('files.bookmarks',['a.txt','b.txt']);
+  s.send('files.bookmarks',bookmarkValue(['a.txt','b.txt']));
   assert.ok(s.root.textContent.includes('a.txt'));assert.ok(s.root.textContent.includes('b.txt'));
   assert.deepEqual(s.bound.map(({name,params})=>[name,params]),[['files.bookmarks.remove',{path:'a.txt'}],['files.bookmarks.remove',{path:'b.txt'}]]);
-  s.send('files.bookmarks',[]);assert.equal(s.root.textContent,'북마크 없음');
+  s.send('files.bookmarks',bookmarkValue([]));assert.equal(s.root.textContent,'북마크 없음');
  } finally {s.dispose();}
  assert.equal(s.observers.size,0);
 });
 
-test('the horizontal project label stays compact and preserves its full path as a title',async()=>{
+test('the horizontal section preserves the project label and full path',async()=>{
  const s=await mountSection('files.tree','horizontal');
  try {
-  s.send('files.tree',{root:'/a/long/project/path/project',error:null,entries:[]});
+  s.send('files.tree',treeValue({root:'/a/long/project/path/project',entries:[]}));
   const header=s.root.children[0].children[0];
   assert.equal(header.children[0].textContent,'project');
   assert.equal(header.children[0].title,'/a/long/project/path/project');

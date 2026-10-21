@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
+import { bookmarkValue, treeValue } from "../ui/declared-data.js";
 
 function setup() {
   const dom = new JSDOM("<body><div id=root></div></body>");
@@ -27,12 +28,12 @@ for (const [file, orientation] of [["../ui/sections/bookmarks.js", "vertical"], 
     context.orientation = orientation;
     const { mount } = await import(`${file}?${orientation}`);
     const section = mount(root, context);
-    send("files.bookmarks", ["/a", "/b"]);
+    send("files.bookmarks", bookmarkValue(["a", "b"]));
     const before = [...root.querySelectorAll("button")];
     assert.equal(before.length, 2);
-    send("files.bookmarks", ["/a", "/b", "/c"]);
+    send("files.bookmarks", bookmarkValue(["a", "b", "c"]));
     assert.ok(before.every((button) => button.isConnected), "a new bookmark took the other remove controls out of the document");
-    assert.deepEqual([...root.querySelectorAll("button")].map((button) => JSON.parse(button.dataset.params).path), ["/a", "/b", "/c"]);
+    assert.deepEqual([...root.querySelectorAll("button")].map((button) => JSON.parse(button.dataset.params).path), ["a", "b", "c"]);
     section.dispose();
     dom.window.close();
   });
@@ -42,10 +43,10 @@ test("the horizontal tree keeps the controls of unchanged entries when a folder 
   const { dom, root, context, send } = setup();
   const { mount } = await import("../ui/sections/tree-horizontal.js");
   const section = mount(root, context);
-  const entries = [{ path: "/p/src", directory: true, expanded: false }, { path: "/p/a.txt", directory: false }];
-  send("files.tree", { root: "/p", error: null, entries });
+  const entries = [{ path: "src", name: "src", directory: true, expanded: false, depth: 0 }, { path: "a.txt", name: "a.txt", directory: false, depth: 0 }];
+  send("files.tree", treeValue({ root: "/p", entries }));
   const select = root.querySelector('[data-command="files.select"]');
-  send("files.tree", { root: "/p", error: null, entries: [{ ...entries[0], expanded: true }, { path: "/p/src/b.txt", directory: false }, entries[1]] });
+  send("files.tree", treeValue({ root: "/p", entries: [{ ...entries[0], expanded: true }, { path: "src/b.txt", name: "b.txt", directory: false, depth: 1 }, entries[1]] }));
   assert.ok(select.isConnected, "opening a folder took the select control of an unchanged entry out of the document");
   assert.equal(root.querySelector('[data-command="files.tree.toggle"]').textContent, "접기");
   section.dispose();

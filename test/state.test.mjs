@@ -41,37 +41,55 @@ const listing = () => ({
   src: [{ name: "main.go", directory: false }],
 });
 
+function treeNodes(value) {
+  const tree = value.elements.find((element) => element.kind === "tree");
+  if (!tree) return [];
+  const flatten = (nodes, depth = 0) => nodes.flatMap((node) => [
+    { path: node.params.path, name: node.label, directory: node.branch === true, depth, expanded: node.expanded === true, selected: node.selected === true, detail: node.detail },
+    ...(node.children ? flatten(node.children, depth + 1) : []),
+  ]);
+  return flatten(tree.nodes);
+}
+
+function bookmarkPaths(value) {
+  return value.elements.find((element) => element.kind === "list").items.map((item) => item.params.path);
+}
+
 test("the state lists the project root, expands and folds a directory, and refreshes expanded directories", async () => {
   const files = listing();
   const f = fakeContext(files);
   const { mount } = await import("../ui/state.js");
   const mounted = await mount(f.context);
   const tree = () => f.statuses.get("files.tree").read();
-  assert.deepEqual(tree(), { root: "/work/p1", error: null, entries: [
-    { path: "src", name: "src", directory: true, depth: 0, expanded: false },
-    { path: "a.txt", name: "a.txt", directory: false, depth: 0, expanded: false },
-  ] });
+  assert.deepEqual(treeNodes(tree()), [
+    { path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false, detail: undefined },
+    { path: "a.txt", name: "a.txt", directory: false, depth: 0, expanded: false, selected: false, detail: undefined },
+  ]);
   const seen = [];
   const stop = f.statuses.get("files.tree").subscribe((value) => seen.push(value));
   await f.commands.get("files.tree.toggle")({ path: "src" });
-  assert.deepEqual(tree().entries.map((e) => [e.path, e.depth, e.expanded]),
+  assert.deepEqual(treeNodes(tree()).map((e) => [e.path, e.depth, e.expanded]),
     [["src", 0, true], ["src/main.go", 1, false], ["a.txt", 0, false]]);
   assert.equal(seen.length, 1);
   files.src = [{ name: "main.go", directory: false }, { name: "util.go", directory: false }];
   await f.commands.get("files.refresh")({});
-  assert.deepEqual(tree().entries.map((e) => e.path), ["src", "src/main.go", "src/util.go", "a.txt"]);
+  assert.deepEqual(treeNodes(tree()).map((e) => e.path), ["src", "src/main.go", "src/util.go", "a.txt"]);
   await f.commands.get("files.tree.toggle")({ path: "src" });
-  assert.deepEqual(tree().entries.map((e) => e.path), ["src", "a.txt"]);
+  assert.deepEqual(treeNodes(tree()).map((e) => e.path), ["src", "a.txt"]);
   await assert.rejects(f.commands.get("files.tree.toggle")({ path: "a.txt" }), /a.txt is not a listed directory/);
   stop();
   await mounted.dispose();
 });
 
-test("a root listing failure is reported in files.tree", async () => {
+test("a root listing failure is not placed in the declared tree value", async () => {
   const f = fakeContext({ "": "permission denied" });
   const { mount } = await import("../ui/state.js");
   await mount(f.context);
-  assert.deepEqual(f.statuses.get("files.tree").read(), { root: "/work/p1", error: "permission denied", entries: [] });
+  const value = f.statuses.get("files.tree").read();
+  assert.deepEqual(treeNodes(value), []);
+  assert.equal(value.error, undefined);
+  assert.equal(value.elements.find((element) => element.kind === "tree").empty, "");
+  assert.ok(f.logged.some(({ event, fields }) => event.endsWith("sidecar.request") && fields.ok === false && fields.error.includes("permission denied")));
 });
 
 test("bookmarks are stored as project data, kept unique, and removed", async () => {
@@ -79,14 +97,14 @@ test("bookmarks are stored as project data, kept unique, and removed", async () 
   const { mount } = await import("../ui/state.js");
   await mount(f.context);
   const bookmarks = () => f.statuses.get("files.bookmarks").read();
-  assert.deepEqual(bookmarks(), []);
+  assert.deepEqual(bookmarkPaths(bookmarks()), []);
   await f.commands.get("files.bookmarks.add")({ path: "a.txt" });
   await f.commands.get("files.bookmarks.add")({ path: "src" });
   await f.commands.get("files.bookmarks.add")({ path: "a.txt" });
-  assert.deepEqual(bookmarks(), ["a.txt", "src"]);
+  assert.deepEqual(bookmarkPaths(bookmarks()), ["a.txt", "src"]);
   assert.deepEqual(f.stored.bookmarks, ["a.txt", "src"]);
   await f.commands.get("files.bookmarks.remove")({ path: "a.txt" });
-  assert.deepEqual(bookmarks(), ["src"]);
+  assert.deepEqual(bookmarkPaths(bookmarks()), ["src"]);
   await assert.rejects(f.commands.get("files.bookmarks.remove")({ path: "none" }), /none is not bookmarked/);
 });
 
@@ -100,7 +118,7 @@ test("the state watches the expanded directories, refreshes on a change, and sto
   await f.commands.get("files.tree.toggle")({ path: "src" });
   assert.deepEqual(watched(), ["", "src"]);
   const seen = [];
-  f.statuses.get("files.tree").subscribe((value) => seen.push(value.entries.map((e) => e.path)));
+  f.statuses.get("files.tree").subscribe((value) => seen.push(treeNodes(value).map((e) => e.path)));
   files.src = [{ name: "main.go", directory: false }, { name: "new.go", directory: false }];
   f.emit({ changed: "src" });
   await f.commands.get("files.refresh")({});
@@ -111,36 +129,52 @@ test("the state watches the expanded directories, refreshes on a change, and sto
   assert.deepEqual(watched(), []);
 });
 
-test("the state reports git status from the sidecar and asks again after a change", async () => {
+test("git status details appear in tree nodes and refresh from the sidecar", async () => {
   const git = [{ path: "a.txt", status: "modified" }];
   const f = fakeContext(listing(), git);
   const { mount } = await import("../ui/state.js");
   await mount(f.context);
-  assert.deepEqual(f.statuses.get("files.git").read(), [{ path: "a.txt", status: "modified" }]);
+  assert.equal(treeNodes(f.statuses.get("files.tree").read()).find((entry) => entry.path === "a.txt").detail, "modified");
+  await f.commands.get("files.tree.toggle")({ path: "src" });
   const asked = () => f.sent.filter((body) => body.operation === "git").length;
   const before = asked();
   git.push({ path: "src/main.go", status: "untracked" });
   f.emit({ changed: "" });
   await f.commands.get("files.refresh")({});
   assert.ok(asked() > before);
-  assert.deepEqual(f.statuses.get("files.git").read().map((e) => e.path), ["a.txt", "src/main.go"]);
+  const entries = treeNodes(f.statuses.get("files.tree").read());
+  assert.equal(entries.find((entry) => entry.path === "src/main.go").detail, "untracked");
+  assert.equal(entries.find((entry) => entry.path === "src").detail, "untracked");
 });
 
-test("the selection is the project's state, shared by every tree", async () => {
+test("a directory shows the highest-priority descendant git detail", async () => {
+  const files = listing();
+  files.src.push({ name: "util.go", directory: false });
+  const git = [
+    { path: "src/main.go", status: "modified" },
+    { path: "src/util.go", status: "deleted" },
+  ];
+  const f = fakeContext(files, git);
+  const { mount } = await import("../ui/state.js");
+  await mount(f.context);
+  await f.commands.get("files.tree.toggle")({ path: "src" });
+  const rows = treeNodes(f.statuses.get("files.tree").read());
+  assert.equal(rows.find((row) => row.path === "src/main.go").detail, "modified");
+  assert.equal(rows.find((row) => row.path === "src/util.go").detail, "deleted");
+  assert.equal(rows.find((row) => row.path === "src").detail, "deleted");
+});
+
+test("selection is carried by each declared tree node", async () => {
   const f = fakeContext(listing());
   const { mount } = await import("../ui/state.js");
   await mount(f.context);
-  const seen = [];
-  f.statuses.get("files.selection").subscribe((value) => seen.push(value));
-  assert.equal(f.statuses.get("files.selection").read(), null);
   await f.commands.get("files.select")({ path: "a.txt" });
-  assert.equal(f.statuses.get("files.selection").read(), "a.txt");
+  assert.equal(treeNodes(f.statuses.get("files.tree").read()).find((entry) => entry.path === "a.txt").selected, true);
   await f.commands.get("files.select")({ path: null });
-  assert.deepEqual(seen, ["a.txt", null]);
-  // path 가 빠진 요청은 선택을 지우지 않고 거절한다.
+  assert.equal(treeNodes(f.statuses.get("files.tree").read()).some((entry) => entry.selected), false);
   await f.commands.get("files.select")({ path: "a.txt" });
   await assert.rejects(f.commands.get("files.select")({}), /requires path/);
-  assert.equal(f.statuses.get("files.selection").read(), "a.txt");
+  assert.equal(treeNodes(f.statuses.get("files.tree").read()).find((entry) => entry.path === "a.txt").selected, true);
 });
 
 test("files.tree read during a refresh shows the previous listing, not an empty tree", async () => {
@@ -149,29 +183,19 @@ test("files.tree read during a refresh shows the previous listing, not an empty 
   await mount(f.context);
   const refreshing = f.commands.get("files.refresh")({});
   await Promise.resolve();
-  assert.deepEqual(f.statuses.get("files.tree").read().entries.map((entry) => entry.path), ["src", "a.txt"]);
+  assert.deepEqual(treeNodes(f.statuses.get("files.tree").read()).map((entry) => entry.path), ["src", "a.txt"]);
   await refreshing;
 });
 
-test("a failure to open a file is the status files.open until the tree is listed again or another path is selected", async () => {
+test("file-open failures are logged without a files.open status", async () => {
   const f = fakeContext(listing());
   const { mount } = await import("../ui/state.js");
   await mount(f.context);
-  const open = () => f.statuses.get("files.open").read();
-  const seen = [];
-  f.statuses.get("files.open").subscribe(() => seen.push(open()));
-  assert.deepEqual(open(), { error: null });
+  assert.equal(f.statuses.has("files.open"), false);
   await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
-  assert.deepEqual(open(), { error: "no plugin opens a.txt" });
-  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
-  assert.equal(seen.length, 1, "the same failure again changes nothing");
-  await f.commands.get("files.select")({ path: "src" });
-  assert.deepEqual(open(), { error: null }, "selecting another path ends the failure");
-  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
-  await f.commands.get("files.refresh")({});
-  assert.deepEqual(open(), { error: null }, "listing the tree again ends the failure");
-  await assert.rejects(f.commands.get("files.open.failed")({ error: "" }), /files\.open\.failed requires error, a non-empty string/);
-  await assert.rejects(f.commands.get("files.open.failed")({}), /files\.open\.failed requires error, a non-empty string/);
+  assert.ok(f.logged.some(({ event, fields }) => event.endsWith("open.failed") && fields.error === "no plugin opens a.txt"));
+  await assert.rejects(f.commands.get("files.open.failed")({ error: "" }), /requires error, a non-empty string/);
+  await assert.rejects(f.commands.get("files.open.failed")({}), /requires error, a non-empty string/);
 });
 
 const micros = (value) => Number.isInteger(value) && value >= 0;

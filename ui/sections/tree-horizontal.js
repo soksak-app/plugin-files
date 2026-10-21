@@ -1,6 +1,6 @@
 // 가로 파일 섹션은 경로를 한 줄로 나열하고 같은 파일 상태와 선언된 명령을 사용한다.
 import { drawList } from '@soksak/plugin-api';
-import { openFailure, treeMessage } from './tree-message.js';
+import { openFailure } from './open-failure.js';
 
 export function mount(root, context) {
   if (context.orientation !== 'horizontal') throw new Error('horizontal file tree requires horizontal orientation');
@@ -19,15 +19,14 @@ export function mount(root, context) {
   Object.assign(paths.style,{display:'flex',alignItems:'center',gap:'8px',overflowX:'auto',minHeight:'0',flex:'1 1 auto'});
   box.append(header,paths);root.append(box);
   let selection = null;
+  let rows = [];
   const controls = new Map();
   const gitMarkers = new Map();
-  let git = [];
-  const openFailed = (error) => box.dispatchEvent(new CustomEvent('files-open-failed',{detail:{error:openFailure(error)}}));
+  const openFailed = (error) => {
+    reportError(error);
+    box.dispatchEvent(new CustomEvent('files-open-failed',{detail:{error:openFailure(error)}}));
+  };
   context.bind(box,'files.open.failed',(event)=>({error:event.detail.error}),{event:'files-open-failed'});
-  const stopOpen = context.status('files.open',(value,source)=>{
-    const text = source===null?null:treeMessage('main',{error:null},value.error);
-    notice.textContent=text??'';notice.hidden=text===null;
-  });
   const applySelection = () => {
     for (const [path,button] of controls) {
       const selected = path === selection;
@@ -36,18 +35,30 @@ export function mount(root, context) {
     }
   };
   const applyGit = () => {
-    for (const [path,label] of gitMarkers) label.textContent=git.filter(item=>item.path===path).map(item=>item.status).join(', ');
+    for (const [path,label] of gitMarkers) label.textContent=rows.find(row=>row.path===path)?.detail??'';
   };
-  const stopTree = context.status('files.tree',(value,source)=>{
+  const flatten = (nodes, depth = 0) => nodes.flatMap((node) => {
+    if (typeof node.params?.path !== "string") throw new Error("files.tree node has no path parameter");
+    const row={path:node.params.path,name:node.label,directory:node.branch===true,depth,expanded:node.expanded===true,selected:node.selected===true,detail:node.detail};
+    return [row,...(node.children?flatten(node.children,depth+1):[])];
+  });
+  const stopTree = context.status('files.tree',(value)=>{
     controls.clear();gitMarkers.clear();
-    if (source === null) {paths.textContent='';title.textContent='프로젝트 없음';return;}
-    title.title=value.root;
-    title.textContent=value.root==='/'?'/':value.root.slice(value.root.lastIndexOf('/')+1);
-    if(!title.textContent) throw new Error('horizontal file tree requires a canonical project root');
-    if (value.error !== null) {paths.textContent=`오류: ${value.error}`;return;}
-    if (value.entries.length === 0) {paths.textContent='파일 없음';return;}
+    const declared=value?.elements?.find(element=>element.kind==='tree');
+    const lines=value?.elements?.filter(element=>element.kind==='status-line')??[];
+    const project=lines.find(element=>element.key==='project');
+    const notice=lines.find(element=>element.key!=='project');
+    if(project&&project.text!=='프로젝트 없음'){
+      title.textContent=project.text.split(/[\\/]/).filter(Boolean).at(-1)??project.text;
+      title.title=project.text;
+    }else{title.textContent=project?.text??'프로젝트 없음';title.title='';}
+    if(notice){notice.textContent=notice.text??'';notice.hidden=notice.textContent==='';}
+    if(!declared){rows=[];paths.textContent=title.textContent;return;}
+    rows=flatten(declared.nodes);
+    selection=rows.find(row=>row.selected)?.path??null;
+    if(rows.length===0){paths.textContent=declared.empty;return;}
     // 항목마다 그 조작 요소를 문서에 둔다. 새 항목만 만들고 펼침 상태는 제자리에서 고친다(core docs/spec/exposure.md).
-    drawList(paths,value.entries,{
+    drawList(paths,rows,{
       key:(entry)=>`${entry.directory?'d':'f'}:${entry.path}`,
       create:(entry)=>{
         const item=document.createElement('div');Object.assign(item.style,{display:'flex',alignItems:'center',gap:'4px',flex:'0 0 auto'});
@@ -75,7 +86,5 @@ export function mount(root, context) {
     });
     applySelection();applyGit();
   });
-  const stopSelection=context.status('files.selection',(value,source)=>{selection=source===null?null:value;applySelection();});
-  const stopGit=context.status('files.git',(value,source)=>{git=source===null?[]:value;applyGit();});
-  return {dispose(){stopTree();stopSelection();stopGit();stopOpen();box.remove();}};
+  return {dispose(){stopTree();box.remove();}};
 }

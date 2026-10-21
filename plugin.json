@@ -42,94 +42,24 @@
     "status": [
       {
         "name": "files.tree",
-        "description": "The project folder, the last failure to list it or null, and the visible rows of the file tree in order: each entry's path relative to the folder, name, whether it is a directory, its depth, and whether it is expanded. The rows are listed again when the files sidecar reports a change in the project folder or an expanded directory.",
+        "description": "The declared UI value: project-root status-line, toolbar buttons, the project tree with selection and git detail, and the no-project and empty-tree states.",
         "schema": {
           "type": "object",
           "properties": {
-            "root": {
-              "type": "string"
-            },
-            "error": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "entries": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "path": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "directory": {
-                    "type": "boolean"
-                  },
-                  "depth": {
-                    "type": "integer"
-                  },
-                  "expanded": {
-                    "type": "boolean"
-                  }
-                }
-              }
+            "elements": {
+              "type": "array"
             }
           }
         }
       },
       {
         "name": "files.bookmarks",
-        "description": "The bookmarked paths of the project, relative to its folder, in the order they were added.",
-        "schema": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      {
-        "name": "files.git",
-        "description": "The git status of the project folder from the files sidecar: each path relative to the folder with added, deleted, modified, renamed, or untracked; empty when the folder is not in a git repository. It is read again after every listing.",
-        "schema": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "path": {
-                "type": "string"
-              },
-              "status": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "files.selection",
-        "description": "The path of the selected file or folder of the project's file trees, relative to the project folder, or null. Every mounted tree shows this selection.",
-        "schema": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      {
-        "name": "files.open",
-        "description": "The failure to open a file from the file tree, or null: the text of the error that core.file.open refused, for example that no plugin opens the file. It ends when the tree is listed again or another path is selected. Every mounted tree shows it in its message row.",
+        "description": "The declared UI list of bookmarked project paths with removal commands and an empty-state label.",
         "schema": {
           "type": "object",
           "properties": {
-            "error": {
-              "type": [
-                "string",
-                "null"
-              ]
+            "elements": {
+              "type": "array"
             }
           }
         }
