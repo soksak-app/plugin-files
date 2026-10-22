@@ -27,7 +27,7 @@ function respond(message) {
 // The view channel of the page: the bridge attaches its message receiver, and the page posts its calls to the handler.
 globalThis.window = {
   location: { host: "files", href: "sok://files/ui/host.html" },
-  sokSurface: { surface: "files-1", params: {}, origin: { directory: "/work" }, project: PROJECT, declarations: manifest.exposes },
+  sokHost: { project: PROJECT, declarations: manifest.exposes },
   sokView: { attach: (receiver) => { deliver = receiver; } },
   webkit: {
     messageHandlers: {

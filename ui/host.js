@@ -5,7 +5,7 @@ import { createViewBridge } from "@soksak/plugin-api/view";
 import { createHostEmitter, startFilesHost } from "./host-entry.js";
 import { mountFilesHost } from "./host-runtime.js";
 
-const start = window.sokSurface;
+const start = window.sokHost;
 let emitEvent = null;
 // The bridge reports each lost call or snapshot and each skip; open-calls is a count of the open calls, which changes at each call.
 const bridge = createViewBridge({
