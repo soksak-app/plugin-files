@@ -8,6 +8,7 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   const statuses = new Map();
   const commands = new Map();
   const errors = [];
+  const opened = [];
   let message;
   let failure;
   let index = 0;
@@ -24,12 +25,13 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     project,
     sidecar(name) { calls.push({ kind: "sidecar", name }); return sidecar; },
     async report(record) { errors.push(record); },
+    async open(path) { opened.push(path); },
   };
   const expose = {
     async status(name, read, subscribe) { statuses.set(name, { read, subscribe }); },
     async command(name, run) { commands.set(name, run); },
   };
-  return { page, expose, calls, statuses, commands, errors, message: () => message, failure: () => failure };
+  return { page, expose, calls, statuses, commands, errors, opened, message: () => message, failure: () => failure };
 }
 
 const snapshot = (entries, selected = null, generation = 1) => ({ generation, entries, selected });
@@ -46,7 +48,7 @@ test("host page subscribes before snapshot and registers the declared tree statu
   assert.equal(send.session, "plugin:files:project-a:@soksak/sidecar-files");
   assert.equal(send.body.operation, "snapshot");
   assert.equal(f.statuses.has("files.tree"), true);
-  assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.tree.toggle", "files.select"]);
+  assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.tree.toggle", "files.select", "files.open"]);
   const value = f.statuses.get("files.tree").read();
   assert.equal(value.elements.find((element) => element.kind === "status-line").text, "/work/project");
   assert.deepEqual(value.elements.find((element) => element.kind === "tree").nodes.map((node) => node.label), ["src", "readme.md"]);
@@ -102,5 +104,22 @@ test("host with no project publishes no-project value and does not contact the s
   const host = await mountFilesHost(f);
   assert.equal(f.calls.some(({ kind }) => kind === "send"), false);
   assert.equal(f.statuses.get("files.tree").read().elements[0].text, "프로젝트 없음");
+  host.dispose();
+});
+
+test("a file row of the tree carries the open command, and the open command opens that file through the page", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([
+    { path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false },
+    { path: "readme.md", name: "readme.md", directory: false, depth: 0, expanded: false, selected: false },
+  ])] });
+  const host = await mountFilesHost(f);
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  const [directory, file] = tree.nodes;
+  assert.equal(directory.open, undefined, "a folder row opens nothing");
+  assert.equal(file.open, "files.open");
+  assert.deepEqual(file.params, { path: "readme.md" });
+  assert.equal(f.commands.has("files.open"), true, "files.open is not registered");
+  await f.commands.get("files.open")({ path: "readme.md" });
+  assert.deepEqual(f.opened, ["readme.md"]);
   host.dispose();
 });

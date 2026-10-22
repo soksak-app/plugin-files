@@ -138,6 +138,24 @@
         }
       },
       {
+        "name": "files.open",
+        "description": "Opens a file of the project folder through core.file.open, which runs the plugin that declares the extension of the file.",
+        "params": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "result": {
+          "type": "null"
+        }
+      },
+      {
         "name": "files.open.failed",
         "description": "Records the failure to open a file from the file tree as files.open. The same text again changes nothing.",
         "params": {

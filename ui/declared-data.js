@@ -131,7 +131,8 @@ export function treeValue({ root, entries = [], selected = null, openCommand, de
       if (entry.path === selectedPath) node.selected = true;
       if (entry.path === selectedPath && !entry.directory) bookmarkEnabled = true;
       if (entry.detail !== undefined && entry.detail !== "") node.detail = entry.detail;
-      if (openCommand !== undefined) node.open = openCommand;
+      // A folder opens nothing; the open command applies to a file (P15).
+      if (openCommand !== undefined && !entry.directory) node.open = openCommand;
       if (entry.depth === 0) roots.push(node);
       else {
         parent.children ??= [];

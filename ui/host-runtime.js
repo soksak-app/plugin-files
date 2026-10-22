@@ -3,6 +3,11 @@ import { treeValue } from "./declared-data.js";
 
 const SIDECAR = "@soksak/sidecar-files";
 const TREE_STATUS = "files.tree";
+// A file row opens its file through the plugin command files.open, which the page runs with core.file.open (docs/spec/declared-ui.md, Tree keys).
+const TREE_OPTIONS = {
+  openCommand: "files.open",
+  declaredCommands: ["files.refresh", "files.tree.toggle", "files.select", "files.open"],
+};
 
 const errorText = (error) => error instanceof Error ? error.message : String(error);
 
@@ -11,12 +16,15 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   if (!page || typeof page.sidecar !== "function" || typeof page.report !== "function") {
     throw new TypeError("files host requires page.sidecar and page.report");
   }
+  if (typeof page.open !== "function") {
+    throw new TypeError("files host requires page.open");
+  }
   if (!expose || typeof expose.status !== "function" || typeof expose.command !== "function") {
     throw new TypeError("files host requires exposure status and command registration");
   }
   const hasProject = project !== null && typeof project === "object" &&
     typeof project.id === "string" && project.id !== "" && typeof project.root === "string" && project.root !== "";
-  let value = treeValue({ root: hasProject ? project.root : null, entries: [] });
+  let value = treeValue({ root: hasProject ? project.root : null, entries: [], ...TREE_OPTIONS });
   const listeners = new Set();
   const pending = new Map();
   let stopped = false;
@@ -59,7 +67,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       if (entry.detail !== undefined) row.detail = entry.detail;
       return row;
     });
-    notify(treeValue({ root: project.root, entries, selected: tree.selected }));
+    notify(treeValue({ root: project.root, entries, selected: tree.selected, ...TREE_OPTIONS }));
   };
   const rejectPending = (error) => {
     for (const [id, call] of pending) {
@@ -119,10 +127,15 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
 
   await expose.status(TREE_STATUS, read, (fn) => { listeners.add(fn); return () => listeners.delete(fn); });
+  const open = async ({ path } = {}) => {
+    if (typeof path !== "string" || path === "") throw new Error("files.open requires a path");
+    return page.open(path);
+  };
   for (const [name, run] of [
     ["files.refresh", runSnapshot],
     ["files.tree.toggle", toggle],
     ["files.select", select],
+    ["files.open", open],
   ]) await expose.command(name, run);
   if (hasProject) {
     // Subscribe to messages and failures before the first request; the sidecar may answer immediately.
@@ -134,7 +147,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     try {
       await runSnapshot();
     } catch (error) {
-      notify(treeValue({ root: project.root, entries: [], listingFailed: true }));
+      notify(treeValue({ root: project.root, entries: [], listingFailed: true, ...TREE_OPTIONS }));
       await reportError(error);
     }
   }
