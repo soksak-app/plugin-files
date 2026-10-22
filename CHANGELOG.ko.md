@@ -4,6 +4,7 @@
 
 ## 미배포
 
+- P26-9: plugin.json의 `files.open` params가 더 이상 `required`를 선언하지 않는다. core schema subset이 이를 받지 않아 두 host가 설치된 plugin을 `unknown field required`로 거부했었다. `test/exposes-schema.test.mjs`가 plugin.json의 모든 exposes schema와 항목을 subset과 대조한다. handler는 문자열 `path`가 없는 호출을 거부하며, test가 이를 포괄한다. Red: subset test가 `files.open params: keyword required is outside the schema subset`로 실패했다. Green: `make test`가 95개 중 95개 통과한다.
 - F238-c-13: test command는 `scripts/build-test.mjs`로 `build/test/ui`를 만들며, plugin API import는 `test/sdk-models/`의 model로 바뀐다. `test/host-page.test.mjs`는 build된 page module을 가짜 view channel 위에서 불러 status 등록, 선언된 UI snapshot, command 등록, 선언된 files sidecar 호출을 검사한다. Red: test가 `build/test/ui/host.js`를 불러오지 못했다. Green: `make test`가 test 92개를 통과한다.
 - F238-c-14: `test/`의 어느 줄도 SDK 패키지 이름을 싣지 않는다. `test/sdk-boundary.test.mjs`는 needle을 포함한 `test/`의 줄마다 실패하며, needle은 부분 문자열에서 조립한다. model 주석은 plugin API로 적고, `test/pack-closure.test.mjs`는 import map 이름을 부분 문자열에서 조립한다. Red: guard가 일곱 줄을 나열했다. Green: `make test`가 test 88개를 통과한다.
 - F238-c-24: release workflow는 `make test`, `make check`, `make pack` 순서로 실행하며, test 전에 Node와 pnpm을 설정한다. `test/workflows.test.mjs`가 두 workflow에서 이 순서를 요구한다. Red: 이전 release workflow에서 test가 실패했다. Green: `make test`가 87개 test를 통과한다. `make check`는 고정된 `@soksak/plugin-api`가 받지 않는 `host` 선언(P26-4)에서 실패하며, core release가 이를 받을 때까지 이것이 예상된 결과다.

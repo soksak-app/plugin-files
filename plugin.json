@@ -151,10 +151,7 @@
             "path": {
               "type": "string"
             }
-          },
-          "required": [
-            "path"
-          ]
+          }
         },
         "result": {
           "type": "null"

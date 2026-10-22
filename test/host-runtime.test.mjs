@@ -140,6 +140,10 @@ test("a file row of the tree carries the open command, and the open command open
   assert.equal(f.commands.has("files.open"), true, "files.open is not registered");
   await f.commands.get("files.open")({ path: "readme.md" });
   assert.deepEqual(f.opened, ["readme.md"]);
+  // The declared params do not mark path required, so the handler refuses a call without a string path.
+  await assert.rejects(f.commands.get("files.open")({}), /files.open requires a path/);
+  await assert.rejects(f.commands.get("files.open")({ path: 3 }), /files.open requires a path/);
+  assert.deepEqual(f.opened, ["readme.md"], "a call without a string path opens nothing");
   host.dispose();
 });
 
