@@ -30,6 +30,8 @@ function wireHost(replyFor) {
     sidecar: () => sidecar,
     async report(record) { reports.push(record); },
     async open() {},
+    data: { async get() { return []; }, async set() { return null; } },
+    emit() {},
   };
   const expose = {
     async status(name, read) { statuses.set(name, read); },

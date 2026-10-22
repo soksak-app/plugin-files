@@ -23,7 +23,6 @@ const EXCLUDED_CASES = {
   "view.bridge.events-delivered-in-order": `${NOT_CALLED_BY_PAGE} a theme subscription; the theme reaches the page through the document-start script`,
   "view.bridge.refuses-malformed-host-message": "the view channel refuses a message without the marker before the bridge receives it",
   "view.bridge.tab-state-read-write": `${NOT_CALLED_BY_PAGE} tab.state; the plugin host has no tab state`,
-  "view.bridge.runtime-log-level-gate": `${NOT_CALLED_BY_PAGE} runtime.log; the page reports through runtime.error`,
 };
 const REPLAYED_COUNTS = {
   expose: 5,
@@ -31,7 +30,7 @@ const REPLAYED_COUNTS = {
   "view-snapshot-pull": 5,
   "view-native": 4,
   "view-commands": 2,
-  "view-bridge": 4,
+  "view-bridge": 5,
 };
 const CASES_OF = ["expose", "declared-ui-snapshot", "view-snapshot-pull", "view-native", "view-commands", "view-bridge"];
 
@@ -246,7 +245,7 @@ test("view bridge cases replay against the view bridge model", async () => {
         if (step.action === "create") {
           viewWindow(step.input?.url);
           bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) }, report: () => {} });
-          output = { ready: true };
+          output = step.output?.plugin === undefined ? { ready: true } : { ready: true, plugin: globalThis.window.location.host };
         } else if (step.action === "request") {
           pendingCall = bridge.calls.request(step.input.command, step.input.params);
           output = posted.at(-1);
@@ -263,6 +262,17 @@ test("view bridge cases replay against the view bridge model", async () => {
           if (kind === "message") handle.on(id, (body) => messages.push(body));
           else handle.onFailure(id, (reason) => failures.push(reason));
           output = posted.at(-1);
+        } else if (step.action === "log") {
+          const { level, event, fields } = step.input;
+          bridge.runtime.log[level](event, fields);
+          output = posted.slice(before);
+        } else if (step.action === "log-builder") {
+          // The builder of the fields runs only for a record that the log stores; the model stores every record.
+          const { level, event, fields } = step.input;
+          let built = false;
+          const calls = posted.length;
+          bridge.runtime.log[level](event, () => { built = true; return fields; });
+          output = { calls: posted.length - calls, built };
         } else if (step.action === "host-event") {
           bridge.deliver(step.input);
           output = { messages: clone(messages), failures: clone(failures) };

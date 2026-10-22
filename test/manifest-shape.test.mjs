@@ -50,8 +50,10 @@ test("the section modules of the earlier sidebar form are removed", () => {
   assert.equal(exists("ui/sections"), false, "ui/sections still exists");
 });
 
-test("the state module is published with the manifest and the events catalog", () => {
-  assert.ok(exists(manifest.state.module), manifest.state.module);
+test("the plugin declares no state module: the host page serves every status and command, and the catalog is published", () => {
+  assert.equal(manifest.state, undefined, "plugin.json still declares a state module");
+  assert.equal(exists("ui/state.js"), false, "ui/state.js still exists");
+  assert.ok(exists("ui/host.js"), "ui/host.js is missing");
   assert.ok(pkg.files.includes("plugin.json"));
   assert.ok(pkg.files.includes("events.json"));
   assert.ok(pkg.files.includes("ui"));

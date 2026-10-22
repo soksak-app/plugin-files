@@ -4,6 +4,39 @@
     "plugin"
   ],
   "events": {
+    "plugin.files.tree.request": {
+      "layer": "plugin",
+      "class": "call",
+      "level": [
+        "debug",
+        "warn"
+      ],
+      "fields": {
+        "operation": "string",
+        "ok": "boolean",
+        "micros": "number",
+        "error?": "string"
+      },
+      "description": "One tree request of the plugin host to the files sidecar (snapshot, expand, collapse or select) and its result; error is the text of the failure and the level is warn for a failed request."
+    },
+    "plugin.files.tree.changed": {
+      "layer": "plugin",
+      "class": "io",
+      "level": "debug",
+      "fields": {
+        "path": "string"
+      },
+      "description": "The files sidecar reported a change in a watched directory; path is the changed directory relative to the project folder."
+    },
+    "plugin.files.tree.failed": {
+      "layer": "plugin",
+      "class": "io",
+      "level": "warn",
+      "fields": {
+        "error": "string"
+      },
+      "description": "The files sidecar reported a failure that no request caused; error is its text."
+    },
     "plugin.files.open.failed": {
       "layer": "plugin",
       "class": "call",

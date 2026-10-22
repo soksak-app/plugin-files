@@ -7,6 +7,13 @@ import { startFilesHost } from "../ui/host-entry.js";
 function fakeBridge() {
   const calls = [];
   const bridge = {
+    calls: {
+      request: async (command, params) => {
+        calls.push({ kind: "request", command, params });
+        if (command === "runtime.data.get") return ["a.txt"];
+        return null;
+      },
+    },
     runtime: {
       sidecar: (name) => ({ name }),
       error: async (where, text) => { calls.push({ kind: "error", where, text }); },
@@ -76,4 +83,19 @@ test("host entry rejects missing or invalid bridge, exposure, start values and m
   ]) {
     await assert.rejects(startFilesHost(input), message);
   }
+});
+
+test("the page reads and writes the bookmarks through the project data calls, and records its events through runtime.log", async () => {
+  const { bridge, calls } = fakeBridge();
+  let options;
+  await startFilesHost({ bridge, expose: { status: async () => {} }, start: { project: null }, mount: async (value) => { options = value; } });
+  assert.deepEqual(await options.page.data.get("bookmarks"), ["a.txt"]);
+  await options.page.data.set("bookmarks", ["b.txt"]);
+  options.page.emit("warn", "plugin.files.open.failed", { error: "no plugin opens a.txt" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(calls.filter((call) => call.kind === "request"), [
+    { kind: "request", command: "runtime.data.get", params: { key: "bookmarks" } },
+    { kind: "request", command: "runtime.data.set", params: { key: "bookmarks", value: ["b.txt"] } },
+    { kind: "request", command: "runtime.log", params: { level: "warn", event: "open.failed", fields: { error: "no plugin opens a.txt" } } },
+  ]);
 });

@@ -3,8 +3,14 @@ import test from "node:test";
 
 import { mountFilesHost } from "../ui/host-runtime.js";
 
-function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/project" } } = {}) {
+function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/project" }, stored = {} } = {}) {
   const calls = [];
+  const emitted = [];
+  const data = {
+    store: stored,
+    async get(key) { calls.push({ kind: "data.get", key }); return structuredClone(this.store[key] ?? []); },
+    async set(key, value) { calls.push({ kind: "data.set", key, value: structuredClone(value) }); this.store[key] = structuredClone(value); return null; },
+  };
   const statuses = new Map();
   const commands = new Map();
   const errors = [];
@@ -26,12 +32,14 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     sidecar(name) { calls.push({ kind: "sidecar", name }); return sidecar; },
     async report(record) { errors.push(record); },
     async open(path) { opened.push(path); },
+    data,
+    emit(level, name, fields) { emitted.push({ level, name, fields }); },
   };
   const expose = {
     async status(name, read, subscribe) { statuses.set(name, { read, subscribe }); },
     async command(name, run) { commands.set(name, run); },
   };
-  return { page, expose, calls, statuses, commands, errors, opened, message: () => message, failure: () => failure };
+  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, message: () => message, failure: () => failure };
 }
 
 const snapshot = (entries, selected = null, generation = 1) => ({ generation, entries, selected });
@@ -42,13 +50,14 @@ test("host page subscribes before snapshot and registers the declared tree statu
     { path: "readme.md", name: "readme.md", directory: false, depth: 0, expanded: false, selected: false },
   ])] });
   const host = await mountFilesHost(f);
-  assert.deepEqual(f.calls.slice(0, 2).map(({ kind }) => kind), ["sidecar", "on"]);
-  assert.ok(f.calls.findIndex(({ kind }) => kind === "onFailure") < f.calls.findIndex(({ kind }) => kind === "send"));
+  const sidecarCalls = f.calls.filter(({ kind }) => !kind.startsWith("data."));
+  assert.deepEqual(sidecarCalls.slice(0, 2).map(({ kind }) => kind), ["sidecar", "on"]);
+  assert.ok(sidecarCalls.findIndex(({ kind }) => kind === "onFailure") < sidecarCalls.findIndex(({ kind }) => kind === "send"));
   const send = f.calls.find(({ kind }) => kind === "send");
   assert.equal(send.session, "plugin:files:project-a:@soksak/sidecar-files");
   assert.equal(send.body.operation, "snapshot");
   assert.equal(f.statuses.has("files.tree"), true);
-  assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.tree.toggle", "files.select", "files.open"]);
+  assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.tree.toggle", "files.select", "files.open", "files.bookmarks.add", "files.bookmarks.remove", "files.open.failed"]);
   const value = f.statuses.get("files.tree").read();
   assert.equal(value.elements.find((element) => element.kind === "status-line").text, "/work/project");
   assert.deepEqual(value.elements.find((element) => element.kind === "tree").nodes.map((node) => node.label), ["src", "readme.md"]);
@@ -121,5 +130,60 @@ test("a file row of the tree carries the open command, and the open command open
   assert.equal(f.commands.has("files.open"), true, "files.open is not registered");
   await f.commands.get("files.open")({ path: "readme.md" });
   assert.deepEqual(f.opened, ["readme.md"]);
+  host.dispose();
+});
+
+test("the bookmarks status is served by the host from the project data, and its commands change the data", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])], stored: { bookmarks: ["src"] } });
+  const host = await mountFilesHost(f);
+  assert.equal(f.statuses.has("files.bookmarks"), true, "files.bookmarks is not registered by the host");
+  const bookmarks = () => f.statuses.get("files.bookmarks").read();
+  const paths = (value) => value.elements.find((element) => element.kind === "list").items.map((item) => item.params.path);
+  assert.deepEqual(paths(bookmarks()), ["src"]);
+  await f.commands.get("files.bookmarks.add")({ path: "a.txt" });
+  await f.commands.get("files.bookmarks.add")({ path: "a.txt" });
+  assert.deepEqual(f.data.store.bookmarks, ["src", "a.txt"]);
+  assert.deepEqual(paths(bookmarks()), ["src", "a.txt"]);
+  await f.commands.get("files.bookmarks.remove")({ path: "src" });
+  assert.deepEqual(paths(bookmarks()), ["a.txt"]);
+  await assert.rejects(f.commands.get("files.bookmarks.remove")({ path: "none" }), /none is not bookmarked/);
+  assert.deepEqual([...f.commands.keys()].filter((name) => name.startsWith("files.bookmarks")), ["files.bookmarks.add", "files.bookmarks.remove"]);
+  host.dispose();
+});
+
+test("each tree request, each change line and each failure of the sidecar is an event with its fields", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }]),
+    new Error("cannot list expanded directory src: permission denied"),
+  ] });
+  const host = await mountFilesHost(f);
+  const requests = f.emitted.filter((record) => record.name === "plugin.files.tree.request");
+  assert.deepEqual(requests.map((record) => [record.level, record.fields.operation, record.fields.ok]), [["debug", "snapshot", true]]);
+  assert.equal(Number.isInteger(requests[0].fields.micros) && requests[0].fields.micros >= 0, true);
+  await assert.rejects(f.commands.get("files.tree.toggle")({ path: "src" }), /permission denied/);
+  const failed = f.emitted.filter((record) => record.name === "plugin.files.tree.request" && record.fields.ok === false);
+  assert.equal(failed.length, 1, "a failed tree request is not recorded");
+  assert.equal(failed[0].level, "warn");
+  assert.equal(typeof failed[0].fields.error, "string");
+  f.message()({ changed: "src" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.tree.changed").map((record) => [record.level, record.fields]), [["debug", { path: "src" }]]);
+  f.failure()(new Error("watch broke"));
+  assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.tree.failed").map((record) => [record.level, record.fields]), [["warn", { error: "watch broke" }]]);
+  host.dispose();
+});
+
+test("a command is recorded with its result, and a failure to open a file is recorded as a warning", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  await f.commands.get("files.bookmarks.add")({ path: "a.txt" });
+  await assert.rejects(f.commands.get("files.bookmarks.remove")({ path: "b.txt" }), /b.txt is not bookmarked/);
+  const results = f.emitted.filter((record) => record.name === "plugin.files.command");
+  assert.deepEqual(results.map((record) => [record.level, record.fields.name, record.fields.ok]),
+    [["debug", "files.bookmarks.add", true], ["warn", "files.bookmarks.remove", false]]);
+  assert.equal(results[1].fields.error, "-32000: b.txt is not bookmarked");
+  await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
+  assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.open.failed"), [{ level: "warn", name: "plugin.files.open.failed", fields: { error: "no plugin opens a.txt" } }]);
+  await assert.rejects(f.commands.get("files.open.failed")({ error: "" }), /requires error, a non-empty string/);
   host.dispose();
 });

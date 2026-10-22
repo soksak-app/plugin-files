@@ -142,6 +142,17 @@ export function createViewBridge({ handler, report }) {
       };
     },
     error: (where, text) => request("runtime.error", { where, text }).then(() => undefined),
+    // The command of core or of the plugin host, run with its params (docs/spec/native-surfaces.md#view-surfaces).
+    command: (name, params = null) => {
+      if (typeof name !== "string" || name === "") throw new TypeError("runtime.command requires a non-empty name");
+      return request(name, params);
+    },
+    // The records of the page: each level writes runtime.log with the event and the fields, and no level query precedes it
+    // (docs/spec/plugin-host.md, Log call). A fields function runs for each record, since the model stores every record.
+    log: Object.fromEntries(["error", "warn", "info", "debug", "trace"].map((level) => [level, (event, fields, cids) => {
+      const body = typeof fields === "function" ? fields() : fields;
+      return request("runtime.log", { level, event, fields: body, ...(cids === undefined ? {} : { cids }) }).then(() => undefined);
+    }])),
   };
 
   const commands = {

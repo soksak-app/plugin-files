@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- F238-d-15-1: the host page serves `files.bookmarks` from the project data and the commands `files.bookmarks.add`, `files.bookmarks.remove` and `files.open.failed`; the state module (`ui/state.js`) is removed with its `plugin.json` entry. Each command and each tree request, change line and sidecar failure is an event through the call `runtime.log`: `plugin.files.tree.request`, `plugin.files.tree.changed` and `plugin.files.tree.failed` are declared in `events.json`. The file open of a file row uses the call `runtime.command` of core (P26-7), whose window check is pending. Red: the bookmark, adapter and no-state tests failed on the unchanged code, and the tree event test failed with no records; Green: `make test` passes 76 of 76.
+
 - P26-5: `ui/host.html` maps each SDK entry of the page import map to a `sok://core/` target, so the installed page no longer requests `sok://files/modules/...`. `test/pack-closure.test.mjs` checks the import map and the packed file list of the files the page imports. Red: `soksak maps to /modules/soksak/dist/index.js`. Green: `make test` passes 66 of 66.
 
 - P26-6: The files host page declares the four entries of the view import map with `sok://core/` targets, and runs its calls, exposure and declared UI snapshots through the view bridge of `@soksak/plugin-api/view`. `scripts/check-manifest.mjs` no longer compares the import map with the surface page map. The bridge reports lost calls as `plugin.files.host.report`. `test/sdk-models/` replays the copied view and snapshot cases. Red: the import map and the page import tests failed on the page map; Green: `make test` passes 79 of 79.

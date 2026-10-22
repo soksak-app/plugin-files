@@ -2,8 +2,7 @@
 // UI snapshots go through the view bridge of @soksak/plugin-api/view, and its exposure is createExpose over the bridge port.
 import { createExpose } from "@soksak/plugin-api";
 import { createViewBridge } from "@soksak/plugin-api/view";
-import { createEmitter } from "./events.js";
-import { startFilesHost } from "./host-entry.js";
+import { createHostEmitter, startFilesHost } from "./host-entry.js";
 import { mountFilesHost } from "./host-runtime.js";
 
 const start = window.sokSurface;
@@ -17,7 +16,7 @@ const bridge = createViewBridge({
     emitEvent(event.kind === "skipped" ? "debug" : "warn", "plugin.files.host.report", { kind: String(event.kind), text });
   },
 });
-emitEvent = createEmitter(bridge.runtime, "files");
+emitEvent = createHostEmitter(bridge);
 const expose = createExpose({
   register: (kind, name) => bridge.exposure.register(kind, name),
   onRequest: (answer) => bridge.runtime.native.on("exposure-request", answer),
