@@ -29,7 +29,7 @@ const REPLAYED_COUNTS = {
   "declared-ui-snapshot": 6,
   "view-snapshot-pull": 5,
   "view-native": 4,
-  "view-commands": 2,
+  "view-commands": 3,
   "view-bridge": 5,
 };
 const CASES_OF = ["expose", "declared-ui-snapshot", "view-snapshot-pull", "view-native", "view-commands", "view-bridge"];
@@ -202,7 +202,8 @@ test("view native cases replay against the view bridge model", async () => {
 });
 
 test("view command cases replay against the command model", async () => {
-  const RUNS = { echo: (params) => params, fail: () => { throw new Error("save failed"); }, none: () => undefined, text: "text" };
+  const RUNS = { echo: (params) => params, fail: () => { throw new Error("save failed"); }, none: () => undefined, text: "text",
+    context: (params, context) => context };
   for (const testCase of replayable("view-commands")) {
     viewWindow();
     const posted = [];
@@ -218,7 +219,8 @@ test("view command cases replay against the command model", async () => {
           if (step.answer) bridge.deliver({ sok: 1, id: posted.at(-1).id, ...step.answer });
           result = (await pending) ?? null;
         } else if (step.request) {
-          bridge.deliver({ sok: 1, id: step.request.id, command: step.request.command, params: step.request.params });
+          bridge.deliver({ sok: 1, id: step.request.id, command: step.request.command, params: step.request.params,
+            ...(step.request.cids === undefined ? {} : { cids: step.request.cids }) });
         } else throw new Error(`unknown command step in ${label}`);
       } catch (failure) {
         throws = errorText(failure);

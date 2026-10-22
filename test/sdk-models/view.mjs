@@ -77,14 +77,15 @@ export function createViewBridge({ handler, report }) {
     }
   };
 
-  async function runCommand({ id, command, params }) {
+  async function runCommand({ id, command, params, cids }) {
     const run = handlers.get(command);
     if (run === undefined) {
       post({ sok: 1, reply: id, error: { code: UNREGISTERED_COMMAND, message: `view command ${command} is not registered` } });
       return;
     }
     try {
-      post({ sok: 1, reply: id, result: (await run(params)) ?? null });
+      // The handler receives the cids of the cause of the request, and an empty context when the request has none (core view.js).
+      post({ sok: 1, reply: id, result: (await run(params, cids === undefined ? {} : { cids })) ?? null });
     } catch (error) {
       post({ sok: 1, reply: id, error: { code: FAILED_COMMAND, message: String(error?.message ?? error) } });
     }

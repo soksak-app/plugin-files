@@ -10,7 +10,7 @@ const DIGESTS = {
   "declared-ui-snapshot.json": "92c119d777954ed2f07cf1e98fcd61ac90f0f9a074a0e0965c8290d1465d519b",
   "expose.json": "4d2f89e569fe8fb2c7a2b60d8217f6cd6b7d43a4ea77a07f5e2cbc9ba60cc8aa",
   "view-bridge.json": "c4b5439c0cdd8156eabf1ff07db21a989314ca7fabcd1c319ec983bef4c1dd9e",
-  "view-commands.json": "aef59ff9733a122d6d166ccf788c17a5753eac3283e7589f2aadc1d886cb00c7",
+  "view-commands.json": "37205ccb654de3249e37912f0f6375805d970a28cd08bcdb5083f2ab7239c37d",
   "view-native.json": "0044f4bdd08436d487e22db57c2fa8664dbea24a4152e28b24c112b4bace3c80",
   "view-snapshot-pull.json": "14fd388dd1c91ae4d122e76cfd371062961e48d3a048dc8e784bec57029b2e2f",
 };

@@ -4,6 +4,7 @@
 
 ## 미배포
 
+- F252-contract-files: 복사한 `view-commands.json`을 core origin/main에 맞췄다. command replay는 handler에 요청의 cids를 context로 전달한다.
 - F252-files: plugin host 실행부는 object가 아닌 sidecar message와 알 수 없는 요청 id의 응답을 보고하고, `selected` 또는 디렉터리 `expanded`가 boolean이 아닌 tree 행을 거부하며, null도 `{id, root}`도 아닌 project 시작 값을 거부한다. Error가 아닌 던져진 값은 명령 event에 그 text를 남긴다. 거부된 오류 보고는 console과 `log` route로 간다. Red와 Green: `test/host-runtime.test.mjs`의 여섯 test(docs/features.ko.md의 F252-files 참조).
 
 - F238-b-10-2: `test/test-script.test.mjs`는 test 명령이 `test/sdk-models/`를 포함해 `test/` 아래의 모든 test 파일을 선택함을 고정한다. 명령은 이미 올바랐다. `make test`는 79개 중 79개를 실행한다(이전 78개).

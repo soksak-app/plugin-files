@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- F252-contract-files: The copied `view-commands.json` follows core origin/main. The command replay gives handlers the cids of their request as context.
 - F252-files: The plugin host runtime reports each sidecar message that is not an object and each reply with an unknown request id, refuses a tree row whose `selected` or directory `expanded` is not a boolean, and refuses a project start value that is neither null nor `{id, root}`. A thrown non-Error value keeps its text in the command event. A refused error report reaches the console and the `log` route. Red and Green: `test/host-runtime.test.mjs`, six tests (see docs/features.md F252-files).
 
 - F238-b-10-2: `test/test-script.test.mjs` pins that the test command selects every test file under `test/`, including `test/sdk-models/`. The command was already correct; `make test` runs 79 of 79 tests (78 before).
