@@ -9,16 +9,16 @@ importers:
   .:
     devDependencies:
       '@soksak/plugin-api':
-        specifier: git+https://github.com/soksak-app/core.git#v0.0.11&path:/packages/plugin-api
-        version: https://codeload.github.com/soksak-app/core/tar.gz/26e7ddb8171315f8ffff643c0e82e5cc278f9570#path:/packages/plugin-api
+        specifier: git+https://github.com/soksak-app/core.git#v0.0.20&path:/packages/plugin-api
+        version: https://codeload.github.com/soksak-app/core/tar.gz/10d1438f9e7e4f0b7e53772ff48d9e3166649719#path:/packages/plugin-api
 
 packages:
 
-  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/26e7ddb8171315f8ffff643c0e82e5cc278f9570#path:/packages/plugin-api':
-    resolution: {gitHosted: true, integrity: sha512-6N1/hLOLQgX5nkwFPW4fC1Z2KjqIb3VQZW29Uj8aVMUgsUyLRF0GreWFukIZxd8ZV3SwMB4v/VYNrfLzp99T1Q==, path: /packages/plugin-api, tarball: https://codeload.github.com/soksak-app/core/tar.gz/26e7ddb8171315f8ffff643c0e82e5cc278f9570}
-    version: 0.0.11
+  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/10d1438f9e7e4f0b7e53772ff48d9e3166649719#path:/packages/plugin-api':
+    resolution: {gitHosted: true, path: /packages/plugin-api, tarball: https://codeload.github.com/soksak-app/core/tar.gz/10d1438f9e7e4f0b7e53772ff48d9e3166649719}
+    version: 0.0.20
     hasBin: true
 
 snapshots:
 
-  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/26e7ddb8171315f8ffff643c0e82e5cc278f9570#path:/packages/plugin-api': {}
+  '@soksak/plugin-api@https://codeload.github.com/soksak-app/core/tar.gz/10d1438f9e7e4f0b7e53772ff48d9e3166649719#path:/packages/plugin-api': {}

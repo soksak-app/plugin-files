@@ -8,6 +8,7 @@
 
 - P26-6: 파일 host page는 view import map의 네 항목을 `sok://core/` 대상으로 선언하고, 호출, exposure, 선언 UI snapshot을 `@soksak/plugin-api/view`의 view bridge로 보낸다. `scripts/check-manifest.mjs`는 import map을 surface page map과 더는 비교하지 않는다. bridge는 잃은 호출을 `plugin.files.host.report`로 보고한다. `test/sdk-models/`가 복사한 view와 snapshot case를 재생한다. Red: import map과 page import 테스트가 page map에서 실패했다. Green: `make test`가 79개 중 79개 통과한다.
 - P26-7: tree의 파일 행은 `files.open` command로 파일을 연다. 이 command는 view bridge로 `core.file.open`을 실행하며, `plugin.json`이 선언한다. 막힘: plugin host가 아직 `core.file.open`을 제공하지 않아, core가 제공하기 전까지 열기는 거부된다. Red: `a file row of the tree carries the open command`가 실패했다. Green: `make test`가 79개 중 79개 통과한다.
+- P26-4: `@soksak/plugin-api`를 가장 새 core release인 `v0.0.20`으로 옮겼다. core release가 선언을 받기 전까지 `make check`는 `plugin.json: unknown field host`로 실패한다.
 
 - P28: host page의 계약 case를 core에서 바이트 단위로 `test/fixtures/contract`에 복사하고(`expose.json`, `declared-ui-snapshot.json`, `view-snapshot-pull.json`) SHA-256으로 고정한다. `test/sdk-models/expose.mjs`가 status 등록과 dispose를 model로 만들고, `test/sdk-models/conformance.test.mjs`가 그것을 쓰는 expose case 5개를 재생한다. 나머지 14개 case는 이유와 함께 적는다. Red: `status.next` 규칙을 `<=`로 바꾸자 `expose.status.get-watch-and-next-in-order#4`가 실패했다. Green: `make test`가 63개 중 63개 통과한다.
 
