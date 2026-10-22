@@ -83,7 +83,7 @@ test("every file of the page closure exists and is in the package", () => {
   }
 });
 
-// The view import map of a page (docs/spec/plugins.md#view-surfaces): four entries, each naming a core target. A page imports
+// The view import map of a page (docs/spec/plugins.md#view-surfaces): five entries, each naming a core target. A page imports
 // no other name, so the page of the files host imports the view bridge and the exposure, and no page API of a surface.
 // The plugin API names are built from parts, so this file does not contain the SDK name.
 const PLUGIN_API = "@soksak/" + "plugin-api";
@@ -91,10 +91,11 @@ const VIEW_IMPORTS = {
   "soksak": "sok://core/modules/soksak/dist/index.js",
   [PLUGIN_API]: `sok://core/modules/${PLUGIN_API}/index.js`,
   [`${PLUGIN_API}/view`]: `sok://core/modules/${PLUGIN_API}/view.js`,
+  [`${PLUGIN_API}/screen-hash`]: `sok://core/modules/${PLUGIN_API}/screen-hash.js`,
   "@soksak/shared/": "sok://core/shared/",
 };
 
-test("the host page declares the view import map of four entries", () => {
+test("the host page declares the view import map of five entries", () => {
   assert.deepEqual(importMapOf(readText(HOST_PAGE)), VIEW_IMPORTS);
 });
 

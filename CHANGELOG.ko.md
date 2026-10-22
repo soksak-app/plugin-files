@@ -4,6 +4,7 @@
 
 ## 미배포
 
+- P32: files host 페이지 map이 core view import map의 screen-hash 항목을 가진다. `checkViewPage`가 이 항목을 요구한다. 시험의 map 복사본은 `VIEW_IMPORTS`의 다섯 항목을 가진다. Red: `test/pack-closure.test.mjs`가 host 페이지 map에 screen-hash 항목이 없어 deep-equal 차이로 실패했다. Green: `make test`가 98개 중 98개를 통과하고, `CORE_PLUGIN_API_DIR`로 `make check`가 통과한다.
 - P29: pre-push 훅이 `make push-check`를 실행한다. 이것은 ci workflow와 같이 `make test`, `make check`, push 범위의 commit message 검사를 실행한다. Red: `.githooks/pre-push`가 없었고 `git push --dry-run`은 검사를 실행하지 않았다. Green: 훅이 검사를 실행한다. `make test`는 98개 중 98개를 통과하고, `make check`는 고정 SDK에서 실패하며 이것은 P30이 기록한다.
 - F238-c-23-1: `CORE_PLUGIN_API_DIR`가 설정되면 `make check`는 그 폴더에서 SDK를 읽는다. `scripts/check-manifest.mjs`는 그 폴더의 `validateManifest`를 불러오고, exposure, engines, events, records 도구도 그 폴더에서 실행한다. `test/check-manifest.test.mjs`는 fixture API의 거부 메시지가 검사를 실패시키는지 확인한다. `ui/host-runtime.js`의 status와 command 등록은 literal 이름을 쓰며, `test/exposure-registration.test.mjs`가 선언된 모든 이름을 검사한다. Red: manifest test는 변수를 무시하는 검사 때문에 실패했고, registration test는 literal 등록이 없는 선언 이름으로 실패했다. Green: `make test`가 98개 중 98개를 통과하며, `make check`는 core origin/main 추출본에 대해 통과한다.
 - P26-9: plugin.json의 `files.open` params가 더 이상 `required`를 선언하지 않는다. core schema subset이 이를 받지 않아 두 host가 설치된 plugin을 `unknown field required`로 거부했었다. `test/exposes-schema.test.mjs`가 plugin.json의 모든 exposes schema와 항목을 subset과 대조한다. handler는 문자열 `path`가 없는 호출을 거부하며, test가 이를 포괄한다. Red: subset test가 `files.open params: keyword required is outside the schema subset`로 실패했다. Green: `make test`가 95개 중 95개 통과한다.
