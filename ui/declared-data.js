@@ -152,7 +152,15 @@ export function treeValue({ root, entries = [], selected = null, openCommand, de
 }
 
 /** Build the plugin-authored declared UI list for project bookmarks. */
-export function bookmarkValue(paths, root = "/project") {
+export function bookmarkValue(paths, root = "/project", readFailed = false) {
+  if (typeof readFailed !== "boolean") throw new TypeError("readFailed must be a boolean");
+  // A list that could not be read is not an empty list: a notice says so, and the list has no empty text of its own.
+  if (readFailed) {
+    return { elements: [
+      { kind: "status-line", key: "bookmarks-error", text: "북마크를 읽지 못했습니다." },
+      { kind: "list", key: "bookmarks", empty: "", items: [] },
+    ] };
+  }
   if (!Array.isArray(paths)) throw new TypeError("bookmarkValue requires an array of paths");
   const seenPaths = new Set();
   const seenKeys = new Set();

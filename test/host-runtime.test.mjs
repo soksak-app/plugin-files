@@ -8,7 +8,12 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   const emitted = [];
   const data = {
     store: stored,
-    async get(key) { calls.push({ kind: "data.get", key }); return structuredClone(this.store[key] ?? []); },
+    failGet: null,
+    async get(key) {
+      calls.push({ kind: "data.get", key });
+      if (this.failGet !== null) throw new Error(this.failGet);
+      return structuredClone(this.store[key] ?? []);
+    },
     async set(key, value) { calls.push({ kind: "data.set", key, value: structuredClone(value) }); this.store[key] = structuredClone(value); return null; },
   };
   const statuses = new Map();
@@ -185,5 +190,23 @@ test("a command is recorded with its result, and a failure to open a file is rec
   await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
   assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.open.failed"), [{ level: "warn", name: "plugin.files.open.failed", fields: { error: "no plugin opens a.txt" } }]);
   await assert.rejects(f.commands.get("files.open.failed")({ error: "" }), /requires error, a non-empty string/);
+  host.dispose();
+});
+
+test("a bookmark list that cannot be read shows a notice beside an empty list, and a change does not overwrite the stored list", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])], stored: { bookmarks: ["src"] } });
+  f.data.failGet = "data read failed";
+  const host = await mountFilesHost(f);
+  const value = f.statuses.get("files.bookmarks").read();
+  assert.deepEqual(value.elements.map((element) => [element.kind, element.key]), [["status-line", "bookmarks-error"], ["list", "bookmarks"]]);
+  assert.equal(value.elements[0].text, "북마크를 읽지 못했습니다.");
+  assert.equal(value.elements[1].empty, "", "an unreadable list must not read as an empty list");
+  await assert.rejects(f.commands.get("files.bookmarks.add")({ path: "a.txt" }), /data read failed/);
+  assert.deepEqual(f.data.store.bookmarks, ["src"], "the stored list was changed while it could not be read");
+  f.data.failGet = null;
+  await f.commands.get("files.bookmarks.add")({ path: "a.txt" });
+  assert.deepEqual(f.data.store.bookmarks, ["src", "a.txt"]);
+  const recovered = f.statuses.get("files.bookmarks").read();
+  assert.equal(recovered.elements.some((element) => element.kind === "status-line"), false);
   host.dispose();
 });

@@ -3,20 +3,12 @@
 // and commands; each one goes through the bridge (docs/spec/plugin-host.md).
 import { createEmitter } from "./events.js";
 
-const LEVELS = ["error", "warn", "info", "debug", "trace"];
-
 /**
- * Creates the emitter of the plugin events of the host page: each record is one runtime.log call, which the main page stores as
- * plugin.files.<event>. A refused record reaches the error route of the page.
+ * Creates the emitter of the plugin events of the host page through the log of the bridge (runtime.log): each record is stored as
+ * plugin.files.<event>, as the views store theirs. A refused record reaches the error route of the page (the bridge's log).
  */
 export function createHostEmitter(bridge) {
-  const log = {};
-  for (const level of LEVELS) {
-    log[level] = (event, fields) => bridge.calls.request("runtime.log", { level, event, fields }).then(() => undefined, (error) => {
-      bridge.runtime.error("files log", String(error?.message ?? error));
-    });
-  }
-  return createEmitter({ log }, "files");
+  return createEmitter(bridge.runtime, "files");
 }
 
 export async function startFilesHost({ bridge, expose, start, mount } = {}) {

@@ -15,6 +15,7 @@ function fakeBridge() {
       },
     },
     runtime: {
+      log: Object.fromEntries(["error", "warn", "info", "debug", "trace"].map((level) => [level, (event, fields) => { calls.push({ kind: "log", level, event, fields }); }])),
       sidecar: (name) => ({ name }),
       error: async (where, text) => { calls.push({ kind: "error", where, text }); },
       command: async (name, params) => { calls.push({ kind: "core", name, params }); },
@@ -96,6 +97,7 @@ test("the page reads and writes the bookmarks through the project data calls, an
   assert.deepEqual(calls.filter((call) => call.kind === "request"), [
     { kind: "request", command: "runtime.data.get", params: { key: "bookmarks" } },
     { kind: "request", command: "runtime.data.set", params: { key: "bookmarks", value: ["b.txt"] } },
-    { kind: "request", command: "runtime.log", params: { level: "warn", event: "open.failed", fields: { error: "no plugin opens a.txt" } } },
   ]);
+  // The records go through the log of the bridge, which stores them as plugin.files.<event>, as the views do.
+  assert.deepEqual(calls.filter((call) => call.kind === "log"), [{ kind: "log", level: "warn", event: "open.failed", fields: { error: "no plugin opens a.txt" } }]);
 });

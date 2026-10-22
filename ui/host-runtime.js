@@ -44,9 +44,11 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   let nextRequest = 0;
   let generation = null;
   let bookmarks = [];
+  // Set while the stored bookmarks cannot be read; a change waits until a read succeeds, so no stored list is overwritten.
+  let bookmarksFailed = false;
   const session = hasProject ? "plugin:files:" + project.id + ":" + SIDECAR : null;
   const read = () => value;
-  const readBookmarks = () => bookmarkValue(bookmarks, hasProject ? project.root : null);
+  const readBookmarks = () => bookmarkValue(bookmarks, hasProject ? project.root : null, bookmarksFailed);
   const notify = (next) => {
     value = next;
     for (const fn of listeners) fn(value);
@@ -161,9 +163,30 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (typeof path !== "string" || path === "") throw new Error("files.open requires a path");
     return page.open(path);
   };
+  // Reads the stored bookmarks again. A failed read shows the notice, and the change that asked for the read is refused.
+  const loadBookmarks = async () => {
+    try {
+      const stored = await page.data.get(BOOKMARKS_KEY);
+      if (!Array.isArray(stored) || stored.some((item) => typeof item !== "string")) {
+        throw new Error("the stored bookmarks are not a list of paths");
+      }
+      bookmarks = stored;
+      bookmarksFailed = false;
+    } catch (error) {
+      bookmarksFailed = true;
+      notifyBookmarks();
+      throw error;
+    }
+  };
+  const refreshBookmarks = async () => {
+    await loadBookmarks();
+    notifyBookmarks();
+  };
   const addBookmark = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.bookmarks.add requires a path");
-    if (!hasProject || bookmarks.includes(path)) return null;
+    if (!hasProject) return null;
+    await refreshBookmarks();
+    if (bookmarks.includes(path)) return null;
     const next = [...bookmarks, path];
     await page.data.set(BOOKMARKS_KEY, next);
     bookmarks = next;
@@ -173,6 +196,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   const removeBookmark = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.bookmarks.remove requires a path");
     if (!hasProject) return null;
+    await refreshBookmarks();
     if (!bookmarks.includes(path)) throw new Error(`${path} is not bookmarked`);
     const next = bookmarks.filter((item) => item !== path);
     await page.data.set(BOOKMARKS_KEY, next);
@@ -201,12 +225,8 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
 
   if (hasProject) {
     try {
-      bookmarks = await page.data.get(BOOKMARKS_KEY);
-      if (!Array.isArray(bookmarks) || bookmarks.some((item) => typeof item !== "string")) {
-        throw new Error("the stored bookmarks are not a list of paths");
-      }
+      await loadBookmarks();
     } catch (error) {
-      bookmarks = [];
       await reportError(error, "files bookmarks");
     }
   }

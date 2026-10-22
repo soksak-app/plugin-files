@@ -165,3 +165,14 @@ test("bookmarkValue keeps the longest prefix whose serialized value fits 1048576
   longer.elements.at(-1).text = `${1000 - shown - 1}개 북마크를 표시하지 않았습니다.`;
   assert.ok(jsonBytes(longer) > MAX_VALUE_BYTES, `one more item has ${jsonBytes(longer)} bytes`);
 });
+
+test("bookmarkValue of a list that cannot be read is a notice beside an empty list with no empty text", () => {
+  const value = bookmarkValue(["a.txt"], "/project", true);
+  assert.deepEqual(value, {
+    elements: [
+      { kind: "status-line", key: "bookmarks-error", text: "북마크를 읽지 못했습니다." },
+      { kind: "list", key: "bookmarks", empty: "", items: [] },
+    ],
+  });
+  assert.throws(() => bookmarkValue([], "/project", "yes"), /readFailed must be a boolean/);
+});

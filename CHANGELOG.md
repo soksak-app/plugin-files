@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Correction: the host page records through the log of the view bridge, as the views do. A bookmark list that cannot be read shows a notice beside an empty list (`bookmarkValue` with `readFailed`), and a change waits for a successful read so no stored list is overwritten. Red: the bridge-log and notice tests failed on the unchanged code; Green: `make test` passes.
 - F238-d-15-1: the host page serves `files.bookmarks` from the project data and the commands `files.bookmarks.add`, `files.bookmarks.remove` and `files.open.failed`; the state module (`ui/state.js`) is removed with its `plugin.json` entry. Each command and each tree request, change line and sidecar failure is an event through the call `runtime.log`: `plugin.files.tree.request`, `plugin.files.tree.changed` and `plugin.files.tree.failed` are declared in `events.json`. The file open of a file row uses the call `runtime.command` of core (P26-7), whose window check is pending. Red: the bookmark, adapter and no-state tests failed on the unchanged code, and the tree event test failed with no records; Green: `make test` passes 76 of 76.
 
 - P26-5: `ui/host.html` maps each SDK entry of the page import map to a `sok://core/` target, so the installed page no longer requests `sok://files/modules/...`. `test/pack-closure.test.mjs` checks the import map and the packed file list of the files the page imports. Red: `soksak maps to /modules/soksak/dist/index.js`. Green: `make test` passes 66 of 66.
