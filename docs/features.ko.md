@@ -2,6 +2,7 @@
 
 [English](features.md)
 
+- [o] F238-b-10-2 — P1, core F238-b-10-1의 후속 항목: test 명령 `node --test test/`는 이미 `test/sdk-models/`의 test 파일을 실행한다(디렉터리 형식은 하위 디렉터리를 실행하며, 두 형식 모두 78개). `test/test-script.test.mjs`는 `test/` 아래의 모든 test 파일이 명령에 선택되는지 고정하며, 현재 명령에서 통과하므로 명령은 바꾸지 않았다. `make test`는 79개 중 79개를 실행한다(이전 78개; 검사가 추가되었다).
 - [o] P1 — P1: 이 plugin을 자기 repository로 test하고 pack한다. 2026-10-02에 soksak core repository(그곳의 checklist 항목 R1-5-3)에서 옮겼으며, 이전 변경 이력은 core에 있다. `make test`와 `make pack`이 통과한다.
 - [o] P2 — P1: soksak core 0.0.2용 version 0.0.2를 release한다. 2026-10-02 완료: `package.json`이 0.0.2와 `engines.soksak` `^0.0.2`를 선언하고, test는 core tag `v0.0.2`의 `@soksak/plugin-api`를 쓴다. macOS arm64에서 `make test`가 통과한다.
 - [o] P3 — P1: 페이지와 섹션의 공개 이름을 검사한다. 2026-10-02 core checklist 항목 R1-5-5를 위해 완료: `make test`가 core tag `v0.0.2`의 `@soksak/plugin-api`의 `soksak-exposure`를 실행해 `ui/`의 모든 이름을 `plugin.json`과 core 선언에 대해 비교하며, macOS arm64에서 통과한다.

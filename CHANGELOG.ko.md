@@ -4,6 +4,7 @@
 
 ## 미배포
 
+- F238-b-10-2: `test/test-script.test.mjs`는 test 명령이 `test/sdk-models/`를 포함해 `test/` 아래의 모든 test 파일을 선택함을 고정한다. 명령은 이미 올바랐다. `make test`는 79개 중 79개를 실행한다(이전 78개).
 - 정정: host 페이지는 view와 같이 view bridge의 log로 기록한다. 읽지 못한 bookmark 목록은 빈 목록 옆에 알림을 보이고(`readFailed`의 `bookmarkValue`), 변경은 읽기가 성공할 때까지 기다려 저장된 목록을 덮어쓰지 않는다. Red: bridge log와 알림 test가 변경 전 code에서 실패했다. Green: `make test`가 통과한다.
 - F238-d-15-1: host 페이지가 프로젝트 데이터에서 `files.bookmarks`를, command `files.bookmarks.add`, `files.bookmarks.remove`, `files.open.failed`를 제공한다. 상태 모듈(`ui/state.js`)은 그 `plugin.json` 항목과 함께 제거되었다. 각 command와 각 tree 요청, 변경 줄, 사이드카 실패는 `runtime.log` 호출로 event가 된다. `plugin.files.tree.request`, `plugin.files.tree.changed`, `plugin.files.tree.failed`는 `events.json`이 선언한다. 파일 행의 파일 열기는 core의 `runtime.command` 호출을 쓰며(P26-7), 그 window 검사는 대기 중이다. Red: bookmark, adapter, 상태 모듈 없음 test가 변경 전 code에서 실패했고, tree event test는 기록이 없어 실패했다. Green: `make test`가 76개 중 76개 통과한다.
 
