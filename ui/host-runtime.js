@@ -12,6 +12,7 @@ const TREE_OPTIONS = {
   declaredCommands: ["files.refresh", "files.tree.toggle", "files.select", "files.open"],
 };
 
+// The text of a thrown value: the message of an Error, and the value itself for any other thrown value.
 const errorText = (error) => error instanceof Error ? error.message : String(error);
 /** The time since a monotonic start, in microseconds, as a non-negative integer. */
 const micros = (started) => Math.round((performance.now() - started) * 1000);
@@ -34,8 +35,12 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     throw new TypeError("files host requires exposure status and command registration");
   }
   const emitEvent = page.emit;
-  const hasProject = project !== null && typeof project === "object" &&
-    typeof project.id === "string" && project.id !== "" && typeof project.root === "string" && project.root !== "";
+  // The start value of the page is the project {id, root} or null for a page without a project; another value is refused.
+  const hasProject = project !== null;
+  if (hasProject && !(typeof project === "object" && typeof project.id === "string" && project.id !== "" &&
+      typeof project.root === "string" && project.root !== "")) {
+    throw new TypeError("files host requires project to be null or an object with id and root");
+  }
   let value = treeValue({ root: hasProject ? project.root : null, entries: [], ...TREE_OPTIONS });
   const listeners = new Set();
   const bookmarkListeners = new Set();
@@ -60,8 +65,14 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   const reportError = async (error, where = "files tree") => {
     try {
       await page.report({ level: "error", where, text: errorText(error) });
-    } catch (reportError) {
-      console.error("files host could not report an error: " + errorText(reportError));
+    } catch (reportFailure) {
+      // The refused report is written to the console and reported through the log route of the page.
+      console.error("files host could not report an error: " + errorText(reportFailure));
+      try {
+        await page.report({ level: "error", where: "log", text: errorText(reportFailure) });
+      } catch (logFailure) {
+        console.error("files host could not report a refused error: " + errorText(logFailure));
+      }
     }
   };
   const publishTree = (tree) => {
@@ -82,9 +93,13 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
         name: entry.name,
         directory: entry.directory,
         depth: entry.depth,
-        selected: entry.selected === true,
+        selected: entry.selected,
       };
-      if (entry.directory) row.expanded = entry.expanded === true;
+      if (typeof entry.selected !== "boolean") throw new Error("files sidecar returned an invalid tree row");
+      if (entry.directory) {
+        if (typeof entry.expanded !== "boolean") throw new Error("files sidecar returned an invalid tree row");
+        row.expanded = entry.expanded;
+      }
       if (entry.detail !== undefined) row.detail = entry.detail;
       return row;
     });
@@ -97,14 +112,21 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     }
   };
   const onMessage = (body) => {
-    if (stopped || !body || typeof body !== "object") return;
+    if (stopped) return;
+    if (!body || typeof body !== "object") {
+      reportError(new Error("files sidecar message must be an object"));
+      return;
+    }
     if (Object.hasOwn(body, "changed")) {
       emitEvent("debug", "plugin.files.tree.changed", { path: String(body.changed) });
       request("snapshot").catch(reportError);
       return;
     }
     const call = pending.get(body.id);
-    if (!call) return;
+    if (!call) {
+      reportError(new Error(`files sidecar replied to unknown request ${body.id}`));
+      return;
+    }
     pending.delete(body.id);
     if (typeof body.error === "string") {
       call.reject(new Error(body.error));
@@ -218,7 +240,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       return result;
     } catch (failure) {
       if (where !== undefined) await reportError(failure, where);
-      emitEvent("warn", "plugin.files.command", { name, ok: false, micros: micros(started), error: `-32000: ${failure.message}` });
+      emitEvent("warn", "plugin.files.command", { name, ok: false, micros: micros(started), error: `-32000: ${errorText(failure)}` });
       throw failure;
     }
   };

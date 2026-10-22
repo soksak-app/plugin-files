@@ -16,6 +16,7 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     },
     async set(key, value) { calls.push({ kind: "data.set", key, value: structuredClone(value) }); this.store[key] = structuredClone(value); return null; },
   };
+  const failures = { send: null, report: [] };
   const statuses = new Map();
   const commands = new Map();
   const errors = [];
@@ -28,6 +29,7 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     async onFailure(session, fn) { calls.push({ kind: "onFailure", session }); failure = fn; },
     async send(session, body, cids) {
       calls.push({ kind: "send", session, body, cids });
+      if (failures.send !== null) throw failures.send;
       const tree = treeSnapshots[index++];
       queueMicrotask(() => message({ id: body.id, ...(tree instanceof Error ? { error: tree.message } : { tree }) }));
     },
@@ -35,7 +37,10 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   const page = {
     project,
     sidecar(name) { calls.push({ kind: "sidecar", name }); return sidecar; },
-    async report(record) { errors.push(record); },
+    async report(record) {
+      if (failures.report.length > 0) throw failures.report.shift();
+      errors.push(record);
+    },
     async open(path) { opened.push(path); },
     data,
     emit(level, name, fields) { emitted.push({ level, name, fields }); },
@@ -44,7 +49,7 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     async status(name, read, subscribe) { statuses.set(name, { read, subscribe }); },
     async command(name, run) { commands.set(name, run); },
   };
-  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, message: () => message, failure: () => failure };
+  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, failures, message: () => message, failure: () => failure };
 }
 
 const snapshot = (entries, selected = null, generation = 1) => ({ generation, entries, selected });
@@ -208,5 +213,70 @@ test("a bookmark list that cannot be read shows a notice beside an empty list, a
   assert.deepEqual(f.data.store.bookmarks, ["src", "a.txt"]);
   const recovered = f.statuses.get("files.bookmarks").read();
   assert.equal(recovered.elements.some((element) => element.kind === "status-line"), false);
+  host.dispose();
+});
+
+test("a sidecar message that is not an object is reported, not dropped", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  f.message()("not an object");
+  assert.equal(f.errors.at(-1).level, "error");
+  assert.match(f.errors.at(-1).text, /sidecar message must be an object/);
+  host.dispose();
+});
+
+test("a sidecar reply with an unknown request id is reported, not dropped", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  f.message()({ id: "files-999", tree: snapshot([]) });
+  assert.match(f.errors.at(-1).text, /sidecar replied to unknown request files-999/);
+  host.dispose();
+});
+
+test("a row whose selected or expanded member is not a boolean is refused, not read as false", async () => {
+  const selected = fakeHost({ treeSnapshots: [snapshot([
+    { path: "a.txt", name: "a.txt", directory: false, depth: 0, selected: "yes" },
+  ])] });
+  const hostA = await mountFilesHost(selected);
+  assert.match(selected.errors[0].text, /invalid tree row/);
+  hostA.dispose();
+  const expanded = fakeHost({ treeSnapshots: [snapshot([
+    { path: "src", name: "src", directory: true, depth: 0, expanded: "no", selected: false },
+  ])] });
+  const hostB = await mountFilesHost(expanded);
+  assert.match(expanded.errors[0].text, /invalid tree row/);
+  hostB.dispose();
+});
+
+test("a project object without a valid id or root is refused with an error, not treated as no project", async () => {
+  await assert.rejects(mountFilesHost(fakeHost({ project: { root: "/work/project" }, treeSnapshots: [] })), /project to be null or an object with id and root/);
+  await assert.rejects(mountFilesHost(fakeHost({ project: { id: "project-a" }, treeSnapshots: [] })), /project to be null or an object with id and root/);
+});
+
+test("a command failure that is not an Error keeps its text in the event and the error report", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  f.failures.send = "pipe closed";
+  await assert.rejects(f.commands.get("files.refresh")(), (failure) => failure === "pipe closed");
+  assert.equal(f.emitted.find((record) => record.name === "plugin.files.command" && record.level === "warn").fields.error, "-32000: pipe closed");
+  assert.equal(f.errors.at(-1).text, "pipe closed");
+  host.dispose();
+});
+
+test("a refused error report is written to the console and reported through the log route of the page", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  const logged = [];
+  const consoleError = console.error;
+  console.error = (line) => logged.push(line);
+  try {
+    f.failures.report.push("error route refused");
+    f.failures.send = "pipe closed";
+    await assert.rejects(f.commands.get("files.refresh")(), (failure) => failure === "pipe closed");
+  } finally {
+    console.error = consoleError;
+  }
+  assert.deepEqual(f.errors.map((record) => [record.where, record.text]), [["log", "error route refused"]]);
+  assert.match(logged[0], /files host could not report an error: error route refused/);
   host.dispose();
 });
