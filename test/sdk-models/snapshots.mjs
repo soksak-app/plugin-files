@@ -1,4 +1,4 @@
-// A consumer-side model of createSnapshotSender of @soksak/plugin-api, for the sender cases of
+// A consumer-side model of createSnapshotSender of the plugin API, for the sender cases of
 // test/fixtures/contract/declared-ui-snapshot.json. The model holds one snapshot in transit per status and one dirty value,
 // as the published sender does. The receiver case of the fixture is not modeled, because the page receives no snapshot.
 export const SNAPSHOT_EVENT = "declared-ui.snapshot";

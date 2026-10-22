@@ -1,4 +1,4 @@
-// A consumer-side model of createExpose of @soksak/plugin-api, for the replay of test/fixtures/contract/expose.json.
+// A consumer-side model of createExpose of the plugin API, for the replay of test/fixtures/contract/expose.json.
 // It covers the status registration and its request methods (status.get, status.watch, status.next, status.unwatch)
 // and the dispose, which the plugin host page calls. The conformance test lists the cases of the fixture that the
 // model does not cover.
@@ -7,7 +7,7 @@ const CODE_METHOD_NOT_FOUND = -32601;
 
 /**
  * Creates the model over a port: register(kind, name), unregister() (optional), onRequest(answer) and reply(id, payload).
- * load() returns the declarations, as createExpose of @soksak/plugin-api does.
+ * load() returns the declarations, as createExpose of the plugin API does.
  */
 export function createExpose(port, load) {
   const statuses = new Map();

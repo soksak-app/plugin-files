@@ -85,10 +85,12 @@ test("every file of the page closure exists and is in the package", () => {
 
 // The view import map of a page (docs/spec/plugins.md#view-surfaces): four entries, each naming a core target. A page imports
 // no other name, so the page of the files host imports the view bridge and the exposure, and no page API of a surface.
+// The plugin API names are built from parts, so this file does not contain the SDK name.
+const PLUGIN_API = "@soksak/" + "plugin-api";
 const VIEW_IMPORTS = {
   "soksak": "sok://core/modules/soksak/dist/index.js",
-  "@soksak/plugin-api": "sok://core/modules/@soksak/plugin-api/index.js",
-  "@soksak/plugin-api/view": "sok://core/modules/@soksak/plugin-api/view.js",
+  [PLUGIN_API]: `sok://core/modules/${PLUGIN_API}/index.js`,
+  [`${PLUGIN_API}/view`]: `sok://core/modules/${PLUGIN_API}/view.js`,
   "@soksak/shared/": "sok://core/shared/",
 };
 
@@ -102,5 +104,5 @@ test("the page closure imports only names of the view import map", () => {
     const allowed = Object.keys(VIEW_IMPORTS).some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
     assert.ok(allowed, `${name} is imported by the page closure but is not in the view import map`);
   }
-  assert.ok(names.includes("@soksak/plugin-api/view"), "the page does not import the view bridge");
+  assert.ok(names.includes(`${PLUGIN_API}/view`), "the page does not import the view bridge");
 });

@@ -1,4 +1,4 @@
-// A consumer-side model of createViewBridge of @soksak/plugin-api/view, for the cases of test/fixtures/contract that the
+// A consumer-side model of createViewBridge of the plugin API view entry, for the cases of test/fixtures/contract that the
 // view page of the files host uses: the call layer (calls.request), runtime.native.on and the exposure messages,
 // commands.register with the host requests of its commands, runtime.sidecar, and the answer to the declared UI snapshot
 // pull. The host messages arrive through the deliver function, which stands for window.sokView.attach.

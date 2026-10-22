@@ -21,3 +21,23 @@ test("no test file imports a plugin API or any other @soksak/ name", () => {
     assert.doesNotMatch(readFileSync(file, "utf8"), IMPORT_OF_SDK, path.relative(testRoot, file));
   }
 });
+
+// The SDK needle is built from parts, so this file does not contain it. The guard reports each line of test/ that contains it.
+const SDK_NEEDLE = "@soksak/" + "plugin-api";
+
+function everyFile(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const file = path.join(directory, entry.name);
+    return entry.isDirectory() ? everyFile(file) : [file];
+  });
+}
+
+test("no line of test/ contains the SDK needle", () => {
+  const found = [];
+  for (const file of everyFile(testRoot)) {
+    readFileSync(file, "utf8").split("\n").forEach((line, index) => {
+      if (line.includes(SDK_NEEDLE)) found.push(`${path.relative(testRoot, file)}:${index + 1}`);
+    });
+  }
+  assert.deepEqual(found, []);
+});
