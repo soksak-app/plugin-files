@@ -13,7 +13,7 @@ function fakeRuntime() {
 }
 
 test("the emitter stores the event without the plugin prefix at the level it names", async () => {
-  const { createEmitter } = await import("../build/test/ui/events.js");
+  const { createEmitter } = await import("../ui/events.js");
   const { runtime, stored } = fakeRuntime();
   const emitEvent = createEmitter(runtime, "files");
   emitEvent("warn", "plugin.files.watch.failed", { error: "gone" });
@@ -21,7 +21,7 @@ test("the emitter stores the event without the plugin prefix at the level it nam
 });
 
 test("the emitter refuses a name of another plugin and a level that the log does not have", async () => {
-  const { createEmitter } = await import("../build/test/ui/events.js");
+  const { createEmitter } = await import("../ui/events.js");
   const { runtime, stored } = fakeRuntime();
   const emitEvent = createEmitter(runtime, "files");
   assert.throws(() => emitEvent("info", "plugin.editor.open", {}), /plugin\.files\./);

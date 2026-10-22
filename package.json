@@ -16,16 +16,13 @@
   "files": [
     "events.json",
     "plugin.json",
-    "ui"
+    "ui",
+    "ui/host.html"
   ],
   "scripts": {
-    "build": "node scripts/build-vendor.mjs",
-    "test": "node scripts/build-vendor.mjs --check && node scripts/build-test.mjs && node --test test/"
+    "test": "node --test test/"
   },
   "devDependencies": {
-    "@pierre/trees": "1.0.0-beta.4",
-    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.11&path:/packages/plugin-api",
-    "esbuild": "0.28.2",
-    "jsdom": "^30.1.1"
+    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.11&path:/packages/plugin-api"
   }
 }

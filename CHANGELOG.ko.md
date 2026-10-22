@@ -4,6 +4,8 @@
 
 ## 미배포
 
+- P26-1: `plugin.json`이 plugin host page `ui/host.html`을 선언하고, 두 사이드바 section은 `status`를 선언한다. `package.json`의 `files`는 `ui/host.html`을 나열한다. section module(`ui/sections/`), 묶음 tree 라이브러리(`ui/vendor/`, `vendor/trees.js`), 묶음 script, plugin API 가짜를 쓰는 test 빌드, `@pierre/trees`, `esbuild`, `jsdom` 의존성을 제거한다. 선언하거나 import하는 곳이 없기 때문이다. `make test`는 SDK 없이 58개 test를 실행한다. `make check`는 `host`를 거부하는 고정 plugin API에서 여전히 실패하며(P26-4), Red: `test/manifest-shape.test.mjs`가 `ui/sections still exists`와 `ui/vendor still exists`로 실패했다. Green: `make test`가 58개 중 58개 통과한다.
+
 - F238-c-23: `make test`는 SDK 도구와 SDK import 없이 이 plugin의 테스트만 실행하고, 새 `make check`는 고정된 `@soksak/plugin-api`로 SDK 검사(manifest, exposure, engines, events, records)를 실행한다. `pack`은 `check`에 의존하며 CI는 둘을 모두 실행한다. section 모듈은 `build/test/ui`로 테스트하며, 이는 `ui/`의 복사본으로 plugin API import가 consumer 쪽 fake를 가리킨다. Red: `test/check-target.test.mjs`가 `test runs soksak-exposure`로, `test/sdk-boundary.test.mjs`가 `manifest.test.mjs`로 실패했다. Green: 각각 3/3, 1/1, `make test` 72/72, `make check` 통과.
 
 - F238-d-17-1: DOM-free 테스트가 `ui/declared-data.js`와 `ui/host-runtime.js`를 읽고, 두 파일 중 어느 쪽에서든 `document`, `window`, `innerHTML`, `createElement`, `querySelector`, `appendChild`가 나오면 실패한다. Red: `ui/host-runtime.js`에 `document.createElement("div");`를 덧붙이자 `DOM APIs found: document, createElement`로 실패했고, 파일을 복원한 뒤 테스트가 3/3을 통과한다.

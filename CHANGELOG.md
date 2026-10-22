@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- P26-1: `plugin.json` declares the plugin host page `ui/host.html` and the two sidebar sections declare `status`; `package.json` lists `ui/host.html` in `files`. The section modules (`ui/sections/`), the bundled tree library (`ui/vendor/`, `vendor/trees.js`), the bundle script, the test build with its plugin API fake, and the `@pierre/trees`, `esbuild` and `jsdom` dependencies are removed, because nothing declares or imports them. `make test` runs 58 tests with no SDK; `make check` still fails on the pinned plugin API, which rejects `host` (P26-4). Red: `test/manifest-shape.test.mjs` failed with `ui/sections still exists` and `ui/vendor still exists`; Green: `make test` passes 58 of 58.
+
 - F238-c-23: `make test` runs only this plugin's tests with no SDK tool and no SDK import, and the new `make check` runs the SDK checks (manifest, exposure, engines, events, records) against the pinned `@soksak/plugin-api`; `pack` depends on `check`, and CI runs both. The section modules are tested through `build/test/ui`, a copy of `ui/` whose plugin API import is a consumer-side fake. Red: `test/check-target.test.mjs` failed with `test runs soksak-exposure`, and `test/sdk-boundary.test.mjs` failed with `manifest.test.mjs`. Green: 3/3 and 1/1, `make test` 72/72, and `make check` passes.
 
 - F238-d-17-1: the DOM-free test reads `ui/declared-data.js` and `ui/host-runtime.js` and fails on `document`, `window`, `innerHTML`, `createElement`, `querySelector` and `appendChild` in either file. Red: with `document.createElement("div");` appended to `ui/host-runtime.js`, the check failed with `DOM APIs found: document, createElement`; the file was restored, and the test passes 3/3.

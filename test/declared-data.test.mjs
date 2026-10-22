@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { treeValue, bookmarkValue } from "../build/test/ui/declared-data.js";
+import { treeValue, bookmarkValue } from "../ui/declared-data.js";
 
 const MAX_VALUE_BYTES = 1048576;
 const jsonBytes = (value) => new TextEncoder().encode(JSON.stringify(value)).byteLength;

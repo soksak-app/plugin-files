@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mountFilesHost } from "../build/test/ui/host-runtime.js";
+import { mountFilesHost } from "../ui/host-runtime.js";
 
 function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/project" } } = {}) {
   const calls = [];

@@ -6,21 +6,18 @@
     {
       "id": "files.tree",
       "name": "파일 트리",
-      "module": {
-        "horizontal": "ui/sections/tree-horizontal.js",
-        "vertical": "ui/sections/tree.js"
-      },
+      "status": "files.tree",
       "fill": true
     },
     {
       "id": "files.bookmarks",
       "name": "북마크",
-      "module": {
-        "horizontal": "ui/sections/bookmarks-horizontal.js",
-        "vertical": "ui/sections/bookmarks.js"
-      }
+      "status": "files.bookmarks"
     }
   ],
+  "host": {
+    "page": "ui/host.html"
+  },
   "state": {
     "module": "ui/state.js"
   },
