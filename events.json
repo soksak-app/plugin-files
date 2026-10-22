@@ -37,6 +37,15 @@
       },
       "description": "The files sidecar reported a failure that no request caused; error is its text."
     },
+    "plugin.files.project": {
+      "layer": "plugin",
+      "class": "call",
+      "level": "debug",
+      "fields": {
+        "shown": "boolean"
+      },
+      "description": "The plugin host received the project message of the window; shown is false when the window shows no project and the tree is reset to no project."
+    },
     "plugin.files.open.failed": {
       "layer": "plugin",
       "class": "call",

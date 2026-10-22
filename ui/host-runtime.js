@@ -14,6 +14,16 @@ const TREE_OPTIONS = {
 const errorText = (error) => error instanceof Error ? error.message : String(error);
 /** The time since a monotonic start, in microseconds, as a non-negative integer. */
 const micros = (started) => Math.round((performance.now() - started) * 1000);
+// The project of the start value or of a project event: null, or an object with a non-empty id and root; another value is refused.
+function parseProject(project) {
+  if (project === null) return null;
+  if (typeof project !== "object" || typeof project.id !== "string" || project.id === "" ||
+      typeof project.root !== "string" || project.root === "") {
+    throw new TypeError("files host requires project to be null or an object with id and root");
+  }
+  return { id: project.id, root: project.root };
+}
+const rootOf = (project) => (project === null ? null : project.root);
 
 /** Register the tree and bookmarks statuses and their commands in the plugin-host page runtime. */
 export async function mountFilesHost({ page, expose, project = page?.project } = {}) {
@@ -29,29 +39,31 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   if (typeof page.emit !== "function") {
     throw new TypeError("files host requires page.emit");
   }
+  if (typeof page.onProject !== "function") {
+    throw new TypeError("files host requires page.onProject");
+  }
   if (!expose || typeof expose.status !== "function" || typeof expose.command !== "function") {
     throw new TypeError("files host requires exposure status and command registration");
   }
   const emitEvent = page.emit;
-  // The start value of the page is the project {id, root} or null for a page without a project; another value is refused.
-  const hasProject = project !== null;
-  if (hasProject && !(typeof project === "object" && typeof project.id === "string" && project.id !== "" &&
-      typeof project.root === "string" && project.root !== "")) {
-    throw new TypeError("files host requires project to be null or an object with id and root");
-  }
-  let value = treeValue({ root: hasProject ? project.root : null, entries: [], ...TREE_OPTIONS });
+  // The project that the plugin host shows: the start value at the mount, then each change of the event project (docs/spec/plugin-host.md).
+  let current = parseProject(project);
+  let value = treeValue({ root: rootOf(current), entries: [], ...TREE_OPTIONS });
   const listeners = new Set();
   const bookmarkListeners = new Set();
   const pending = new Map();
+  // The ids of the requests of a previous project: their replies are dropped when they arrive.
+  const abandoned = new Set();
+  const subscribed = new Set();
   let stopped = false;
   let nextRequest = 0;
   let generation = null;
   let bookmarks = [];
   // Set while the stored bookmarks cannot be read; a change waits until a read succeeds, so no stored list is overwritten.
   let bookmarksFailed = false;
-  const session = hasProject ? "plugin:files:" + project.id + ":" + SIDECAR : null;
+  const sessionOf = (shown) => "plugin:files:" + shown.id + ":" + SIDECAR;
   const read = () => value;
-  const readBookmarks = () => bookmarkValue(bookmarks, hasProject ? project.root : null, bookmarksFailed);
+  const readBookmarks = () => bookmarkValue(bookmarks, rootOf(current), bookmarksFailed);
   const notify = (next) => {
     value = next;
     for (const fn of listeners) fn(value);
@@ -101,12 +113,20 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       if (entry.detail !== undefined) row.detail = entry.detail;
       return row;
     });
-    notify(treeValue({ root: project.root, entries, selected: tree.selected, ...TREE_OPTIONS }));
+    notify(treeValue({ root: rootOf(current), entries, selected: tree.selected, ...TREE_OPTIONS }));
   };
   const rejectPending = (error) => {
     for (const [id, call] of pending) {
       pending.delete(id);
       call.reject(error);
+    }
+  };
+  // A request of a previous project resolves with no tree: its reply belongs to a project that the plugin host no longer shows.
+  const abandonPending = () => {
+    for (const [id, call] of pending) {
+      pending.delete(id);
+      abandoned.add(id);
+      call.resolve(null);
     }
   };
   const onMessage = (body) => {
@@ -120,6 +140,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       request("snapshot").catch(reportError);
       return;
     }
+    if (abandoned.delete(body.id)) return;
     const call = pending.get(body.id);
     if (!call) {
       reportError(new Error(`files sidecar replied to unknown request ${body.id}`));
@@ -137,12 +158,26 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       call.reject(error);
     }
   };
-  const sidecar = hasProject ? page.sidecar(SIDECAR) : null;
+  const sidecar = page.sidecar(SIDECAR);
+  // Subscribes the messages and failures of a session once. A message of a session that the plugin host no longer shows is dropped.
+  const subscribe = async (session) => {
+    if (subscribed.has(session)) return;
+    subscribed.add(session);
+    await Promise.all([sidecar.on(session, (body) => {
+      if (session === sessionOf(current)) onMessage(body);
+    }), sidecar.onFailure(session, (reason) => {
+      if (session !== sessionOf(current)) return;
+      const error = new Error(errorText(reason));
+      emitEvent("warn", "plugin.files.tree.failed", { error: error.message });
+      rejectPending(error);
+      reportError(error);
+    })]);
+  };
   const send = async (operation, params) => {
     const body = { operation, id: "files-" + (++nextRequest), ...params };
     const response = new Promise((resolve, reject) => pending.set(body.id, { resolve, reject }));
     try {
-      await sidecar.send(session, body, []);
+      await sidecar.send(sessionOf(current), body, []);
     } catch (error) {
       pending.delete(body.id);
       throw error;
@@ -151,7 +186,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   /** A tree request, with its result recorded as an event. */
   const request = async (operation, params = {}) => {
-    if (!hasProject) return null;
+    if (current === null) return null;
     if (stopped) throw new Error("files host is disposed");
     const started = performance.now();
     try {
@@ -159,13 +194,15 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       emitEvent("debug", "plugin.files.tree.request", { operation, ok: true, micros: micros(started) });
       return result;
     } catch (error) {
+      // A refusal that follows the end of the project is the reply of a plugin host without a project: the project event comes first.
+      if (current === null) return null;
       emitEvent("warn", "plugin.files.tree.request", { operation, ok: false, micros: micros(started), error: errorText(error) });
       throw error;
     }
   };
   const runSnapshot = () => request("snapshot");
   const toggle = async ({ path } = {}) => {
-    if (!hasProject) return null;
+    if (current === null) return null;
     if (typeof path !== "string") throw new Error("files.tree.toggle requires a path");
     const tree = value.elements.find((element) => element.kind === "tree");
     const flatten = (nodes) => nodes.flatMap((node) => [node, ...(node.children ? flatten(node.children) : [])]);
@@ -175,7 +212,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     return request(operation, { generation, path });
   };
   const select = async ({ path } = {}) => {
-    if (!hasProject) return null;
+    if (current === null) return null;
     if (path === undefined) throw new Error("files.select requires path, a string or null");
     return request("select", { generation, path: path ?? "" });
   };
@@ -184,15 +221,19 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     return page.open(path);
   };
   // Reads the stored bookmarks again. A failed read shows the notice, and the change that asked for the read is refused.
+  // A read of the bookmarks of a project that the plugin host no longer shows changes nothing.
   const loadBookmarks = async () => {
+    const owner = current;
     try {
       const stored = await page.data.get(BOOKMARKS_KEY);
       if (!Array.isArray(stored) || stored.some((item) => typeof item !== "string")) {
         throw new Error("the stored bookmarks are not a list of paths");
       }
+      if (owner !== current) return;
       bookmarks = stored;
       bookmarksFailed = false;
     } catch (error) {
+      if (owner !== current) return;
       bookmarksFailed = true;
       notifyBookmarks();
       throw error;
@@ -204,8 +245,11 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   const addBookmark = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.bookmarks.add requires a path");
-    if (!hasProject) return null;
+    if (current === null) return null;
+    const owner = current;
     await refreshBookmarks();
+    // The list and the write belong to the project of the call: a project change during the read ends the call.
+    if (owner !== current) return null;
     if (bookmarks.includes(path)) return null;
     const next = [...bookmarks, path];
     await page.data.set(BOOKMARKS_KEY, next);
@@ -215,8 +259,10 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   const removeBookmark = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.bookmarks.remove requires a path");
-    if (!hasProject) return null;
+    if (current === null) return null;
+    const owner = current;
     await refreshBookmarks();
+    if (owner !== current) return null;
     if (!bookmarks.includes(path)) throw new Error(`${path} is not bookmarked`);
     const next = bookmarks.filter((item) => item !== path);
     await page.data.set(BOOKMARKS_KEY, next);
@@ -243,7 +289,42 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     }
   };
 
-  if (hasProject) {
+  // A change of the shown project: the tree, the bookmarks and the sidecar session follow it, and its requests of the previous project are dropped.
+  const changeProject = async (data) => {
+    if (stopped) return;
+    const next = parseProject(data);
+    current = next;
+    generation = null;
+    abandonPending();
+    bookmarks = [];
+    bookmarksFailed = false;
+    emitEvent("debug", "plugin.files.project", { shown: next !== null });
+    notify(treeValue({ root: rootOf(next), entries: [], ...TREE_OPTIONS }));
+    notifyBookmarks();
+    if (next === null) return;
+    await subscribe(sessionOf(next));
+    try {
+      await loadBookmarks();
+    } catch (error) {
+      await reportError(error, "files bookmarks");
+    }
+    notifyBookmarks();
+    // The listing of the project runs in the background, so the project message is not held by a slow sidecar reply.
+    runSnapshot().catch(async (error) => {
+      if (current === null) return;
+      notify(treeValue({ root: rootOf(current), entries: [], listingFailed: true, ...TREE_OPTIONS }));
+      await reportError(error);
+    });
+  };
+  const onProjectEvent = async (data) => {
+    try {
+      await changeProject(data);
+    } catch (error) {
+      await reportError(error, "files tree");
+    }
+  };
+  page.onProject(onProjectEvent);
+  if (current !== null) {
     try {
       await loadBookmarks();
     } catch (error) {
@@ -260,18 +341,13 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   await expose.command("files.bookmarks.add", recorded("files.bookmarks.add", addBookmark, "files bookmarks"));
   await expose.command("files.bookmarks.remove", recorded("files.bookmarks.remove", removeBookmark, "files bookmarks"));
   await expose.command("files.open.failed", recorded("files.open.failed", openFailed, undefined));
-  if (hasProject) {
+  if (current !== null) {
     // Subscribe to messages and failures before the first request; the sidecar may answer immediately.
-    await Promise.all([sidecar.on(session, onMessage), sidecar.onFailure(session, (reason) => {
-      const error = new Error(errorText(reason));
-      emitEvent("warn", "plugin.files.tree.failed", { error: error.message });
-      rejectPending(error);
-      reportError(error);
-    })]);
+    await subscribe(sessionOf(current));
     try {
       await runSnapshot();
     } catch (error) {
-      notify(treeValue({ root: project.root, entries: [], listingFailed: true, ...TREE_OPTIONS }));
+      notify(treeValue({ root: rootOf(current), entries: [], listingFailed: true, ...TREE_OPTIONS }));
       await reportError(error);
     }
   }

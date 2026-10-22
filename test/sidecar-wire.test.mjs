@@ -32,6 +32,7 @@ function wireHost(replyFor) {
     async open() {},
     data: { async get() { return []; }, async set() { return null; } },
     emit() {},
+    onProject() {},
   };
   const expose = {
     async status(name, read) { statuses.set(name, read); },

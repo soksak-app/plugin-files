@@ -101,3 +101,15 @@ test("the page reads and writes the bookmarks through the project data calls, an
   // The records go through the log of the bridge, which stores them as plugin.files.<event>, as the views do.
   assert.deepEqual(calls.filter((call) => call.kind === "log"), [{ kind: "log", level: "warn", event: "open.failed", fields: { error: "no plugin opens a.txt" } }]);
 });
+
+test("the page passes the project message to the runtime through runtime.project, not as a native event", async () => {
+  const { bridge, calls } = fakeBridge();
+  const projects = [];
+  bridge.runtime.project = (listener) => { projects.push(listener); return { ready: Promise.resolve(), dispose: Promise.resolve(() => {}) }; };
+  let options;
+  await startFilesHost({ bridge, expose: { status: async () => {} }, start: { project: null }, mount: async (value) => { options = value; } });
+  options.page.onProject((project) => calls.push({ kind: "project", project }));
+  assert.equal(projects.length, 1, "the project message is not subscribed through runtime.project");
+  projects[0]({ id: "project-b", root: "/work/b" });
+  assert.deepEqual(calls.at(-1), { kind: "project", project: { id: "project-b", root: "/work/b" } });
+});

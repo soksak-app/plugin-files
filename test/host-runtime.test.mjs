@@ -24,6 +24,8 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   let message;
   let failure;
   let index = 0;
+  const state = { hold: false, held: [] };
+  const projectListeners = [];
   const sidecar = {
     async on(session, fn) { calls.push({ kind: "on", session }); message = fn; },
     async onFailure(session, fn) { calls.push({ kind: "onFailure", session }); failure = fn; },
@@ -31,7 +33,8 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
       calls.push({ kind: "send", session, body, cids });
       if (failures.send !== null) throw failures.send;
       const tree = treeSnapshots[index++];
-      queueMicrotask(() => message({ id: body.id, ...(tree instanceof Error ? { error: tree.message } : { tree }) }));
+      const reply = () => message({ id: body.id, ...(tree instanceof Error ? { error: tree.message } : { tree }) });
+      if (state.hold) state.held.push(reply); else queueMicrotask(reply);
     },
   };
   const page = {
@@ -44,15 +47,23 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     async open(path) { opened.push(path); },
     data,
     emit(level, name, fields) { emitted.push({ level, name, fields }); },
+    onProject(listener) { projectListeners.push(listener); return () => {}; },
   };
   const expose = {
     async status(name, read, subscribe) { statuses.set(name, { read, subscribe }); },
     async command(name, run) { commands.set(name, run); },
   };
-  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, failures, message: () => message, failure: () => failure };
+  // Delivers a project event to each subscribed listener, as the main page posts the event project to the plugin host.
+  const emitProject = async (value) => {
+    assert.ok(projectListeners.length > 0, "page.onProject is not subscribed");
+    for (const listener of projectListeners) await listener(value);
+  };
+  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, failures, state, emitProject, message: () => message, failure: () => failure };
 }
 
 const snapshot = (entries, selected = null, generation = 1) => ({ generation, entries, selected });
+// Waits until the replies that are already queued have run.
+const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 test("host page subscribes before snapshot and registers the declared tree status and commands", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([
@@ -282,5 +293,76 @@ test("a refused error report is written to the console and reported through the 
   }
   assert.deepEqual(f.errors.map((record) => [record.where, record.text]), [["log", "error route refused"]]);
   assert.match(logged[0], /files host could not report an error: error route refused/);
+  host.dispose();
+});
+
+test("a project event moves the tree and the sidecar session to the project that the window shows now", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }]),
+    snapshot([{ path: "docs", name: "docs", directory: true, depth: 0, expanded: false, selected: false }]),
+  ] });
+  const host = await mountFilesHost(f);
+  await f.emitProject({ id: "project-b", root: "/work/b" });
+  await settle();
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "/work/b");
+  const sends = f.calls.filter(({ kind }) => kind === "send");
+  assert.equal(sends[sends.length - 1].session, "plugin:files:project-b:@soksak/sidecar-files");
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.deepEqual(tree.nodes.map((node) => node.label), ["docs"]);
+  host.dispose();
+});
+
+test("a project event null shows no project and sends nothing to the sidecar", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }])] });
+  const host = await mountFilesHost(f);
+  const sendsBefore = f.calls.filter(({ kind }) => kind === "send").length;
+  await f.emitProject(null);
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "프로젝트 없음");
+  assert.equal(await f.commands.get("files.refresh")(), null);
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, sendsBefore);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("a reply to a request of the previous project is dropped and does not reach the tree of the current project", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }]),
+    snapshot([{ path: "late", name: "late", directory: true, depth: 0, expanded: false, selected: false }]),
+    snapshot([{ path: "docs", name: "docs", directory: true, depth: 0, expanded: false, selected: false }]),
+  ] });
+  const host = await mountFilesHost(f);
+  f.state.hold = true;
+  const refresh = f.commands.get("files.refresh")();
+  await f.emitProject({ id: "project-b", root: "/work/b" });
+  assert.equal(await refresh, null);
+  f.state.hold = false;
+  for (const reply of f.state.held.splice(0)) reply();
+  await settle();
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.deepEqual(tree.nodes.map((node) => node.label), ["docs"], "the listing of the previous project is not shown");
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "/work/b");
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("a sidecar refusal after the window showed no project is the reply of no project, not an error", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }])] });
+  const host = await mountFilesHost(f);
+  f.failures.send = new Error("plugin host files: no project is shown");
+  const refresh = f.commands.get("files.refresh")();
+  await f.emitProject(null);
+  assert.equal(await refresh, null);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("an invalid project event is refused with an error and keeps the project shown before it", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  await f.emitProject({ id: "", root: "/work/b" });
+  assert.equal(f.errors.length, 1);
+  assert.equal(f.errors[0].level, "error");
+  assert.match(f.errors[0].text, /project to be null or an object with id and root/);
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "/work/project");
   host.dispose();
 });

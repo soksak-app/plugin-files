@@ -19,6 +19,8 @@ export function createViewBridge({ handler, report }) {
   const handlers = new Map();
   const calls = new Map();
   let sequence = 0;
+  // The last project message of the host; undefined until the host sends one (runtime.project replays it).
+  let lastProject;
   let acknowledgement = null;
   const post = (message) => handler.postMessage(message);
 
@@ -93,6 +95,11 @@ export function createViewBridge({ handler, report }) {
 
   // The host messages: acknowledgements, events, replies to calls, snapshot pulls and command requests.
   function deliver(message) {
+    if (message.event === "project") {
+      lastProject = message.data;
+      for (const listener of [...(listeners.get("project") ?? [])]) listener(message.data);
+      return;
+    }
     if (message.event === SNAPSHOT_ACK_EVENT) {
       acknowledgement({ event: message.event, ...message.data });
       return;
@@ -141,6 +148,14 @@ export function createViewBridge({ handler, report }) {
         on: (id, listener) => listen(`sidecar.message:${id}`, () => request("runtime.sidecar.on", { id, sidecar: name }), (data) => listener(data.body)),
         onFailure: (id, listener) => listen(`sidecar.failure:${id}`, () => request("runtime.sidecar.onFailure", { id, sidecar: name }), (data) => listener(data.reason)),
       };
+    },
+    // The project of the window, as the host sends it with no call (the theme path).
+    project(listener) {
+      if (typeof listener !== "function") throw new TypeError("runtime.project requires a listener");
+      if (!listeners.has("project")) listeners.set("project", new Set());
+      listeners.get("project").add(listener);
+      if (lastProject !== undefined) listener(lastProject);
+      return { ready: Promise.resolve(), dispose: Promise.resolve(() => listeners.get("project")?.delete(listener)) };
     },
     error: (where, text) => request("runtime.error", { where, text }).then(() => undefined),
     // The command of core or of the plugin host, run with its params (docs/spec/native-surfaces.md#view-surfaces).
