@@ -24,6 +24,14 @@
   "dependencies": {
     "@soksak/sidecar-files": ">=0.0.7"
   },
+  "hostOperations": {
+    "@soksak/sidecar-files": [
+      "snapshot",
+      "expand",
+      "collapse",
+      "select"
+    ]
+  },
   "data": {
     "bookmarks": {
       "schema": {

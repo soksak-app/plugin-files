@@ -60,3 +60,15 @@ test("the state module is published with the manifest and the events catalog", (
 test("the plugin ships no third-party library bundle", () => {
   assert.equal(exists("ui/vendor"), false, "ui/vendor still exists");
 });
+
+// The sidecar declaration of the files sidecar (fixture copy of its sidecar.json): the operations that a plugin host may call.
+const sidecar = JSON.parse(read("test/fixtures/sidecar-files/sidecar.json"));
+const TREE_OPERATIONS = ["snapshot", "expand", "collapse", "select"];
+
+test("plugin.json lets the plugin host call the tree operations of the files sidecar, which the sidecar declares read-only", () => {
+  assert.deepEqual(manifest.hostOperations, { "@soksak/sidecar-files": TREE_OPERATIONS });
+  assert.ok(manifest.dependencies["@soksak/sidecar-files"] !== undefined, "the sidecar is not a dependency");
+  for (const operation of manifest.hostOperations["@soksak/sidecar-files"]) {
+    assert.ok(sidecar.hostReadOperations.includes(operation), `${operation} is not a host read operation of the sidecar`);
+  }
+});

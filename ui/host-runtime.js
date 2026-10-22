@@ -131,10 +131,19 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (typeof path !== "string" || path === "") throw new Error("files.open requires a path");
     return page.open(path);
   };
+  // A failure of a tree command is shown on the tree through the error route and then returned to the caller of the command.
+  const reported = (run) => async (params) => {
+    try {
+      return await run(params);
+    } catch (error) {
+      await reportError(error);
+      throw error;
+    }
+  };
   for (const [name, run] of [
-    ["files.refresh", runSnapshot],
-    ["files.tree.toggle", toggle],
-    ["files.select", select],
+    ["files.refresh", reported(runSnapshot)],
+    ["files.tree.toggle", reported(toggle)],
+    ["files.select", reported(select)],
     ["files.open", open],
   ]) await expose.command(name, run);
   if (hasProject) {

@@ -1,0 +1,36 @@
+{
+  "description": "The wire contract of the files sidecar for the tree operations that the plugin host calls, as the sidecar declares it: each request body the host sends, and each reply line the sidecar answers with. A reply echoes the id of its request; a change line carries no id. The rows are a flat depth-first list of visible rows, and a directory detail is the highest-ranked descendant status (deleted, modified, added, renamed, untracked).",
+  "requests": {
+    "snapshot": { "operation": "snapshot" },
+    "expand": { "operation": "expand", "generation": 1, "path": "src" },
+    "collapse": { "operation": "collapse", "generation": 1, "path": "src" },
+    "select": { "operation": "select", "generation": 1, "path": "src/main.go" }
+  },
+  "replies": {
+    "snapshot": {
+      "tree": {
+        "generation": 1,
+        "entries": [
+          { "path": "src", "name": "src", "directory": true, "depth": 0, "expanded": true, "selected": false, "detail": "deleted" },
+          { "path": "src/main.go", "name": "main.go", "directory": false, "depth": 1, "expanded": false, "selected": false, "detail": "modified" },
+          { "path": "src/old.go", "name": "old.go", "directory": false, "depth": 1, "expanded": false, "selected": false, "detail": "deleted" },
+          { "path": "readme.md", "name": "readme.md", "directory": false, "depth": 0, "expanded": false, "selected": false }
+        ],
+        "selected": null
+      }
+    },
+    "select": {
+      "tree": {
+        "generation": 1,
+        "entries": [
+          { "path": "src", "name": "src", "directory": true, "depth": 0, "expanded": true, "selected": false, "detail": "deleted" },
+          { "path": "src/main.go", "name": "main.go", "directory": false, "depth": 1, "expanded": false, "selected": true, "detail": "modified" }
+        ],
+        "selected": "src/main.go"
+      }
+    },
+    "expandFailed": { "error": "cannot list expanded directory src: permission denied" },
+    "staleGeneration": { "error": "stale tree generation 1; current generation is 2" }
+  },
+  "change": { "changed": "src" }
+}

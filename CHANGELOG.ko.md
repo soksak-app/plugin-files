@@ -7,6 +7,8 @@
 - P26-5: `ui/host.html`의 SDK 항목을 `sok://core/` 대상으로 연결하여, 설치된 page가 더는 `sok://files/modules/...`를 요청하지 않는다. `test/pack-closure.test.mjs`가 import map과 page가 import하는 파일의 포장 목록을 검사한다. Red: `soksak maps to /modules/soksak/dist/index.js`. Green: `make test`가 66개 중 66개 통과한다.
 
 - P26-6: 파일 host page는 view import map의 네 항목을 `sok://core/` 대상으로 선언하고, 호출, exposure, 선언 UI snapshot을 `@soksak/plugin-api/view`의 view bridge로 보낸다. `scripts/check-manifest.mjs`는 import map을 surface page map과 더는 비교하지 않는다. bridge는 잃은 호출을 `plugin.files.host.report`로 보고한다. `test/sdk-models/`가 복사한 view와 snapshot case를 재생한다. Red: import map과 page import 테스트가 page map에서 실패했다. Green: `make test`가 79개 중 79개 통과한다.
+- F238-d-16: `plugin.json`이 파일 sidecar의 tree 작업 `snapshot`, `expand`, `collapse`, `select`의 `hostOperations`를 선언한다. sidecar는 이를 host 읽기 작업으로 선언한다. test가 선언된 wire 계약의 host 요청과 sidecar 응답을 재생한다(`test/sidecar-wire.test.mjs`, `test/fixtures/sidecar-files/`). 실패한 tree command는 돌려주기 전에 오류 경로로 오류를 보고한다. 상태 모듈은 더 이상 tree status와 tree command를 선언하지 않는다. 이는 플러그인 호스트 페이지가 제공한다. 나열 이벤트 `plugin.files.sidecar.request`, `list`, `watch.changed`, `watch.failed`, `git`은 나열과 함께 제거된다. Red: 변경 전 manifest에서 `hostOperations` 검사가 실패했고, 상태 모듈 test는 `files.tree`가 선언된 상태에서 실패했으며, 실패한 나열의 보고 test는 기록이 없어 실패했다. Green: `make test`가 76개 중 76개 통과한다.
+
 - P26-7: tree의 파일 행은 `files.open` command로 파일을 연다. 이 command는 view bridge로 `core.file.open`을 실행하며, `plugin.json`이 선언한다. 막힘: plugin host가 아직 `core.file.open`을 제공하지 않아, core가 제공하기 전까지 열기는 거부된다. Red: `a file row of the tree carries the open command`가 실패했다. Green: `make test`가 79개 중 79개 통과한다.
 - P26-4: `@soksak/plugin-api`를 가장 새 core release인 `v0.0.20`으로 옮겼다. core release가 선언을 받기 전까지 `make check`는 `plugin.json: unknown field host`로 실패한다.
 
