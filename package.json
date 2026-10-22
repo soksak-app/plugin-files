@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build": "node scripts/build-vendor.mjs",
-    "test": "node scripts/build-vendor.mjs --check && node --test test/"
+    "test": "node scripts/build-vendor.mjs --check && node scripts/build-test.mjs && node --test test/"
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",

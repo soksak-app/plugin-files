@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { bookmarkValue, treeValue } from "../ui/declared-data.js";
+import { bookmarkValue, treeValue } from "../build/test/ui/declared-data.js";
 
 function setup() {
   const dom = new JSDOM("<body><div id=root></div></body>");
@@ -22,7 +22,7 @@ function setup() {
   return { dom, root: dom.window.document.getElementById("root"), context, send };
 }
 
-for (const [file, orientation] of [["../ui/sections/bookmarks.js", "vertical"], ["../ui/sections/bookmarks-horizontal.js", "horizontal"]]) {
+for (const [file, orientation] of [["../build/test/ui/sections/bookmarks.js", "vertical"], ["../build/test/ui/sections/bookmarks-horizontal.js", "horizontal"]]) {
   test(`${file}: a new bookmark keeps the remove controls of the other bookmarks in the document`, async () => {
     const { dom, root, context, send } = setup();
     context.orientation = orientation;
@@ -41,7 +41,7 @@ for (const [file, orientation] of [["../ui/sections/bookmarks.js", "vertical"], 
 
 test("the horizontal tree keeps the controls of unchanged entries when a folder opens", async () => {
   const { dom, root, context, send } = setup();
-  const { mount } = await import("../ui/sections/tree-horizontal.js");
+  const { mount } = await import("../build/test/ui/sections/tree-horizontal.js");
   const section = mount(root, context);
   const entries = [{ path: "src", name: "src", directory: true, expanded: false, depth: 0 }, { path: "a.txt", name: "a.txt", directory: false, depth: 0 }];
   send("files.tree", treeValue({ root: "/p", entries }));

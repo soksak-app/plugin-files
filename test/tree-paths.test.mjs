@@ -1,8 +1,8 @@
 // 파일 트리 섹션이 files.tree 의 행을 트리 라이브러리의 경로와 펼침으로 옮기는 규칙을 검사한다.
-import { openablePath } from "../ui/sections/tree-open.js";
+import { openablePath } from "../build/test/ui/sections/tree-open.js";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PLACEHOLDER, pathDiff, treePaths, expansionRequests } from "../ui/sections/tree-paths.js";
+import { PLACEHOLDER, pathDiff, treePaths, expansionRequests } from "../build/test/ui/sections/tree-paths.js";
 
 const rows = [
   { path: "src", name: "src", directory: true, depth: 0, expanded: true },

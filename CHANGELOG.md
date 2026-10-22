@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- F238-c-23: `make test` runs only this plugin's tests with no SDK tool and no SDK import, and the new `make check` runs the SDK checks (manifest, exposure, engines, events, records) against the pinned `@soksak/plugin-api`; `pack` depends on `check`, and CI runs both. The section modules are tested through `build/test/ui`, a copy of `ui/` whose plugin API import is a consumer-side fake. Red: `test/check-target.test.mjs` failed with `test runs soksak-exposure`, and `test/sdk-boundary.test.mjs` failed with `manifest.test.mjs`. Green: 3/3 and 1/1, `make test` 72/72, and `make check` passes.
+
 - F238-d-17-1: the DOM-free test reads `ui/declared-data.js` and `ui/host-runtime.js` and fails on `document`, `window`, `innerHTML`, `createElement`, `querySelector` and `appendChild` in either file. Red: with `document.createElement("div");` appended to `ui/host-runtime.js`, the check failed with `DOM APIs found: document, createElement`; the file was restored, and the test passes 3/3.
 
 - P26-3: a text, key or parameter over its limit is sent unchanged, so core rejects it with its rejection text and the section is cleared; `treeValue` and `bookmarkValue` no longer throw for it, and a control character is still rejected. Tests: `test/declared-data.test.mjs` and `test/host-runtime.test.mjs` (24/24), `make test` (68/68).

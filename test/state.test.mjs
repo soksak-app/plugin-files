@@ -58,7 +58,7 @@ function bookmarkPaths(value) {
 test("the state lists the project root, expands and folds a directory, and refreshes expanded directories", async () => {
   const files = listing();
   const f = fakeContext(files);
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   const mounted = await mount(f.context);
   const tree = () => f.statuses.get("files.tree").read();
   assert.deepEqual(treeNodes(tree()), [
@@ -83,7 +83,7 @@ test("the state lists the project root, expands and folds a directory, and refre
 
 test("a root listing failure is not placed in the declared tree value", async () => {
   const f = fakeContext({ "": "permission denied" });
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   const value = f.statuses.get("files.tree").read();
   assert.deepEqual(treeNodes(value), []);
@@ -94,7 +94,7 @@ test("a root listing failure is not placed in the declared tree value", async ()
 
 test("bookmarks are stored as project data, kept unique, and removed", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   const bookmarks = () => f.statuses.get("files.bookmarks").read();
   assert.deepEqual(bookmarkPaths(bookmarks()), []);
@@ -111,7 +111,7 @@ test("bookmarks are stored as project data, kept unique, and removed", async () 
 test("the state watches the expanded directories, refreshes on a change, and stops watching on dispose", async () => {
   const files = listing();
   const f = fakeContext(files);
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   const mounted = await mount(f.context);
   const watched = () => f.sent.filter((body) => body.operation === "watch").at(-1)?.paths;
   assert.deepEqual(watched(), [""]);
@@ -132,7 +132,7 @@ test("the state watches the expanded directories, refreshes on a change, and sto
 test("git status details appear in tree nodes and refresh from the sidecar", async () => {
   const git = [{ path: "a.txt", status: "modified" }];
   const f = fakeContext(listing(), git);
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   assert.equal(treeNodes(f.statuses.get("files.tree").read()).find((entry) => entry.path === "a.txt").detail, "modified");
   await f.commands.get("files.tree.toggle")({ path: "src" });
@@ -155,7 +155,7 @@ test("a directory shows the highest-priority descendant git detail", async () =>
     { path: "src/util.go", status: "deleted" },
   ];
   const f = fakeContext(files, git);
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   await f.commands.get("files.tree.toggle")({ path: "src" });
   const rows = treeNodes(f.statuses.get("files.tree").read());
@@ -166,7 +166,7 @@ test("a directory shows the highest-priority descendant git detail", async () =>
 
 test("selection is carried by each declared tree node", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   await f.commands.get("files.select")({ path: "a.txt" });
   assert.equal(treeNodes(f.statuses.get("files.tree").read()).find((entry) => entry.path === "a.txt").selected, true);
@@ -179,7 +179,7 @@ test("selection is carried by each declared tree node", async () => {
 
 test("files.tree read during a refresh shows the previous listing, not an empty tree", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   const refreshing = f.commands.get("files.refresh")({});
   await Promise.resolve();
@@ -189,7 +189,7 @@ test("files.tree read during a refresh shows the previous listing, not an empty 
 
 test("file-open failures are logged without a files.open status", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   assert.equal(f.statuses.has("files.open"), false);
   await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });
@@ -202,7 +202,7 @@ const micros = (value) => Number.isInteger(value) && value >= 0;
 
 test("each request to the sidecar, each listing and the git status are events with their result", async () => {
   const f = fakeContext(listing(), [{ path: "a.txt", status: "modified" }]);
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   const named = (event) => f.logged.filter((entry) => entry.event === event);
   assert.deepEqual(named("sidecar.request").map((entry) => [entry.level, entry.fields.operation, entry.fields.ok]),
@@ -216,7 +216,7 @@ test("each request to the sidecar, each listing and the git status are events wi
 
 test("a failed request is a warning that names its error in the form code and text", async () => {
   const f = fakeContext({ "": "permission denied" });
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   const failed = f.logged.find((entry) => entry.event === "sidecar.request" && !entry.fields.ok);
   assert.equal(failed.level, "warn");
@@ -227,7 +227,7 @@ test("a failed request is a warning that names its error in the form code and te
 
 test("a change that the watch reports and a failure that no request caused are events", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   f.logged.length = 0;
   f.emit({ changed: "src" });
@@ -240,7 +240,7 @@ test("a change that the watch reports and a failure that no request caused are e
 
 test("the result of a command is an event with its time and, when it failed, its error", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   f.logged.length = 0;
   await f.commands.get("files.refresh")({});
@@ -255,7 +255,7 @@ test("the result of a command is an event with its time and, when it failed, its
 
 test("the failure to open a file is a warning event", async () => {
   const f = fakeContext(listing());
-  const { mount } = await import("../ui/state.js");
+  const { mount } = await import("../build/test/ui/state.js");
   await mount(f.context);
   f.logged.length = 0;
   await f.commands.get("files.open.failed")({ error: "no plugin opens a.txt" });

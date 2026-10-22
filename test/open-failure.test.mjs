@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { openFailure } from "../ui/sections/open-failure.js";
+import { openFailure } from "../build/test/ui/sections/open-failure.js";
 
 test("open failure text is the message of the Error", () => {
   assert.equal(openFailure(new Error("no plugin opens test.txt")), "no plugin opens test.txt");

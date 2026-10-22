@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { startFilesHost } from "../ui/host-entry.js";
+import { startFilesHost } from "../build/test/ui/host-entry.js";
 
 test("host entry mounts runtime with the exported page, exposure API, and page project", async () => {
   const page = { project: { id: "project-a", root: "/work/a" } };

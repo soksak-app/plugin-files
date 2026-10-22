@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { PAGE_IMPORTS, pageImports, validateManifest } from "@soksak/plugin-api";
 import { JSDOM } from "jsdom";
-import { bookmarkValue, treeValue } from "../ui/declared-data.js";
+import { bookmarkValue, treeValue } from "../build/test/ui/declared-data.js";
 
 const manifest = JSON.parse(readFileSync(new URL("../plugin.json", import.meta.url), "utf8"));
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -17,15 +16,10 @@ test("files tree and bookmarks declare the declared UI schemas", () => {
   assert.equal(manifest.sections.find(({ id }) => id === "files.bookmarks").module.vertical, "ui/sections/bookmarks.js");
 });
 
-test("the DOM-free host page uses the documented plugin-page import map", () => {
+test("the host page loads the page entry module", () => {
   const html = readFileSync(new URL("../ui/host.html", import.meta.url), "utf8");
-  assert.deepEqual(pageImports(html), PAGE_IMPORTS);
   assert.match(html, /host.js/);
   assert.ok(existsSync(new URL("../ui/host.js", import.meta.url)));
-});
-
-test("plugin.json satisfies the manifest format", () => {
-  assert.equal(validateManifest(manifest), manifest);
 });
 
 test("the package publishes the manifest and surface module", () => {
@@ -50,7 +44,7 @@ async function mountSection(id, orientation = "vertical") {
   const context = { card: null, surface: null, orientation, icon: () => "<svg></svg>",
     status(name, fn) { observers.set(name, fn); return () => observers.delete(name); },
     bind(el, name, params, options = {}) { bound.push({ el, name, params, event: options.event ?? "click" }); return el; } };
-  const mounted = await (await import(`../${typeof section.module === "string" ? section.module : section.module[orientation]}`)).mount(root, context);
+  const mounted = await (await import(`../build/test/${typeof section.module === "string" ? section.module : section.module[orientation]}`)).mount(root, context);
   const send = (name, value, source = "state") => { bound.length = 0; observers.get(name)(value, source); };
   const sheets = () => globalThis.document.adoptedStyleSheets;
   return { root, observers, bound, send, sheets, dispose: () => { mounted.dispose(); delete globalThis.document; delete globalThis.CSSStyleSheet; dom.window.close(); } };
