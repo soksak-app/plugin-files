@@ -81,6 +81,19 @@
         "error?": "string"
       },
       "description": "The result of a command of the plugin; error is present only when ok is false and the level is warn then."
+    },
+    "plugin.files.host.report": {
+      "layer": "plugin",
+      "class": "call",
+      "level": [
+        "debug",
+        "warn"
+      ],
+      "fields": {
+        "kind": "string",
+        "text": "string"
+      },
+      "description": "The view bridge of the plugin host page reported a lost or skipped call or snapshot; kind names the loss and text names its command, status or place. The level is debug for a skipped snapshot and warn for the others."
     }
   }
 }

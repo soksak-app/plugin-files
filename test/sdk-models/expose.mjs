@@ -5,12 +5,14 @@
 const CODE_UNKNOWN_STATUS = 1001;
 const CODE_METHOD_NOT_FOUND = -32601;
 
-/** Creates the model over a port: register(kind, name), unregister(), onRequest(answer) and reply(id, payload). */
-export function createExpose(port, declarations = {}) {
+/**
+ * Creates the model over a port: register(kind, name), unregister() (optional), onRequest(answer) and reply(id, payload).
+ * load() returns the declarations, as createExpose of @soksak/plugin-api does.
+ */
+export function createExpose(port, load) {
   const statuses = new Map();
   let disposed = false;
 
-  const isDeclared = (kind, name) => (declarations[kind] ?? []).some((entry) => entry.name === name);
 
   const changed = (entry, value) => {
     entry.version += 1;
@@ -65,7 +67,8 @@ export function createExpose(port, declarations = {}) {
   /** Registers a status with its read and subscribe functions. The version starts at 1. */
   async function status(name, read, subscribe) {
     if (disposed) throw new Error("exposure is disposed");
-    if (!isDeclared("status", name)) throw new Error(`status ${name} is not declared`);
+    const declarations = await load();
+    if (!(declarations.status ?? []).some((entry) => entry.name === name)) throw new Error(`status ${name} is not declared`);
     if (statuses.has(name)) throw new Error(`status ${name} is already registered`);
     statuses.set(name, { read, subscribe, version: 1, value: read(), watching: false, unsubscribe: null, pending: [] });
     await port.register("status", name);
@@ -84,7 +87,7 @@ export function createExpose(port, declarations = {}) {
       entry.unsubscribe();
       entry.pending = [];
     }
-    await port.unregister();
+    await port.unregister?.();
   }
 
   return { status, dispose };

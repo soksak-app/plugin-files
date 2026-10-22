@@ -3,24 +3,76 @@ import test from "node:test";
 
 import { startFilesHost } from "../ui/host-entry.js";
 
-test("host entry mounts runtime with the exported page, exposure API, and page project", async () => {
-  const page = { project: { id: "project-a", root: "/work/a" } };
-  const expose = {};
+// A view bridge with the methods of the host adapter, and the calls it receives.
+function fakeBridge() {
+  const calls = [];
+  const bridge = {
+    runtime: {
+      sidecar: (name) => ({ name }),
+      error: async (where, text) => { calls.push({ kind: "error", where, text }); },
+      command: async (name, params) => { calls.push({ kind: "core", name, params }); },
+    },
+    snapshots: { push: (status, value) => { calls.push({ kind: "snapshot", status, value }); } },
+    commands: { register: async (name, run) => { calls.push({ kind: "command", name }); return run; } },
+  };
+  return { bridge, calls };
+}
+
+test("host entry mounts the runtime with the page of the bridge, the status adapter and the page project", async () => {
+  const { bridge } = fakeBridge();
+  const expose = { status: async () => {} };
+  const start = { project: { id: "project-a", root: "/work/a" }, declarations: {} };
   const calls = [];
   const mounted = { dispose() {} };
-  const result = await startFilesHost({ page, expose, mount: async (options) => { calls.push(options); return mounted; } });
-  assert.deepEqual(calls, [{ page, expose, project: page.project }]);
+  const result = await startFilesHost({ bridge, expose, start, mount: async (options) => { calls.push(options); return mounted; } });
   assert.equal(result, mounted);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].project, start.project);
+  assert.equal(typeof calls[0].page.sidecar, "function");
+  assert.equal(typeof calls[0].page.report, "function");
+  assert.equal(typeof calls[0].page.open, "function");
+  assert.equal(typeof calls[0].expose.status, "function");
+  assert.equal(typeof calls[0].expose.command, "function");
 });
 
-test("host entry rejects missing or invalid page and exposure exports instead of silently skipping startup", async () => {
+test("the page opens a file through the core command, and reports errors through the error route", async () => {
+  const { bridge, calls } = fakeBridge();
+  let options;
+  await startFilesHost({ bridge, expose: { status: async () => {} }, start: { project: null }, mount: async (value) => { options = value; } });
+  await options.page.open("readme.md");
+  await options.page.report({ level: "error", where: "files tree", text: "listing failed" });
+  assert.deepEqual(calls, [
+    { kind: "core", name: "core.file.open", params: { path: "readme.md" } },
+    { kind: "error", where: "files tree", text: "listing failed" },
+  ]);
+  assert.throws(() => options.page.report({ level: "warn", where: "files tree", text: "x" }), /reports only errors/);
+});
+
+test("a declared status is registered, its first value is pushed, and each later value is pushed", async () => {
+  const { bridge, calls } = fakeBridge();
+  const registered = [];
+  const expose = { status: async (name, read, subscribe) => { registered.push(name); subscribe((value) => calls.push({ kind: "watched", value })); } };
+  let options;
+  await startFilesHost({ bridge, expose, start: { project: null }, mount: async (value) => { options = value; } });
+  let current = { n: 1 };
+  await options.expose.status("files.tree", () => current, (fn) => { fn; return () => {}; });
+  assert.deepEqual(registered, ["files.tree"]);
+  assert.deepEqual(calls.filter((call) => call.kind === "snapshot"), [{ kind: "snapshot", status: "files.tree", value: { n: 1 } }]);
+  await options.expose.command("files.refresh", () => null);
+  assert.deepEqual(calls.filter((call) => call.kind === "command"), [{ kind: "command", name: "files.refresh" }]);
+});
+
+test("host entry rejects missing or invalid bridge, exposure, start values and mount function", async () => {
   const mount = async () => assert.fail("mount must not run");
+  const start = { project: null };
+  const bridge = fakeBridge().bridge;
   for (const [input, message] of [
-    [{ expose: {}, mount }, /requires the plugin API page/],
-    [{ page: null, expose: {}, mount }, /requires the plugin API page/],
-    [{ page: {}, mount }, /requires the plugin API expose API/],
-    [{ page: {}, expose: null, mount }, /requires the plugin API expose API/],
-    [{ page: {}, expose: {}, mount: null }, /requires a mount function/],
+    [{ expose: {}, start, mount }, /requires the view bridge/],
+    [{ bridge: null, expose: {}, start, mount }, /requires the view bridge/],
+    [{ bridge, start, mount }, /requires the exposure/],
+    [{ bridge, expose: null, start, mount }, /requires the exposure/],
+    [{ bridge, expose: {}, mount }, /requires the start values/],
+    [{ bridge, expose: {}, start, mount: null }, /requires a mount function/],
   ]) {
     await assert.rejects(startFilesHost(input), message);
   }
