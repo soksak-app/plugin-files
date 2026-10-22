@@ -122,8 +122,29 @@ test("bookmarkValue cuts excess items and reports their count", () => {
   assert.equal(value.elements.at(-1).text, "1개 북마크를 표시하지 않았습니다.");
 });
 
-test("bookmarkValue rejects labels beyond the declared text limit", () => {
-  assert.throws(() => bookmarkValue(["a".repeat(501)]), /bookmark label/);
+test("bookmarkValue sends a label beyond the declared text limit unchanged for core to reject", () => {
+  const label = "a".repeat(501);
+  const value = bookmarkValue([label]);
+  assert.equal(value.elements[0].items[0].label, label);
+  assert.equal(value.elements[0].items[0].params.path, label);
+});
+
+test("treeValue sends a name, detail, path or root beyond its text limit unchanged", () => {
+  const name = "n".repeat(501);
+  const path = `${"p".repeat(1001)}`;
+  const root = `/${"r".repeat(600)}`;
+  const value = treeValue({ root, entries: [{ path, name: path, directory: false, depth: 0, detail: "d".repeat(501) }] });
+  assert.equal(value.elements[0].text, root);
+  const node = value.elements.find((element) => element.kind === "tree").nodes[0];
+  assert.equal(node.label, path);
+  assert.equal(node.params.path, path);
+  assert.equal(node.detail, "d".repeat(501));
+  const long = treeValue({ root: "/project", entries: [{ path: name, name, directory: false, depth: 0 }] });
+  assert.equal(long.elements.find((element) => element.kind === "tree").nodes[0].label, name);
+});
+
+test("treeValue still rejects control characters in a text value", () => {
+  assert.throws(() => treeValue({ root: "/project", entries: [{ path: "a\u0001", name: "a\u0001", directory: false, depth: 0 }] }), /plain text/);
 });
 
 test("bookmarkValue builds a declared list with removal commands", () => {

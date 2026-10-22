@@ -6,12 +6,14 @@ const SAFE_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/u;
 const encoder = new TextEncoder();
 
-function text(value, field, max = 500) {
-  if (typeof value !== "string" || [...value].length > max || CONTROL.test(value)) throw new TypeError(`${field} must be plain text of at most ${max} code points`);
+// A text over its code point limit is not cut or rejected here: the value goes to core unchanged, and core rejects
+// it with its rejection text (docs/spec/declared-ui.md, Rejection). A control character is not plain text and is rejected here.
+function text(value, field) {
+  if (typeof value !== "string" || CONTROL.test(value)) throw new TypeError(`${field} must be plain text`);
 }
 
 function relativePath(value, field) {
-  text(value, field, 1000);
+  text(value, field);
   if (value === "" || value.startsWith("/") || value.split("/").some((part) => part === "" || part === "." || part === "..")) throw new TypeError(`${field} must be a normalized relative path`);
 }
 

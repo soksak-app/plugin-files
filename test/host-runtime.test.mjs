@@ -87,6 +87,16 @@ test("host reports sidecar reply errors without publishing an empty-tree success
   host.dispose();
 });
 
+test("host publishes a snapshot whose label is over the text limit unchanged, without reporting an error", async () => {
+  const label = "L".repeat(501);
+  const f = fakeHost({ treeSnapshots: [snapshot([{ path: label, name: label, directory: false, depth: 0, expanded: false, selected: false }])] });
+  const host = await mountFilesHost(f);
+  assert.deepEqual(f.errors, []);
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.deepEqual(tree.nodes.map((node) => node.label), [label]);
+  host.dispose();
+});
+
 test("host with no project publishes no-project value and does not contact the sidecar", async () => {
   const f = fakeHost({ project: null, treeSnapshots: [] });
   const host = await mountFilesHost(f);
