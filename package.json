@@ -20,7 +20,7 @@
     "ui/host.html"
   ],
   "scripts": {
-    "test": "node --test test/"
+    "test": "node scripts/build-test.mjs && node --test test/"
   },
   "devDependencies": {
     "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#v0.0.20&path:/packages/plugin-api"

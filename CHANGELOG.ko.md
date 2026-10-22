@@ -4,6 +4,7 @@
 
 ## 미배포
 
+- F238-c-13: test command는 `scripts/build-test.mjs`로 `build/test/ui`를 만들며, plugin API import는 `test/sdk-models/`의 model로 바뀐다. `test/host-page.test.mjs`는 build된 page module을 가짜 view channel 위에서 불러 status 등록, 선언된 UI snapshot, command 등록, 선언된 files sidecar 호출을 검사한다. Red: test가 `build/test/ui/host.js`를 불러오지 못했다. Green: `make test`가 test 92개를 통과한다.
 - F238-c-14: `test/`의 어느 줄도 SDK 패키지 이름을 싣지 않는다. `test/sdk-boundary.test.mjs`는 needle을 포함한 `test/`의 줄마다 실패하며, needle은 부분 문자열에서 조립한다. model 주석은 plugin API로 적고, `test/pack-closure.test.mjs`는 import map 이름을 부분 문자열에서 조립한다. Red: guard가 일곱 줄을 나열했다. Green: `make test`가 test 88개를 통과한다.
 - F238-c-24: release workflow는 `make test`, `make check`, `make pack` 순서로 실행하며, test 전에 Node와 pnpm을 설정한다. `test/workflows.test.mjs`가 두 workflow에서 이 순서를 요구한다. Red: 이전 release workflow에서 test가 실패했다. Green: `make test`가 87개 test를 통과한다. `make check`는 고정된 `@soksak/plugin-api`가 받지 않는 `host` 선언(P26-4)에서 실패하며, core release가 이를 받을 때까지 이것이 예상된 결과다.
 - F252-contract-files: 복사한 `view-commands.json`을 core origin/main에 맞췄다. command replay는 handler에 요청의 cids를 context로 전달한다.

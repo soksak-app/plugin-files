@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- F238-c-13: The test command builds `build/test/ui` with each plugin API import rewritten to its model in `test/sdk-models/` (`scripts/build-test.mjs`), and `test/host-page.test.mjs` loads the built page module over a fake view channel. The test checks the status registrations, the declared UI snapshots, the command registrations and the call to the declared files sidecar. Red: the test could not load `build/test/ui/host.js`. Green: `make test` passes 92 tests.
 - F238-c-14: No line of `test/` names the SDK package. `test/sdk-boundary.test.mjs` fails on any line of `test/` that contains the needle, which the test builds from parts. The model comments name the plugin API, and `test/pack-closure.test.mjs` builds its import-map names from parts. Red: the guard listed seven lines. Green: `make test` passes 88 tests.
 - F238-c-24: The release workflow runs `make test`, then `make check`, then `make pack`, and sets up Node and pnpm before its tests. `test/workflows.test.mjs` requires that order in both workflows. Red: the test failed on the previous release workflow. Green: `make test` passes 87 tests. `make check` fails on the `host` declaration that the pinned `@soksak/plugin-api` does not accept (P26-4), which is the expected result until a core release accepts it.
 - F252-contract-files: The copied `view-commands.json` follows core origin/main. The command replay gives handlers the cids of their request as context.
