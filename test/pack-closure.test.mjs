@@ -14,12 +14,6 @@ const HOST_PAGE = "ui/host.html";
 
 const readText = (file) => readFileSync(path.join(root, file), "utf8");
 
-function importMapOf(html) {
-  const match = html.match(/<script type="importmap">([\s\S]*?)<\/script>/);
-  assert.ok(match, `${HOST_PAGE} has no import map`);
-  return JSON.parse(match[1]).imports;
-}
-
 function packedFiles() {
   const [pack] = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"], { cwd: root, encoding: "utf8" }));
   return new Set(pack.files.map((entry) => entry.path));
@@ -61,13 +55,13 @@ const hostScript = () => {
 };
 
 test("every entry of the page import map names a core target", () => {
-  for (const [name, target] of Object.entries(importMapOf(readText(HOST_PAGE)))) {
+  for (const [name, target] of Object.entries(VIEW_IMPORTS)) {
     assert.ok(target.startsWith(CORE_ROOT), `${name} maps to ${target}, which is not a core target`);
   }
 });
 
 test("every bare name that the page closure imports is mapped", () => {
-  const imports = importMapOf(readText(HOST_PAGE));
+  const imports = VIEW_IMPORTS;
   const { names } = closureOf(hostScript());
   for (const name of names) {
     const mapped = Object.keys(imports).some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
@@ -95,8 +89,10 @@ const VIEW_IMPORTS = {
   "@soksak/shared/": "sok://core/shared/",
 };
 
-test("the host page declares the view import map of five entries", () => {
-  assert.deepEqual(importMapOf(readText(HOST_PAGE)), VIEW_IMPORTS);
+test("the host page begins with its doctype and holds no import map, because the host inserts the view import map", () => {
+  const html = readText(HOST_PAGE);
+  assert.match(html, /^<!doctype html>/i);
+  assert.doesNotMatch(html, /<script type="importmap">/);
 });
 
 test("the page closure imports only names of the view import map", () => {
