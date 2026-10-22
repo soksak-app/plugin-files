@@ -1,5 +1,5 @@
 # files plugin repository 의 test, check 와 pack(docs/features.md). pack 은 core 의 sok 를 쓴다.
-.PHONY: test check pack hooks
+.PHONY: test check pack push-check hooks
 
 SOK ?= sok
 # DIAGNOSTICS=1 이면 diagnostics.json 을 담은 진단 package 를 쓴다.
@@ -33,6 +33,11 @@ check: node_modules
 pack: check
 	@test -n "$(OUT)" || { echo "make pack OUT=<folder>" >&2; exit 2; }
 	$(SOK) plugin pack . $(OUT) $(PACK_FLAGS)
+
+# The checks of the ci workflow that a push needs: make test, make check, and the commit messages of the pushed range.
+# RANGE holds the commits of the pushed refs; the pre-push hook sets it, and it defaults to origin/main..HEAD.
+push-check: test check
+	pnpm exec soksak-commits "$(or $(RANGE),origin/main..HEAD)"
 
 # Sets this repository to use .githooks, which checks commit messages and records at commit time.
 hooks:
