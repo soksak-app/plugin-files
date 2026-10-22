@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { treeValue, bookmarkValue } from "../ui/declared-data.js";
 
+const MAX_VALUE_BYTES = 1048576;
+const jsonBytes = (value) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
+
 test("treeValue builds the declared sidebar tree from sidecar rows", () => {
   assert.deepEqual(treeValue({
     root: "/work/project",
@@ -51,14 +54,32 @@ test("treeValue cuts rows deeper than the declared tree limit", () => {
   assert.equal(value.elements.at(-1).text, "1개 항목을 표시하지 않았습니다.");
 });
 
-test("treeValue fills the node budget after skipping valid over-depth rows", () => {
+test("treeValue ends the listing at the first row beyond the depth limit", () => {
   const chain = Array.from({ length: 16 }, (_, depth) => ({ path: ["deep", ...Array(depth).fill("child")].join("/"), name: depth === 0 ? "deep" : "child", directory: true, depth, expanded: true }));
   const tooDeep = { path: `${chain.at(-1).path}/leaf`, name: "leaf", directory: false, depth: 16 };
   const later = Array.from({ length: 5000 }, (_, index) => ({ path: `f${index}`, name: `f${index}`, directory: false, depth: 0 }));
   const value = treeValue({ root: "/project", entries: [...chain, tooDeep, ...later] });
   const count = (nodes) => nodes.reduce((total, node) => total + 1 + count(node.children ?? []), 0);
-  assert.equal(count(value.elements.find((element) => element.kind === "tree").nodes), 5000);
-  assert.equal(value.elements.at(-1).text, "17개 항목을 표시하지 않았습니다.");
+  assert.equal(count(value.elements.find((element) => element.kind === "tree").nodes), 16);
+  assert.equal(value.elements.at(-1).text, "5001개 항목을 표시하지 않았습니다.");
+});
+
+test("treeValue keeps the longest prefix whose serialized value fits 1048576 bytes", () => {
+  const entries = Array.from({ length: 3000 }, (_, index) => {
+    const name = `f${index}-${"x".repeat(300)}`;
+    return { path: name, name, directory: false, depth: 0 };
+  });
+  const value = treeValue({ root: "/project", entries });
+  const shown = value.elements.find((element) => element.kind === "tree").nodes.length;
+  assert.equal(value.elements.at(-1).key, "cut");
+  assert.equal(value.elements.at(-1).text, `${3000 - shown}개 항목을 표시하지 않았습니다.`);
+  assert.ok(jsonBytes(value) <= MAX_VALUE_BYTES, `value has ${jsonBytes(value)} bytes`);
+  assert.ok(value.elements.length < 64);
+  // Adding the next row, with the status-line that states one fewer row, exceeds the limit, so the cut is the longest prefix.
+  const longer = structuredClone(value);
+  longer.elements.find((element) => element.kind === "tree").nodes.push(treeValue({ root: "/project", entries: [entries[shown]] }).elements.find((element) => element.kind === "tree").nodes[0]);
+  longer.elements.at(-1).text = `${3000 - shown - 1}개 항목을 표시하지 않았습니다.`;
+  assert.ok(jsonBytes(longer) > MAX_VALUE_BYTES, `one more row has ${jsonBytes(longer)} bytes`);
 });
 
 test("treeValue rejects malformed rows even when a row would be cut", () => {
@@ -110,4 +131,16 @@ test("bookmarkValue builds a declared list with removal commands", () => {
     { key: "a.txt", label: "a.txt", command: "files.bookmarks.remove", params: { path: "a.txt" } },
     { key: "src", label: "src", command: "files.bookmarks.remove", params: { path: "src" } },
   ] }] });
+});
+
+test("bookmarkValue keeps the longest prefix whose serialized value fits 1048576 bytes", () => {
+  const paths = Array.from({ length: 1000 }, (_, index) => `${index}${"가".repeat(450)}`);
+  const value = bookmarkValue(paths);
+  const shown = value.elements[0].items.length;
+  assert.equal(value.elements.at(-1).text, `${1000 - shown}개 북마크를 표시하지 않았습니다.`);
+  assert.ok(jsonBytes(value) <= MAX_VALUE_BYTES, `value has ${jsonBytes(value)} bytes`);
+  const longer = structuredClone(value);
+  longer.elements[0].items.push(bookmarkValue([paths[shown]]).elements[0].items[0]);
+  longer.elements.at(-1).text = `${1000 - shown - 1}개 북마크를 표시하지 않았습니다.`;
+  assert.ok(jsonBytes(longer) > MAX_VALUE_BYTES, `one more item has ${jsonBytes(longer)} bytes`);
 });

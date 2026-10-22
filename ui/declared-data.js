@@ -1,7 +1,10 @@
+const MAX_LIST_ITEMS = 1000;
 const MAX_TREE_NODES = 5000;
 const MAX_TREE_DEPTH = 16;
+const MAX_VALUE_BYTES = 1048576;
 const SAFE_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/u;
+const encoder = new TextEncoder();
 
 function text(value, field, max = 500) {
   if (typeof value !== "string" || [...value].length > max || CONTROL.test(value)) throw new TypeError(`${field} must be plain text of at most ${max} code points`);
@@ -20,6 +23,28 @@ function stableKey(value) {
     hash = BigInt.asUintN(64, hash * 0x100000001b3n);
   }
   return `p-${hash.toString(16).padStart(16, "0")}`;
+}
+
+const valueBytes = (value) => encoder.encode(JSON.stringify(value)).byteLength;
+
+// Keeps the longest prefix of the first `total` rows whose value, with its cut status-line, fits the size limit.
+// rowsValue(count) builds the value of the first `count` rows without the cut status-line; the size without it grows
+// with each row, so the largest count within the limit is found by bisection, and the cut status-line, whose length
+// depends on the count it states, is then checked by counting down from that count.
+function cutToLimits(total, maxRows, rowsValue, cutText) {
+  let low = 0;
+  let high = maxRows;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (valueBytes(rowsValue(middle)) <= MAX_VALUE_BYTES) low = middle;
+    else high = middle - 1;
+  }
+  for (let count = low; count >= 0; count -= 1) {
+    const value = rowsValue(count);
+    if (count < total) value.elements.push({ kind: "status-line", key: "cut", text: cutText(total - count) });
+    if (valueBytes(value) <= MAX_VALUE_BYTES) return value;
+  }
+  throw new RangeError(`declared value exceeds ${MAX_VALUE_BYTES} bytes without any row`);
 }
 
 function validateEntries(entries) {
@@ -79,49 +104,48 @@ export function treeValue({ root, entries = [], selected = null, openCommand, de
   if (!Array.isArray(declaredCommands) || declaredCommands.some((name) => typeof name !== "string")) throw new TypeError("declaredCommands must be an array of command names");
   if (openCommand !== undefined && (typeof openCommand !== "string" || !/^files\.[A-Za-z0-9._-]+$/.test(openCommand) || !declaredCommands.includes(openCommand))) throw new TypeError("openCommand must name a declared command of this plugin");
 
-  const visible = [];
-  for (const entry of entries) {
-    if (entry.depth < MAX_TREE_DEPTH && visible.length < MAX_TREE_NODES) visible.push(entry);
-  }
-  const omitted = entries.length - visible.length;
-  const roots = [];
-  const stack = [];
-  const nodeKeys = new Map();
-  let bookmarkEnabled = false;
-  for (const entry of visible) {
-    const key = stableKey(entry.name);
-    const parent = entry.depth === 0 ? null : stack[entry.depth - 1];
-    const siblingKey = entry.depth === 0 ? "" : entry.path.slice(0, entry.path.lastIndexOf("/"));
-    let keys = nodeKeys.get(siblingKey);
-    if (!keys) { keys = new Set(); nodeKeys.set(siblingKey, keys); }
-    if (keys.has(key)) throw new TypeError(`tree nodes have duplicate sibling key ${key}`);
-    keys.add(key);
-    const node = { key, label: entry.name, command: "files.select", params: { path: entry.path } };
-    if (entry.directory) {
-      node.branch = true;
-      if (entry.expanded === true) node.expanded = true;
-    }
-    if (entry.path === selectedPath) node.selected = true;
-    if (entry.path === selectedPath && !entry.directory) bookmarkEnabled = true;
-    if (entry.detail !== undefined && entry.detail !== "") node.detail = entry.detail;
-    if (openCommand !== undefined) node.open = openCommand;
-    if (entry.depth === 0) roots.push(node);
-    else {
-      parent.children ??= [];
-      parent.children.push(node);
-    }
-    stack[entry.depth] = node;
-    stack.length = entry.depth + 1;
-  }
+  // Rows beyond the first depth-16 row end the listing, so a prefix never contains a row whose parent it lacks.
+  const deepest = entries.findIndex((entry) => entry.depth >= MAX_TREE_DEPTH);
+  const maxRows = Math.min(deepest === -1 ? entries.length : deepest, MAX_TREE_NODES);
   if (typeof listingFailed !== "boolean") throw new TypeError("listingFailed must be a boolean");
-  const elements = [
-    { kind: "status-line", key: "project", text: root },
-    { kind: "button", key: "bookmark", label: "북마크 추가", command: "files.bookmarks.add", params: { path: selectedPath ?? "" }, enabled: bookmarkEnabled },
-    { kind: "button", key: "refresh", label: "새로 고침", command: "files.refresh" },
-    { kind: "tree", key: "files", empty: listingFailed ? "" : "파일이 없습니다.", nodes: roots },
-  ];
-  if (omitted > 0) elements.push({ kind: "status-line", key: "cut", text: `${omitted}개 항목을 표시하지 않았습니다.` });
-  return { elements };
+  const rowsValue = (count) => {
+    const roots = [];
+    const stack = [];
+    const nodeKeys = new Map();
+    let bookmarkEnabled = false;
+    for (const entry of entries.slice(0, count)) {
+      const key = stableKey(entry.name);
+      const parent = entry.depth === 0 ? null : stack[entry.depth - 1];
+      const siblingKey = entry.depth === 0 ? "" : entry.path.slice(0, entry.path.lastIndexOf("/"));
+      let keys = nodeKeys.get(siblingKey);
+      if (!keys) { keys = new Set(); nodeKeys.set(siblingKey, keys); }
+      if (keys.has(key)) throw new TypeError(`tree nodes have duplicate sibling key ${key}`);
+      keys.add(key);
+      const node = { key, label: entry.name, command: "files.select", params: { path: entry.path } };
+      if (entry.directory) {
+        node.branch = true;
+        if (entry.expanded === true) node.expanded = true;
+      }
+      if (entry.path === selectedPath) node.selected = true;
+      if (entry.path === selectedPath && !entry.directory) bookmarkEnabled = true;
+      if (entry.detail !== undefined && entry.detail !== "") node.detail = entry.detail;
+      if (openCommand !== undefined) node.open = openCommand;
+      if (entry.depth === 0) roots.push(node);
+      else {
+        parent.children ??= [];
+        parent.children.push(node);
+      }
+      stack[entry.depth] = node;
+      stack.length = entry.depth + 1;
+    }
+    return { elements: [
+      { kind: "status-line", key: "project", text: root },
+      { kind: "button", key: "bookmark", label: "북마크 추가", command: "files.bookmarks.add", params: { path: selectedPath ?? "" }, enabled: bookmarkEnabled },
+      { kind: "button", key: "refresh", label: "새로 고침", command: "files.refresh" },
+      { kind: "tree", key: "files", empty: listingFailed ? "" : "파일이 없습니다.", nodes: roots },
+    ] };
+  };
+  return cutToLimits(entries.length, maxRows, rowsValue, (omitted) => `${omitted}개 항목을 표시하지 않았습니다.`);
 }
 
 /** Build the plugin-authored declared UI list for project bookmarks. */
@@ -129,7 +153,6 @@ export function bookmarkValue(paths, root = "/project") {
   if (!Array.isArray(paths)) throw new TypeError("bookmarkValue requires an array of paths");
   const seenPaths = new Set();
   const seenKeys = new Set();
-  const items = [];
   for (const path of paths) {
     text(path, "bookmark label");
     relativePath(path, "bookmark path");
@@ -138,9 +161,7 @@ export function bookmarkValue(paths, root = "/project") {
     const key = stableKey(path);
     if (seenKeys.has(key)) throw new TypeError(`bookmarkValue received duplicate key ${key}`);
     seenKeys.add(key);
-    if (items.length < 1000) items.push({ key, label: path, command: "files.bookmarks.remove", params: { path } });
   }
-  const elements = [{ kind: "list", key: "bookmarks", empty: root === null ? "프로젝트 없음" : "북마크 없음", items }];
-  if (paths.length > items.length) elements.push({ kind: "status-line", key: "cut", text: `${paths.length - items.length}개 북마크를 표시하지 않았습니다.` });
-  return { elements };
+  const rowsValue = (count) => ({ elements: [{ kind: "list", key: "bookmarks", empty: root === null ? "프로젝트 없음" : "북마크 없음", items: paths.slice(0, count).map((path) => ({ key: stableKey(path), label: path, command: "files.bookmarks.remove", params: { path } })) }] });
+  return cutToLimits(paths.length, Math.min(paths.length, MAX_LIST_ITEMS), rowsValue, (omitted) => `${omitted}개 북마크를 표시하지 않았습니다.`);
 }
