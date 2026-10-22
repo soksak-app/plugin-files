@@ -2,6 +2,7 @@
 
 [English](features.md)
 
+- [o] F238-c-24 — P1, core F238-c-24 plugin CI: `release.yml`은 `make test`, `make check`, `make pack` 순서로 실행하며, release job은 test 전에 Node와 pnpm을 설정한다. `ci.yml`은 이미 같은 순서로 `make test`와 `make check`를 실행한다. `test/workflows.test.mjs`는 두 workflow 파일을 읽어 필요한 단계가 없거나 순서가 다르면 실패한다. Red: 이전 release workflow에서 `release.yml runs make test, then make check, then make pack in that order`가 `release.yml runs make test`로 실패했다. Green: `make test`가 87개 test를 통과하고 실패는 0개다. `make check`는 `scripts/check-manifest.mjs`에서 `plugin.json: unknown field host`로 실패한다. 고정된 `@soksak/plugin-api`가 `host` 선언을 받지 않기 때문이며, 이 원인은 P26-4가 추적하고, core release가 이를 받을 때까지 이 결과가 예상된 결과다.
 - [o] F238-b-10-2 — P1, core F238-b-10-1의 후속 항목: test 명령 `node --test test/`는 이미 `test/sdk-models/`의 test 파일을 실행한다(디렉터리 형식은 하위 디렉터리를 실행하며, 두 형식 모두 78개). `test/test-script.test.mjs`는 `test/` 아래의 모든 test 파일이 명령에 선택되는지 고정하며, 현재 명령에서 통과하므로 명령은 바꾸지 않았다. `make test`는 79개 중 79개를 실행한다(이전 78개; 검사가 추가되었다).
 - [o] P1 — P1: 이 plugin을 자기 repository로 test하고 pack한다. 2026-10-02에 soksak core repository(그곳의 checklist 항목 R1-5-3)에서 옮겼으며, 이전 변경 이력은 core에 있다. `make test`와 `make pack`이 통과한다.
 - [o] P2 — P1: soksak core 0.0.2용 version 0.0.2를 release한다. 2026-10-02 완료: `package.json`이 0.0.2와 `engines.soksak` `^0.0.2`를 선언하고, test는 core tag `v0.0.2`의 `@soksak/plugin-api`를 쓴다. macOS arm64에서 `make test`가 통과한다.

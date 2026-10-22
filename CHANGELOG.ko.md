@@ -4,6 +4,7 @@
 
 ## 미배포
 
+- F238-c-24: release workflow는 `make test`, `make check`, `make pack` 순서로 실행하며, test 전에 Node와 pnpm을 설정한다. `test/workflows.test.mjs`가 두 workflow에서 이 순서를 요구한다. Red: 이전 release workflow에서 test가 실패했다. Green: `make test`가 87개 test를 통과한다. `make check`는 고정된 `@soksak/plugin-api`가 받지 않는 `host` 선언(P26-4)에서 실패하며, core release가 이를 받을 때까지 이것이 예상된 결과다.
 - F252-contract-files: 복사한 `view-commands.json`을 core origin/main에 맞췄다. command replay는 handler에 요청의 cids를 context로 전달한다.
 - F252-files: plugin host 실행부는 object가 아닌 sidecar message와 알 수 없는 요청 id의 응답을 보고하고, `selected` 또는 디렉터리 `expanded`가 boolean이 아닌 tree 행을 거부하며, null도 `{id, root}`도 아닌 project 시작 값을 거부한다. Error가 아닌 던져진 값은 명령 event에 그 text를 남긴다. 거부된 오류 보고는 console과 `log` route로 간다. Red와 Green: `test/host-runtime.test.mjs`의 여섯 test(docs/features.ko.md의 F252-files 참조).
 
