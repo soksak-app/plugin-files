@@ -3,8 +3,6 @@
 import { bookmarkValue, treeValue } from "./declared-data.js";
 
 const SIDECAR = "@soksak/sidecar-files";
-const TREE_STATUS = "files.tree";
-const BOOKMARKS_STATUS = "files.bookmarks";
 const BOOKMARKS_KEY = "bookmarks";
 // A file row opens its file through the plugin command files.open, which the page runs with core.file.open (docs/spec/declared-ui.md, Tree keys).
 const TREE_OPTIONS = {
@@ -252,17 +250,16 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       await reportError(error, "files bookmarks");
     }
   }
-  await expose.status(TREE_STATUS, read, (fn) => { listeners.add(fn); return () => listeners.delete(fn); });
-  await expose.status(BOOKMARKS_STATUS, readBookmarks, (fn) => { bookmarkListeners.add(fn); return () => bookmarkListeners.delete(fn); });
-  for (const [name, run, where] of [
-    ["files.refresh", runSnapshot, "files tree"],
-    ["files.tree.toggle", toggle, "files tree"],
-    ["files.select", select, "files tree"],
-    ["files.open", open, undefined],
-    ["files.bookmarks.add", addBookmark, "files bookmarks"],
-    ["files.bookmarks.remove", removeBookmark, "files bookmarks"],
-    ["files.open.failed", openFailed, undefined],
-  ]) await expose.command(name, recorded(name, run, where));
+  // Each name is written as a literal in its registration: the exposure check of the repository matches the literal names.
+  await expose.status("files.tree", read, (fn) => { listeners.add(fn); return () => listeners.delete(fn); });
+  await expose.status("files.bookmarks", readBookmarks, (fn) => { bookmarkListeners.add(fn); return () => bookmarkListeners.delete(fn); });
+  await expose.command("files.refresh", recorded("files.refresh", runSnapshot, "files tree"));
+  await expose.command("files.tree.toggle", recorded("files.tree.toggle", toggle, "files tree"));
+  await expose.command("files.select", recorded("files.select", select, "files tree"));
+  await expose.command("files.open", recorded("files.open", open, undefined));
+  await expose.command("files.bookmarks.add", recorded("files.bookmarks.add", addBookmark, "files bookmarks"));
+  await expose.command("files.bookmarks.remove", recorded("files.bookmarks.remove", removeBookmark, "files bookmarks"));
+  await expose.command("files.open.failed", recorded("files.open.failed", openFailed, undefined));
   if (hasProject) {
     // Subscribe to messages and failures before the first request; the sidecar may answer immediately.
     await Promise.all([sidecar.on(session, onMessage), sidecar.onFailure(session, (reason) => {
