@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const sourcePath = new URL("../ui/declared-data.js", import.meta.url);
+// The two host page modules that build and send the declared files values (core docs/spec/plugin-processes.md, Layer rules).
+const sourcePaths = ["../ui/declared-data.js", "../ui/host-runtime.js"];
 const forbidden = ["document", "window", "innerHTML", "createElement", "querySelector", "appendChild"];
 
 function assertDomFree(source) {
@@ -10,11 +11,13 @@ function assertDomFree(source) {
   assert.deepEqual(found, [], `DOM APIs found: ${found.join(", ")}`);
 }
 
-test("the declared files data module contains no DOM APIs", async () => {
-  assertDomFree(await readFile(sourcePath, "utf8"));
-});
+for (const path of sourcePaths) {
+  test(`${path} contains no DOM APIs`, async () => {
+    assertDomFree(await readFile(new URL(path, import.meta.url), "utf8"));
+  });
+}
 
 test("the DOM-free assertion rejects an injected document element", async () => {
-  const source = await readFile(sourcePath, "utf8");
+  const source = await readFile(new URL(sourcePaths[0], import.meta.url), "utf8");
   assert.throws(() => assertDomFree(`${source}\ndocument.createElement(\"div\");`), /DOM APIs found: document, createElement/);
 });

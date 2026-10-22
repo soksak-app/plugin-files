@@ -4,6 +4,8 @@
 
 ## 미배포
 
+- F238-d-17-1: DOM-free 테스트가 `ui/declared-data.js`와 `ui/host-runtime.js`를 읽고, 두 파일 중 어느 쪽에서든 `document`, `window`, `innerHTML`, `createElement`, `querySelector`, `appendChild`가 나오면 실패한다. Red: `ui/host-runtime.js`에 `document.createElement("div");`를 덧붙이자 `DOM APIs found: document, createElement`로 실패했고, 파일을 복원한 뒤 테스트가 3/3을 통과한다.
+
 - P26-3: 한도를 넘은 text, key 또는 parameter는 그대로 보내져, core가 거부 문구와 함께 거부하고 section을 비운다. `treeValue`와 `bookmarkValue`는 이 경우 throw하지 않고, control character는 여전히 거부한다. 테스트: `test/declared-data.test.mjs`와 `test/host-runtime.test.mjs`(24/24), `make test`(68/68).
 
 - P26-2: `treeValue`와 `bookmarkValue`는 표시 순서의 가장 긴 prefix 중, 잘린 status-line을 포함한 값이 1000개 list item, 5000개 tree node, 16 level, JSON 직렬화 값의 1048576 bytes(UTF-8) 안에 드는 것을 남긴다. depth 16 행 아래의 행은 건너뛰지 않고 그 행에서 목록이 끝난다. 테스트: `test/declared-data.test.mjs`(17/17), `make test`(65/65).

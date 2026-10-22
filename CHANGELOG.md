@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- F238-d-17-1: the DOM-free test reads `ui/declared-data.js` and `ui/host-runtime.js` and fails on `document`, `window`, `innerHTML`, `createElement`, `querySelector` and `appendChild` in either file. Red: with `document.createElement("div");` appended to `ui/host-runtime.js`, the check failed with `DOM APIs found: document, createElement`; the file was restored, and the test passes 3/3.
+
 - P26-3: a text, key or parameter over its limit is sent unchanged, so core rejects it with its rejection text and the section is cleared; `treeValue` and `bookmarkValue` no longer throw for it, and a control character is still rejected. Tests: `test/declared-data.test.mjs` and `test/host-runtime.test.mjs` (24/24), `make test` (68/68).
 
 - P26-2: `treeValue` and `bookmarkValue` keep the longest prefix in listing order whose value, with its cut status-line, fits 1000 list items, 5000 tree nodes, 16 levels and 1048576 bytes of the JSON-serialized value (UTF-8). A row below the first depth-16 row ends the listing instead of being skipped. Tests: `test/declared-data.test.mjs` (17/17), `make test` (65/65).
