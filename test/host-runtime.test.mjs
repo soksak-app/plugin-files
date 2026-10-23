@@ -9,12 +9,18 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   const data = {
     store: stored,
     failGet: null,
+    failSet: null,
     async get(key) {
       calls.push({ kind: "data.get", key });
       if (this.failGet !== null) throw new Error(this.failGet);
       return structuredClone(this.store[key] ?? []);
     },
-    async set(key, value) { calls.push({ kind: "data.set", key, value: structuredClone(value) }); this.store[key] = structuredClone(value); return null; },
+    async set(key, value) {
+      calls.push({ kind: "data.set", key, value: structuredClone(value) });
+      if (this.failSet !== null) throw new Error(this.failSet);
+      this.store[key] = structuredClone(value);
+      return null;
+    },
   };
   const failures = { send: null, report: [] };
   const statuses = new Map();
@@ -366,3 +372,30 @@ test("an invalid project event is refused with an error and keeps the project sh
   assert.equal(f.statuses.get("files.tree").read().elements[0].text, "/work/project");
   host.dispose();
 });
+
+test("a bookmark read refused because no project is shown is not an error: the project message ends the list", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  f.data.failGet = "plugin host files: no project is shown";
+  const host = await mountFilesHost(f);
+  assert.deepEqual(f.errors, [], "a refusal for no shown project is reported as no error");
+  host.dispose();
+});
+
+test("a bookmark write refused because no project is shown changes nothing and is not an error", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  f.data.failSet = "plugin host files: no project is shown";
+  assert.equal(await f.commands.get("files.bookmarks.add")({ path: "a.txt" }), null);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("a sidecar request refused because no project is shown resolves as no project, not as an error", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  f.failures.send = new Error("plugin host files: no project is shown");
+  assert.equal(await f.commands.get("files.refresh")(), null);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+

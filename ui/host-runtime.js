@@ -24,6 +24,9 @@ function parseProject(project) {
   return { id: project.id, root: project.root };
 }
 const rootOf = (project) => (project === null ? null : project.root);
+// The refusal of a call that needs a shown project: the plugin host showed no project when the call ran (docs/spec/plugin-host.md). The
+// project message that follows it ends the list or the tree, so the refusal is not an error of the plugin.
+const noProjectRefusal = (error) => /no project is shown$/.test(errorText(error));
 
 /** Register the tree and bookmarks statuses and their commands in the plugin-host page runtime. */
 export async function mountFilesHost({ page, expose, project = page?.project } = {}) {
@@ -195,7 +198,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       return result;
     } catch (error) {
       // A refusal that follows the end of the project is the reply of a plugin host without a project: the project event comes first.
-      if (current === null) return null;
+      if (current === null || noProjectRefusal(error)) return null;
       emitEvent("warn", "plugin.files.tree.request", { operation, ok: false, micros: micros(started), error: errorText(error) });
       throw error;
     }
@@ -233,9 +236,19 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       bookmarks = stored;
       bookmarksFailed = false;
     } catch (error) {
-      if (owner !== current) return;
+      if (owner !== current || noProjectRefusal(error)) return;
       bookmarksFailed = true;
       notifyBookmarks();
+      throw error;
+    }
+  };
+  // Writes the list. A write refused for no shown project changes nothing; the project message ends the call.
+  const storeBookmarks = async (next) => {
+    try {
+      await page.data.set(BOOKMARKS_KEY, next);
+      return true;
+    } catch (error) {
+      if (noProjectRefusal(error)) return false;
       throw error;
     }
   };
@@ -252,7 +265,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (owner !== current) return null;
     if (bookmarks.includes(path)) return null;
     const next = [...bookmarks, path];
-    await page.data.set(BOOKMARKS_KEY, next);
+    if (!(await storeBookmarks(next))) return null;
     bookmarks = next;
     notifyBookmarks();
     return null;
@@ -265,7 +278,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (owner !== current) return null;
     if (!bookmarks.includes(path)) throw new Error(`${path} is not bookmarked`);
     const next = bookmarks.filter((item) => item !== path);
-    await page.data.set(BOOKMARKS_KEY, next);
+    if (!(await storeBookmarks(next))) return null;
     bookmarks = next;
     notifyBookmarks();
     return null;
