@@ -4,6 +4,8 @@
 
 ## 미배포
 
+- P36: 필수 process display identity를 선언한 files sidecar 0.0.8 이상을 요구하고 이 plugin version을 0.0.7로 올린다. Red: manifest test가 이전 범위에서 실패했다. Green: 새 범위와 version으로 통과한다.
+
 - P33: files host 페이지는 doctype으로 시작하고 import map을 갖지 않는다. host가 doctype 뒤에 view import map을 넣으므로(core F212.12-1-10-6), 페이지의 복사본을 뺐다. Red: host 페이지 규칙 시험이 map을 가진 page에서 실패했다. Green: `make test`가 98개 중 98개를 통과하고, core의 `checkViewPage`가 page를 받아들인다.
 - P32: files host 페이지 map이 core view import map의 screen-hash 항목을 가진다. `checkViewPage`가 이 항목을 요구한다. 시험의 map 복사본은 `VIEW_IMPORTS`의 다섯 항목을 가진다. Red: `test/pack-closure.test.mjs`가 host 페이지 map에 screen-hash 항목이 없어 deep-equal 차이로 실패했다. Green: `make test`가 98개 중 98개를 통과하고, `CORE_PLUGIN_API_DIR`로 `make check`가 통과한다.
 - P29: pre-push 훅이 `make push-check`를 실행한다. 이것은 ci workflow와 같이 `make test`, `make check`, push 범위의 commit message 검사를 실행한다. Red: `.githooks/pre-push`가 없었고 `git push --dry-run`은 검사를 실행하지 않았다. Green: 훅이 검사를 실행한다. `make test`는 98개 중 98개를 통과하고, `make check`는 고정 SDK에서 실패하며 이것은 P30이 기록한다.

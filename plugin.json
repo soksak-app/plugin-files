@@ -19,7 +19,7 @@
     "page": "ui/host.html"
   },
   "dependencies": {
-    "@soksak/sidecar-files": ">=0.0.7"
+    "@soksak/sidecar-files": ">=0.0.8"
   },
   "hostOperations": {
     "@soksak/sidecar-files": [

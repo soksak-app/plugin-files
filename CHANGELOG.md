@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- P36: Require files sidecar 0.0.8 or later, which declares the required process display identity; bump this plugin version to 0.0.7. Red: the manifest test rejected the old range. Green: the test passes with the new range and version.
+
 - P33: The files host page begins with its doctype and holds no import map. The host inserts the view import map after the doctype, for the core checklist item F212.12-1-10-6, so the copy in the page is removed. Red: the host page rule test failed on the page with the map. Green: `make test` passes 98 of 98, and the core `checkViewPage` accepts the page.
 - P32: The files host page map holds the screen-hash entry of core's view import map, which `checkViewPage` requires. The test's copy of the map holds the five entries of `VIEW_IMPORTS`. Red: `test/pack-closure.test.mjs` failed with a deep-equal difference, because the host page map lacked the screen-hash entry. Green: `make test` passes 98 of 98, and `make check` passes with CORE_PLUGIN_API_DIR.
 - P29: The pre-push hook runs `make push-check`, which runs `make test`, `make check` and the commit message check of the pushed range, as the ci workflow does. Red: `.githooks/pre-push` did not exist and `git push --dry-run` ran no check. Green: the hook runs the checks; `make test` passes 98 of 98, and `make check` fails at the pinned SDK, which P30 records.

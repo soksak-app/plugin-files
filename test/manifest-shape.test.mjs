@@ -10,6 +10,11 @@ const manifest = JSON.parse(read("plugin.json"));
 const pkg = JSON.parse(read("package.json"));
 const STATUS_SCHEMA = { type: "object", properties: { elements: { type: "array" } } };
 
+test("the plugin requires the current files sidecar process identity release", () => {
+  assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.8");
+  assert.equal(pkg.version, "0.0.7");
+});
+
 test("plugin.json declares the plugin host page and no host state", () => {
   assert.deepEqual(manifest.host, { page: "ui/host.html" });
   assert.ok(exists("ui/host.html"), "ui/host.html is missing");
