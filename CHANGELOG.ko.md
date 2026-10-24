@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P47: P46을 포함하는 Files 0.0.8 local candidate를 준비했다. 공식 진단 package 검사는 manifest, exposure, engines, events와 records 다섯 검사를 통과한다. 새 registry는 P87 entry를 보존하고 Files 0.0.8을 추가하며, 새 설정에 Files sidecar 0.0.8과 함께 설치된다. 설치된 host runtime은 package의 P46 구현과 같다. Files는 `diagnostics.json`을 선언하지 않는다. Candidate archive SHA-256은 `75234f301dda839aa9a81eeeb7fb33c6f4de8a19ec4edfd54ef7783a7bfb2ced`, registry index SHA-256은 `4c192acd4fd8e121811641b38b18067d8c36e9b53b431aa75958cc2a22027c94`다. Local 상태이며 미배포이고 application은 실행하지 않았다.
+
 - P46: `core.file.open`의 예상된 `-32000` `no plugin opens <path>` 거부만 처리한다. 선택된 파일 행은 sidecar detail을 유지하면서 `열 수 없음: <오류>`를 표시하고 다음 tree snapshot에서 거부를 지운다. Host는 `plugin.files.open.failed`를 기록하고 처리된 거부를 application global error display에 보내지 않는다. 다른 open 오류는 계속 reject한다. Red: 새 host-runtime case는 변경 전 코드가 행을 publish하지 않고 `files.open`을 reject해 실패했다. Green: 거부와 예상 밖 오류를 확인하는 두 focused case가 통과하고, `test/host-runtime.test.mjs` filtered run은 2/2 통과한다.
 
 - P45: Files host는 초기 bookmarks status를 읽을 때 start project를 current로 간주하지 않는다. Sidecar 구독 중 project 전달이 current를 바꾸면 이전 초기화는 project data read나 snapshot 요청 전에 중단한다. Red: host-entry test가 먼저 undefined current를 status 등록 중 읽는 결함을 드러냈고, 그 전제 수정 후에는 project-null 전달 뒤 오래된 continuation이 `runtime.data.get`을 호출하는 것을 재현했다. Green: 수정된 test와 host-entry/host-runtime test 41/41, candidate `make check`의 다섯 검사가 통과한다. D 설치 파일은 P44 source와 같지만 project callback 값이 기록되지 않아 이 controlled race를 D의 확인된 원인으로 주장하지 않는다.
