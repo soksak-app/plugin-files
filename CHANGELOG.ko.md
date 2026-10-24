@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P41: Files host adapter는 `core.file.open`을 raw host call로 전달하지 않고 `{name, params}` 형태의 `runtime.command` envelope를 통해 main page로 보낸다. Plugin-host channel은 raw core call을 거부한다. Red: `test/host-entry.test.mjs`가 envelope를 기대하도록 바뀐 뒤 변경 전 adapter의 직접 `runtime.command` 호출로 실패했다. Green: 같은 test와 host-entry test file의 8개 case가 통과한다. Files `0.0.7`은 P38-1이 게시될 때까지 미배포 상태다.
+
 - P40: Files host는 `files.tree`를 expose하기 전에 `declared-ui.expanded`를 구독한다. Event의 node-key 경로를 현재 declared tree에서 찾아 요청한 `expand` 또는 `collapse` operation과 해석된 `params.path`를 보내고 sidecar reply snapshot을 publish한다. 잘못되거나 오래된 event, project가 없는 event와 거부된 sidecar callback은 host error 경로로 보고한다. 더 이상 필요 없는 `files.tree.toggle` command를 제거한다. Red: `test/host-runtime.test.mjs`가 변경 전 코드에서 event 미구독 assertion에 실패했다. Green: `test/host-runtime.test.mjs`, `test/host-entry.test.mjs`, `test/sidecar-wire.test.mjs`가 42/42 통과한다. Files `0.0.7`은 P38-1과 core event gate F239-35-4까지 미배포다.
 
 - P39: Plugin host는 `files.tree`, `files.bookmarks`를 전체 이름으로 등록하고 declared-section pull이 요청하는 local name `tree`, `bookmarks`로 snapshot을 저장한다. 이전 adapter는 전체 이름만 저장해 `files.refresh` 뒤 두 pull이 `{seq: 0, value: null}`을 반환하고 sidebar section이 mount되지 않았다. Red: `test/host-entry.test.mjs`의 `plugin host snapshots use plugin-local status names`는 `files.tree`를 받아 기대값 `tree`와 달라 실패했다. Green: `test/host-entry.test.mjs` 7/7, `test/manifest-shape.test.mjs` 10/10이며 변경 module과 test의 `node --check`가 통과한다. 공개 Files `0.0.7`은 없으므로 candidate version은 `0.0.7`로 유지하며 archive는 P38-1까지 미배포다.

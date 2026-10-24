@@ -49,14 +49,14 @@ test("host entry mounts the runtime with the page of the bridge, the status adap
   assert.equal(typeof calls[0].expose.command, "function");
 });
 
-test("the page opens a file through the core command, and reports errors through the error route", async () => {
+test("the page opens a file through the plugin-host command envelope and reports errors through the error route", async () => {
   const { bridge, calls } = fakeBridge();
   let options;
   await startFilesHost({ bridge, expose: { status: async () => {} }, start: { project: null }, mount: async (value) => { options = value; } });
   await options.page.open("readme.md");
   await options.page.report({ level: "error", where: "files tree", text: "listing failed" });
   assert.deepEqual(calls, [
-    { kind: "core", name: "core.file.open", params: { path: "readme.md" } },
+    { kind: "request", command: "runtime.command", params: { name: "core.file.open", params: { path: "readme.md" } } },
     { kind: "error", where: "files tree", text: "listing failed" },
   ]);
   assert.throws(() => options.page.report({ level: "warn", where: "files tree", text: "x" }), /reports only errors/);

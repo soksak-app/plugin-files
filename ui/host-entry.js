@@ -43,7 +43,7 @@ export async function startFilesHost({ bridge, expose, start, mount } = {}) {
       if (level !== "error") throw new TypeError(`files host reports only errors, got ${level}`);
       return bridge.runtime.error(where, text);
     },
-    open: (path) => bridge.runtime.command("core.file.open", { path }),
+    open: (path) => bridge.calls.request("runtime.command", { name: "core.file.open", params: { path } }),
     data: {
       get: (key) => bridge.calls.request("runtime.data.get", { key }),
       set: (key, value) => bridge.calls.request("runtime.data.set", { key, value }).then(() => undefined),
