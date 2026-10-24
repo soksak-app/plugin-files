@@ -17,7 +17,8 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     },
     async set(key, value) {
       calls.push({ kind: "data.set", key, value: structuredClone(value) });
-      if (this.failSet !== null) throw new Error(this.failSet);
+      if (typeof this.failSet === "function") await this.failSet();
+      else if (this.failSet !== null) throw new Error(this.failSet);
       this.store[key] = structuredClone(value);
       return null;
     },
@@ -485,7 +486,7 @@ test("a reply to a request of the previous project is dropped and does not reach
   host.dispose();
 });
 
-test("a sidecar refusal after the window showed no project is the reply of no project, not an error", async () => {
+test("a sidecar refusal after the request project becomes null is canceled", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }])] });
   const host = await mountFilesHost(f);
   f.failures.send = new Error("plugin host files: no project is shown");
@@ -507,29 +508,50 @@ test("an invalid project event is refused with an error and keeps the project sh
   host.dispose();
 });
 
-test("a bookmark read refused because no project is shown is not an error: the project message ends the list", async () => {
+test("a no-project refusal from an active project's bookmark read is reported", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([])] });
   f.data.failGet = "plugin host files: no project is shown";
   const host = await mountFilesHost(f);
-  assert.deepEqual(f.errors, [], "a refusal for no shown project is reported as no error");
+  assert.deepEqual(f.errors, [{ level: "error", where: "files bookmarks", text: "plugin host files: no project is shown" }]);
   host.dispose();
 });
 
-test("a bookmark write refused because no project is shown changes nothing and is not an error", async () => {
+test("a no-project refusal from an active project's bookmark write is reported and rejected", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([])] });
   const host = await mountFilesHost(f);
   f.data.failSet = "plugin host files: no project is shown";
-  assert.equal(await f.commands.get("files.bookmarks.add")({ path: "a.txt" }), null);
-  assert.deepEqual(f.errors, []);
+  await assert.rejects(f.commands.get("files.bookmarks.add")({ path: "a.txt" }), /plugin host files: no project is shown/);
+  assert.deepEqual(f.errors, [{ level: "error", where: "files bookmarks", text: "plugin host files: no project is shown" }]);
   host.dispose();
 });
 
-test("a sidecar request refused because no project is shown resolves as no project, not as an error", async () => {
+test("a bookmark write refused after its project becomes null is canceled", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  let rejectWrite;
+  let writeStarted;
+  const started = new Promise((resolve) => { writeStarted = resolve; });
+  f.data.failSet = () => {
+    writeStarted();
+    return new Promise((_, reject) => { rejectWrite = reject; });
+  };
+  const add = f.commands.get("files.bookmarks.add")({ path: "a.txt" });
+  await started;
+  await f.emitProject(null);
+  rejectWrite(new Error("plugin host files: no project is shown"));
+  assert.equal(await add, null);
+  assert.deepEqual(f.errors, []);
+  assert.deepEqual(f.data.store.bookmarks ?? [], []);
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "프로젝트 없음");
+  host.dispose();
+});
+
+test("a no-project refusal from an active project's sidecar request is reported and rejected", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([])] });
   const host = await mountFilesHost(f);
   f.failures.send = new Error("plugin host files: no project is shown");
-  assert.equal(await f.commands.get("files.refresh")(), null);
-  assert.deepEqual(f.errors, []);
+  await assert.rejects(f.commands.get("files.refresh")(), /plugin host files: no project is shown/);
+  assert.deepEqual(f.errors, [{ level: "error", where: "files tree", text: "plugin host files: no project is shown" }]);
   host.dispose();
 });
 

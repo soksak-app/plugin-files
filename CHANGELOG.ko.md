@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P42: operation이 캡처한 project가 현재일 때 `no project is shown` 거부를 보고한다. 이전 text-only 취소가 active-project bookmark와 sidecar 오류를 숨겼다. 캡처한 project가 바뀐 operation만 보고 없이 취소한다. Red: active-refusal test 세 개가 변경 전 `ui/host-runtime.js`에서 실패했다(bookmark read는 error report가 없었고 bookmark write와 sidecar request는 reject하지 않았다). Green: active 거부를 보고하고 reject하며 project가 `null`이 된 뒤 거부된 bookmark write는 취소한다. `test/host-runtime.test.mjs`는 29/29 통과하고 candidate `make check`는 manifest, exposure, engines, events 및 records(56 files) 검사를 통과한다. 원래 두 host project-close trigger는 core F262-6에서 검증되지 않은 상태로 남는다. Files `0.0.7`은 P38-1이 끝날 때까지 미배포다.
+
 - P41: Files host adapter는 `core.file.open`을 raw host call로 전달하지 않고 `{name, params}` 형태의 `runtime.command` envelope를 통해 main page로 보낸다. Plugin-host channel은 raw core call을 거부한다. Red: `test/host-entry.test.mjs`가 envelope를 기대하도록 바뀐 뒤 변경 전 adapter의 직접 `runtime.command` 호출로 실패했다. Green: 같은 test와 host-entry test file의 8개 case가 통과한다. Files `0.0.7`은 P38-1이 게시될 때까지 미배포 상태다.
 
 - P40: Files host는 `files.tree`를 expose하기 전에 `declared-ui.expanded`를 구독한다. Event의 node-key 경로를 현재 declared tree에서 찾아 요청한 `expand` 또는 `collapse` operation과 해석된 `params.path`를 보내고 sidecar reply snapshot을 publish한다. 잘못되거나 오래된 event, project가 없는 event와 거부된 sidecar callback은 host error 경로로 보고한다. 더 이상 필요 없는 `files.tree.toggle` command를 제거한다. Red: `test/host-runtime.test.mjs`가 변경 전 코드에서 event 미구독 assertion에 실패했다. Green: `test/host-runtime.test.mjs`, `test/host-entry.test.mjs`, `test/sidecar-wire.test.mjs`가 42/42 통과한다. Files `0.0.7`은 P38-1과 core event gate F239-35-4까지 미배포다.

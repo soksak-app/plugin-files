@@ -24,9 +24,6 @@ function parseProject(project) {
   return { id: project.id, root: project.root };
 }
 const rootOf = (project) => (project === null ? null : project.root);
-// The refusal of a call that needs a shown project: the plugin host showed no project when the call ran (docs/spec/plugin-host.md). The
-// project message that follows it ends the list or the tree, so the refusal is not an error of the plugin.
-const noProjectRefusal = (error) => /no project is shown$/.test(errorText(error));
 
 /** Register the tree and bookmarks statuses and their commands in the plugin-host page runtime. */
 export async function mountFilesHost({ page, expose, project = page?.project } = {}) {
@@ -179,11 +176,11 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       reportError(error);
     })]);
   };
-  const send = async (operation, params) => {
+  const send = async (operation, params, shown) => {
     const body = { operation, id: "files-" + (++nextRequest), ...params };
     const response = new Promise((resolve, reject) => pending.set(body.id, { resolve, reject }));
     try {
-      await sidecar.send(sessionOf(current), body, []);
+      await sidecar.send(sessionOf(shown), body, []);
     } catch (error) {
       pending.delete(body.id);
       throw error;
@@ -192,16 +189,16 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   /** A tree request, with its result recorded as an event. */
   const request = async (operation, params = {}) => {
-    if (current === null) return null;
+    const owner = current;
+    if (owner === null) return null;
     if (stopped) throw new Error("files host is disposed");
     const started = performance.now();
     try {
-      const result = await send(operation, params);
+      const result = await send(operation, params, owner);
       emitEvent("debug", "plugin.files.tree.request", { operation, ok: true, micros: micros(started) });
       return result;
     } catch (error) {
-      // A refusal that follows the end of the project is the reply of a plugin host without a project: the project event comes first.
-      if (current === null || noProjectRefusal(error)) return null;
+      if (owner !== current) return null;
       emitEvent("warn", "plugin.files.tree.request", { operation, ok: false, micros: micros(started), error: errorText(error) });
       throw error;
     }
@@ -255,19 +252,19 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       bookmarks = stored;
       bookmarksFailed = false;
     } catch (error) {
-      if (owner !== current || noProjectRefusal(error)) return;
+      if (owner !== current) return;
       bookmarksFailed = true;
       notifyBookmarks();
       throw error;
     }
   };
-  // Writes the list. A write refused for no shown project changes nothing; the project message ends the call.
-  const storeBookmarks = async (next) => {
+  // Writes the list. A write is canceled only when the project captured by the command has changed.
+  const storeBookmarks = async (next, owner) => {
     try {
       await page.data.set(BOOKMARKS_KEY, next);
-      return true;
+      return owner === current;
     } catch (error) {
-      if (noProjectRefusal(error)) return false;
+      if (owner !== current) return false;
       throw error;
     }
   };
@@ -284,7 +281,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (owner !== current) return null;
     if (bookmarks.includes(path)) return null;
     const next = [...bookmarks, path];
-    if (!(await storeBookmarks(next))) return null;
+    if (!(await storeBookmarks(next, owner))) return null;
     bookmarks = next;
     notifyBookmarks();
     return null;
@@ -297,7 +294,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (owner !== current) return null;
     if (!bookmarks.includes(path)) throw new Error(`${path} is not bookmarked`);
     const next = bookmarks.filter((item) => item !== path);
-    if (!(await storeBookmarks(next))) return null;
+    if (!(await storeBookmarks(next, owner))) return null;
     bookmarks = next;
     notifyBookmarks();
     return null;
