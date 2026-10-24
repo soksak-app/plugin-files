@@ -23,7 +23,7 @@ function parseProject(project) {
   }
   return { id: project.id, root: project.root };
 }
-const rootOf = (project) => (project === null ? null : project.root);
+const rootOf = (project) => (project === null || project === undefined ? null : project.root);
 
 /** Register the tree and bookmarks statuses and their commands in the plugin-host page runtime. */
 export async function mountFilesHost({ page, expose, project = page?.project } = {}) {
@@ -340,6 +340,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     notifyBookmarks();
     if (next === null) return;
     await subscribe(sessionOf(next));
+    if (current !== next) return;
     try {
       await loadBookmarks();
     } catch (error) {

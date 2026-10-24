@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { startFilesHost } from "../ui/host-entry.js";
+import { mountFilesHost } from "../ui/host-runtime.js";
 
 // A view bridge with the methods of the host adapter, and the calls it receives.
 function fakeBridge() {
@@ -156,4 +157,48 @@ test("the page passes the project message to the runtime through runtime.project
   assert.equal(projects.length, 1, "the project message is not subscribed through runtime.project");
   projects[0]({ id: "project-b", root: "/work/b" });
   assert.deepEqual(calls.at(-1), { kind: "project", project: { id: "project-b", root: "/work/b" } });
+});
+
+test("host entry cancels project initialization when a null delivery arrives during sidecar subscription", { timeout: 1000 }, async () => {
+  const { bridge, calls } = fakeBridge();
+  const projectListeners = [];
+  let resolveSidecarOn;
+  let shownProject = null;
+  bridge.runtime.project = (listener) => {
+    projectListeners.push(listener);
+    return { ready: Promise.resolve(), dispose: Promise.resolve(() => {}) };
+  };
+  bridge.runtime.sidecar = (name) => ({
+    on: async (session) => {
+      calls.push({ kind: "sidecar.on", name, session });
+      await new Promise((resolve) => { resolveSidecarOn = resolve; });
+    },
+    onFailure: async (session) => { calls.push({ kind: "sidecar.onFailure", name, session }); },
+    send: async (session, body) => { calls.push({ kind: "sidecar.send", name, session, body }); },
+  });
+  bridge.calls.request = async (command, params) => {
+    calls.push({ kind: "request", command, params });
+    if (command === "runtime.data.get" && shownProject === null) throw new Error("plugin host files: no project is shown");
+    return command === "runtime.data.get" ? [] : null;
+  };
+  const expose = { status: async () => {}, command: async () => {} };
+  await startFilesHost({
+    bridge,
+    expose,
+    start: { project: { id: "project-a", root: "/work/a" }, declarations: {} },
+    mount: mountFilesHost,
+  });
+  assert.equal(projectListeners.length, 1);
+  const bookmarkSnapshot = calls.find(({ kind, status }) => kind === "snapshot" && status === "bookmarks");
+  assert.equal(bookmarkSnapshot.value.elements[0].empty, "프로젝트 없음");
+
+  const initial = projectListeners[0]({ id: "project-a", root: "/work/a" });
+  await Promise.resolve();
+  assert.equal(typeof resolveSidecarOn, "function", "the initial project must be waiting for sidecar subscription");
+  await projectListeners[0](null);
+  resolveSidecarOn();
+  await initial;
+
+  assert.deepEqual(calls.filter(({ kind }) => kind === "request" || kind === "sidecar.send"), []);
+  assert.deepEqual(calls.filter(({ kind }) => kind === "error"), []);
 });

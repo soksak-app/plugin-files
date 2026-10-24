@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P45: Files host는 초기 bookmarks status를 읽을 때 start project를 current로 간주하지 않는다. Sidecar 구독 중 project 전달이 current를 바꾸면 이전 초기화는 project data read나 snapshot 요청 전에 중단한다. Red: host-entry test가 먼저 undefined current를 status 등록 중 읽는 결함을 드러냈고, 그 전제 수정 후에는 project-null 전달 뒤 오래된 continuation이 `runtime.data.get`을 호출하는 것을 재현했다. Green: 수정된 test와 host-entry/host-runtime test 41/41, candidate `make check`의 다섯 검사가 통과한다. D 설치 파일은 P44 source와 같지만 project callback 값이 기록되지 않아 이 controlled race를 D의 확인된 원인으로 주장하지 않는다.
+
 - P44: Files host는 document-start project를 초기 tree value로만 사용하고 I/O 권한으로 취급하지 않는다. Ready-time 첫 전달을 기다리며 그 전 project command는 명시적으로 거부한다. Red: null 전달 test는 변경 전 코드에서 bookmark와 tree 오류를 냈고, pre-ready command test는 command가 거부되지 않고 성공처럼 resolve되어 실패했다. Green: 두 test와 `test/host-runtime.test.mjs` 32/32가 통과한다. 첫 전달이 `null`이면 project 전용 I/O 없이 tree를 비우고, start와 같은 non-null 전달이면 한 번 초기화한다.
 
 - P43: 같은 `id`, `root`를 가진 project message가 반복되면 tree/bookmarks를 비우거나 pending 작업을 버리거나 sidecar snapshot을 다시 보내지 않는다. Root 변경은 계속 project transition으로 처리한다. Red: `test/host-runtime.test.mjs`의 `a repeated project value preserves state and pending work while a changed root refreshes`가 P42 코드에서 전송 수 `2 !== 1`로 실패했다. Green: 해당 test가 통과하고 `test/host-runtime.test.mjs`는 30/30 통과한다. Core F262-6의 원래 두 host project-close trigger는 재현하지 않았다.
