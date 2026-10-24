@@ -435,6 +435,43 @@ test("a project event moves the tree and the sidecar session to the project that
   host.dispose();
 });
 
+test("a repeated project value preserves state and pending work while a changed root refreshes", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([
+      { path: "src", name: "src", directory: true, depth: 0, expanded: true, selected: false },
+      { path: "src/readme.md", name: "readme.md", directory: false, depth: 1, expanded: false, selected: false },
+    ]),
+    snapshot([{ path: "refreshed.md", name: "refreshed.md", directory: false, depth: 0, expanded: false, selected: false }]),
+    snapshot([{ path: "docs", name: "docs", directory: true, depth: 0, expanded: false, selected: false }]),
+  ], stored: { bookmarks: ["saved.txt"] } });
+  const host = await mountFilesHost(f);
+  const initialReads = f.calls.filter(({ kind }) => kind === "data.get").length;
+  f.state.hold = true;
+  const pendingRefresh = f.commands.get("files.refresh")();
+  const initialSends = f.calls.filter(({ kind }) => kind === "send").length;
+  assert.equal(f.state.held.length, 1);
+  const initialTree = f.statuses.get("files.tree").read();
+  const initialBookmarks = f.statuses.get("files.bookmarks").read();
+  await f.emitProject({ id: "project-a", root: "/work/project" });
+  await settle();
+  assert.equal(f.calls.filter(({ kind }) => kind === "data.get").length, initialReads);
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, initialSends);
+  assert.deepEqual(f.statuses.get("files.tree").read(), initialTree);
+  assert.deepEqual(f.statuses.get("files.bookmarks").read(), initialBookmarks);
+  assert.equal(f.state.held.length, 1, "the duplicate project event abandoned the pending request");
+  f.state.hold = false;
+  f.state.held.splice(0).forEach((reply) => reply());
+  await pendingRefresh;
+  assert.deepEqual(f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree").nodes.map((node) => node.label), ["refreshed.md"]);
+
+  await f.emitProject({ id: "project-a", root: "/work/moved" });
+  await settle();
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "/work/moved");
+  assert.deepEqual(f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree").nodes.map((node) => node.label), ["docs"]);
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, initialSends + 1);
+  host.dispose();
+}, { timeout: 1000 });
+
 test("a project event null shows no project and sends nothing to the sidecar", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }])] });
   const host = await mountFilesHost(f);

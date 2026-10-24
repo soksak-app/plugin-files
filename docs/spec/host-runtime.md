@@ -10,6 +10,8 @@ A project change ends the previous sidecar session. Its registered message and f
 
 A later project with an `id` and `root` uses its own sidecar session. A callback from an earlier project is ignored even when it arrives after the later project is shown.
 
+A repeated project message with the current `id` and `root` is not a project change. The runtime preserves its tree, bookmarks and pending work and starts no sidecar or project-data request. A changed `root` is a project change even when the `id` is unchanged.
+
 ## Declared status snapshots
 
 The plugin host registers each exposed status with its full manifest name, such as `files.tree`. The view bridge stores and answers snapshots by the plugin-local status name, such as `tree`. The host adapter therefore passes the suffix after `files.` to `bridge.snapshots.push` for the initial value and every subscribed value. It does not change the full name passed to `expose.status`.

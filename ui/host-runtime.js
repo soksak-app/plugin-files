@@ -322,6 +322,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   const changeProject = async (data) => {
     if (stopped) return;
     const next = parseProject(data);
+    if (current === null ? next === null : next !== null && current.id === next.id && current.root === next.root) return;
     current = next;
     generation = null;
     abandonPending();

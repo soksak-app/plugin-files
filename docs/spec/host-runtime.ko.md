@@ -10,6 +10,8 @@ Project가 바뀌면 이전 sidecar session은 끝난다. 이전 session에 등�
 
 나중에 `id`, `root`가 있는 project가 표시되면 자체 sidecar session을 사용한다. 이전 project callback은 새 project가 표시된 뒤 도착해도 무시한다.
 
+현재 `id`, `root`와 같은 project message는 project 변경이 아니다. Runtime은 tree, bookmarks, 진행 중인 작업을 유지하고 sidecar 또는 project-data request를 새로 시작하지 않는다. `id`가 같아도 `root`가 바뀌면 project 변경이다.
+
 ## Declared status snapshot
 
 Plugin host는 `files.tree`처럼 전체 manifest 이름으로 exposed status를 등록한다. View bridge는 `tree`처럼 plugin 안에서 사용하는 status 이름으로 snapshot을 저장하고 응답한다. 따라서 host adapter는 처음 값과 구독 값 모두에서 `files.` 뒤의 이름을 `bridge.snapshots.push`에 전달한다. `expose.status`에 전달하는 전체 이름은 바꾸지 않는다.
