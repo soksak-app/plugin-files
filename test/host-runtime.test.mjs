@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { mountFilesHost } from "../ui/host-runtime.js";
 
-function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/project" }, stored = {} } = {}) {
+function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/project" }, projectReady = true, stored = {} } = {}) {
   const calls = [];
   const emitted = [];
   const data = {
@@ -58,7 +58,11 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     async open(path) { opened.push(path); },
     data,
     emit(level, name, fields) { emitted.push({ level, name, fields }); },
-    onProject(listener) { projectListeners.push(listener); return () => {}; },
+    onProject(listener) {
+      projectListeners.push(listener);
+      if (projectReady) listener(project);
+      return () => {};
+    },
     onTreeExpanded(listener) {
       order.push("tree-expanded");
       treeExpandedListeners.push(listener);
@@ -100,6 +104,7 @@ test("host page subscribes before snapshot and registers the declared tree statu
   const send = f.calls.find(({ kind }) => kind === "send");
   assert.equal(send.session, "plugin:files:project-a:@soksak/sidecar-files");
   assert.equal(send.body.operation, "snapshot");
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, 1, "the matching ready-time project initializes once");
   assert.equal(f.statuses.has("files.tree"), true);
   assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.select", "files.open", "files.bookmarks.add", "files.bookmarks.remove", "files.open.failed"]);
   const value = f.statuses.get("files.tree").read();
@@ -481,6 +486,31 @@ test("a project event null shows no project and sends nothing to the sidecar", a
   assert.equal(await f.commands.get("files.refresh")(), null);
   assert.equal(f.calls.filter(({ kind }) => kind === "send").length, sendsBefore);
   assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("a ready-time null project clears the start value before project APIs run", { timeout: 1000 }, async () => {
+  const f = fakeHost({ project: { id: "project-a", root: "/work/project" }, projectReady: false, treeSnapshots: [snapshot([])] });
+  f.data.failGet = "plugin host files: no project is shown";
+  f.failures.send = new Error("plugin host files: no project is shown");
+  const host = await mountFilesHost(f);
+
+  assert.deepEqual(f.errors, [], "startup used a document-start project before the ready-time project arrived");
+  assert.equal(f.calls.filter(({ kind }) => kind === "data.get" || kind === "send").length, 0);
+  await f.emitProject(null);
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "프로젝트 없음");
+  assert.equal(f.calls.filter(({ kind }) => kind === "data.get" || kind === "send").length, 0);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("project commands before the first ready-time delivery are refused explicitly", { timeout: 1000 }, async () => {
+  const f = fakeHost({ project: { id: "project-a", root: "/work/project" }, projectReady: false, treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+
+  await assert.rejects(f.commands.get("files.refresh")(), /ready-time project delivery/);
+  await assert.rejects(f.commands.get("files.bookmarks.add")({ path: "README.md" }), /ready-time project delivery/);
+  assert.equal(f.calls.some(({ kind }) => kind === "data.get" || kind === "data.set" || kind === "send"), false);
   host.dispose();
 });
 

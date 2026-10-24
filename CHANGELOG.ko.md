@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P44: Files host는 document-start project를 초기 tree value로만 사용하고 I/O 권한으로 취급하지 않는다. Ready-time 첫 전달을 기다리며 그 전 project command는 명시적으로 거부한다. Red: null 전달 test는 변경 전 코드에서 bookmark와 tree 오류를 냈고, pre-ready command test는 command가 거부되지 않고 성공처럼 resolve되어 실패했다. Green: 두 test와 `test/host-runtime.test.mjs` 32/32가 통과한다. 첫 전달이 `null`이면 project 전용 I/O 없이 tree를 비우고, start와 같은 non-null 전달이면 한 번 초기화한다.
+
 - P43: 같은 `id`, `root`를 가진 project message가 반복되면 tree/bookmarks를 비우거나 pending 작업을 버리거나 sidecar snapshot을 다시 보내지 않는다. Root 변경은 계속 project transition으로 처리한다. Red: `test/host-runtime.test.mjs`의 `a repeated project value preserves state and pending work while a changed root refreshes`가 P42 코드에서 전송 수 `2 !== 1`로 실패했다. Green: 해당 test가 통과하고 `test/host-runtime.test.mjs`는 30/30 통과한다. Core F262-6의 원래 두 host project-close trigger는 재현하지 않았다.
 
 - P42: operation이 캡처한 project가 현재일 때 `no project is shown` 거부를 보고한다. 이전 text-only 취소가 active-project bookmark와 sidecar 오류를 숨겼다. 캡처한 project가 바뀐 operation만 보고 없이 취소한다. Red: active-refusal test 세 개가 변경 전 `ui/host-runtime.js`에서 실패했다(bookmark read는 error report가 없었고 bookmark write와 sidecar request는 reject하지 않았다). Green: active 거부를 보고하고 reject하며 project가 `null`이 된 뒤 거부된 bookmark write는 취소한다. `test/host-runtime.test.mjs`는 29/29 통과하고 candidate `make check`는 manifest, exposure, engines, events 및 records(56 files) 검사를 통과한다. 원래 두 host project-close trigger는 core F262-6에서 검증되지 않은 상태로 남는다. Files `0.0.7`은 P38-1이 끝날 때까지 미배포다.

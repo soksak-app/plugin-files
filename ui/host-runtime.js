@@ -49,9 +49,10 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     throw new TypeError("files host requires exposure status and command registration");
   }
   const emitEvent = page.emit;
-  // The project that the plugin host shows: the start value at the mount, then each change of the event project (docs/spec/plugin-host.md).
-  let current = parseProject(project);
-  let value = treeValue({ root: rootOf(current), entries: [], ...TREE_OPTIONS });
+  // The start value seeds the tree; current stays unknown until the ready-time project delivery.
+  const startProject = parseProject(project);
+  let current;
+  let value = treeValue({ root: rootOf(startProject), entries: [], ...TREE_OPTIONS });
   const listeners = new Set();
   const bookmarkListeners = new Set();
   const pending = new Map();
@@ -190,8 +191,9 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   /** A tree request, with its result recorded as an event. */
   const request = async (operation, params = {}) => {
     const owner = current;
-    if (owner === null) return null;
     if (stopped) throw new Error("files host is disposed");
+    if (owner === undefined) throw new Error("files host requires a ready-time project delivery");
+    if (owner === null) return null;
     const started = performance.now();
     try {
       const result = await send(operation, params, owner);
@@ -206,6 +208,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   const runSnapshot = () => request("snapshot");
   const onTreeExpanded = async (event) => {
     try {
+      if (current === undefined) throw new Error("declared tree expansion requires a ready-time project delivery");
       if (current === null) throw new Error("declared tree expansion requires a shown project");
       if (!event || typeof event !== "object" || Array.isArray(event)) throw new TypeError("declared tree expansion event must be an object");
       if (event.status !== "tree") throw new TypeError("declared tree expansion status must be tree");
@@ -231,6 +234,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     }
   };
   const select = async ({ path } = {}) => {
+    if (current === undefined) throw new Error("files host requires a ready-time project delivery");
     if (current === null) return null;
     if (path === undefined) throw new Error("files.select requires path, a string or null");
     return request("select", { generation, path: path ?? "" });
@@ -274,6 +278,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   const addBookmark = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.bookmarks.add requires a path");
+    if (current === undefined) throw new Error("files host requires a ready-time project delivery");
     if (current === null) return null;
     const owner = current;
     await refreshBookmarks();
@@ -288,6 +293,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   const removeBookmark = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.bookmarks.remove requires a path");
+    if (current === undefined) throw new Error("files host requires a ready-time project delivery");
     if (current === null) return null;
     const owner = current;
     await refreshBookmarks();
@@ -322,7 +328,8 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   const changeProject = async (data) => {
     if (stopped) return;
     const next = parseProject(data);
-    if (current === null ? next === null : next !== null && current.id === next.id && current.root === next.root) return;
+    const unchanged = current !== undefined && (current === null ? next === null : next !== null && current.id === next.id && current.root === next.root);
+    if (unchanged) return;
     current = next;
     generation = null;
     abandonPending();
@@ -355,13 +362,6 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   };
   page.onProject(onProjectEvent);
   const stopTreeExpanded = await page.onTreeExpanded(onTreeExpanded);
-  if (current !== null) {
-    try {
-      await loadBookmarks();
-    } catch (error) {
-      await reportError(error, "files bookmarks");
-    }
-  }
   // Each name is written as a literal in its registration: the exposure check of the repository matches the literal names.
   await expose.status("files.tree", read, (fn) => { listeners.add(fn); return () => listeners.delete(fn); });
   await expose.status("files.bookmarks", readBookmarks, (fn) => { bookmarkListeners.add(fn); return () => bookmarkListeners.delete(fn); });
@@ -371,16 +371,6 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   await expose.command("files.bookmarks.add", recorded("files.bookmarks.add", addBookmark, "files bookmarks"));
   await expose.command("files.bookmarks.remove", recorded("files.bookmarks.remove", removeBookmark, "files bookmarks"));
   await expose.command("files.open.failed", recorded("files.open.failed", openFailed, undefined));
-  if (current !== null) {
-    // Subscribe to messages and failures before the first request; the sidecar may answer immediately.
-    await subscribe(sessionOf(current));
-    try {
-      await runSnapshot();
-    } catch (error) {
-      notify(treeValue({ root: rootOf(current), entries: [], listingFailed: true, ...TREE_OPTIONS }));
-      await reportError(error);
-    }
-  }
   return {
     dispose() {
       stopped = true;

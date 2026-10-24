@@ -4,6 +4,8 @@
 
 Host runtime은 plugin host에 표시된 project를 따른다. 시작 값과 project message는 `null` 또는 비어 있지 않은 `id`, `root`를 가진 object다. Project가 `null`이면 runtime은 tree와 bookmarks를 비우고 sidecar request를 보내지 않는다.
 
+Start project는 초기 tree value를 만들지만 `page.onProject`의 첫 전달 전까지 operation의 current project가 아니다. 그 전에 실행된 project 전용 command는 준비 상태 오류로 명시적으로 실패하며, 성공한 것처럼 조용히 반환하거나 I/O를 실행하지 않는다. Host는 plugin-host page가 ready가 된 뒤 현재 표시 중인 project를 전달하며 `null`도 보낸다. Window가 page ready 전에 project를 바꿨을 수 있으므로 이 전달이 현재 project를 확정한다. 첫 전달이 start project와 같으면 그 project를 한 번 초기화한다. 첫 전달이 `null`이면 tree와 bookmarks를 지우고 project 전용 operation을 실행하지 않는다. 이후 같은 값이 반복돼도 idempotent하다.
+
 Project에 의존하는 host 또는 sidecar operation이 거부되면 그 operation이 캡처한 project가 여전히 현재 project일 때 거부를 보고한다. 오류 문구가 `no project is shown`이어도 같다. Operation이 캡처한 project가 바뀐 뒤에만 진행 중인 operation을 보고 없이 취소한다. 오류 문구를 비교해 취소로 분류하지 않는다.
 
 Project가 바뀌면 이전 sidecar session은 끝난다. 이전 session에 등록된 message 및 failure callback은 project가 바뀐 뒤에도, `null`로 바뀐 뒤에도 도착할 수 있다. Runtime은 현재 project session이 아닌 callback을 무시한다. 이를 error로 보고하거나 현재 tree 또는 bookmarks를 바꾸거나, 없는 project에서 session을 만들지 않는다.
