@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P38: Files host는 project가 `null`이 된 뒤 이전 sidecar session의 message와 failure callback을 무시한다. Red: 변경 전 host-runtime 소유 test에서 project-close event 뒤 이전 session message가 도착하자 `sessionOf`가 `Cannot read properties of null (reading 'id')`로 실패했다. Green: 이전 session callback 두 개를 무시하고 no-project status를 유지하며 error를 보고하지 않는다. `test/host-runtime.test.mjs` 25/25, `soksak-records` 56개 파일 검사가 통과한다. 보존된 Wails probe log는 host sequence 66의 app error를 기록하지만 message callback과 failure callback 중 어느 쪽인지는 구분하지 않는다. Source-level 원인은 현재 project가 `null`일 때 이전 session을 대조하는 것이다. SDK pin, plugin version, archive, registry, app profile은 바꾸지 않는다.
+
 - P36: 필수 process display identity를 선언한 files sidecar 0.0.8 이상을 요구하고 이 plugin version을 0.0.7로 올린다. Red: manifest test가 이전 범위에서 실패했다. Green: 새 범위와 version으로 통과한다.
 
 - P33: files host 페이지는 doctype으로 시작하고 import map을 갖지 않는다. host가 doctype 뒤에 view import map을 넣으므로(core F212.12-1-10-6), 페이지의 복사본을 뺐다. Red: host 페이지 규칙 시험이 map을 가진 page에서 실패했다. Green: `make test`가 98개 중 98개를 통과하고, core의 `checkViewPage`가 page를 받아들인다.

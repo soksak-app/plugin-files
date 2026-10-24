@@ -27,19 +27,21 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   const commands = new Map();
   const errors = [];
   const opened = [];
+  const messages = new Map();
+  const sessionFailures = new Map();
   let message;
   let failure;
   let index = 0;
   const state = { hold: false, held: [] };
   const projectListeners = [];
   const sidecar = {
-    async on(session, fn) { calls.push({ kind: "on", session }); message = fn; },
-    async onFailure(session, fn) { calls.push({ kind: "onFailure", session }); failure = fn; },
+    async on(session, fn) { calls.push({ kind: "on", session }); messages.set(session, fn); message = fn; },
+    async onFailure(session, fn) { calls.push({ kind: "onFailure", session }); sessionFailures.set(session, fn); failure = fn; },
     async send(session, body, cids) {
       calls.push({ kind: "send", session, body, cids });
       if (failures.send !== null) throw failures.send;
       const tree = treeSnapshots[index++];
-      const reply = () => message({ id: body.id, ...(tree instanceof Error ? { error: tree.message } : { tree }) });
+      const reply = () => messages.get(session)?.({ id: body.id, ...(tree instanceof Error ? { error: tree.message } : { tree }) });
       if (state.hold) state.held.push(reply); else queueMicrotask(reply);
     },
   };
@@ -64,7 +66,9 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     assert.ok(projectListeners.length > 0, "page.onProject is not subscribed");
     for (const listener of projectListeners) await listener(value);
   };
-  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, failures, state, emitProject, message: () => message, failure: () => failure };
+  return { page, expose, calls, statuses, commands, errors, opened, emitted, data, failures, state, emitProject,
+    message: (session) => session === undefined ? message : messages.get(session),
+    failure: (session) => session === undefined ? failure : sessionFailures.get(session) };
 }
 
 const snapshot = (entries, selected = null, generation = 1) => ({ generation, entries, selected });
@@ -326,6 +330,24 @@ test("a project event null shows no project and sends nothing to the sidecar", a
   assert.equal(f.statuses.get("files.tree").read().elements[0].text, "프로젝트 없음");
   assert.equal(await f.commands.get("files.refresh")(), null);
   assert.equal(f.calls.filter(({ kind }) => kind === "send").length, sendsBefore);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
+test("previous sidecar callbacks are ignored after the project becomes null", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }])] });
+  const host = await mountFilesHost(f);
+  const previousSession = "plugin:files:project-a:@soksak/sidecar-files";
+  const previousMessage = f.message(previousSession);
+  const previousFailure = f.failure(previousSession);
+  assert.equal(typeof previousMessage, "function");
+  assert.equal(typeof previousFailure, "function");
+  await f.emitProject(null);
+  assert.doesNotThrow(() => previousMessage({ changed: "src" }));
+  assert.doesNotThrow(() => previousFailure(new Error("the closed project watch failed")));
+  await settle();
+  assert.equal(f.statuses.get("files.tree").read().elements[0].text, "프로젝트 없음");
+  assert.deepEqual(f.emitted.filter(({ name }) => name === "plugin.files.tree.changed" || name === "plugin.files.tree.failed"), []);
   assert.deepEqual(f.errors, []);
   host.dispose();
 });

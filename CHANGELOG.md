@@ -6,6 +6,8 @@
 
 ## Unreleased
 
+- P38: The Files host ignores messages and failure callbacks from a previous sidecar session after its project becomes `null`. Red: the owning host-runtime test failed on unchanged production code with `Cannot read properties of null (reading 'id')` in `sessionOf`, when a previous-session message arrived after the project-close event. Green: both previous-session callbacks are ignored, the no-project status remains unchanged, and no error is reported; `test/host-runtime.test.mjs` passes 25/25 and `soksak-records` passes 56 files. The preserved Wails probe log records the application error at host sequence 66; it does not distinguish the message callback from the failure callback. The source-level cause is evaluating the previous session against a `null` current project. The SDK pin, plugin version, archive, registry, and application profile do not change.
+
 - P36: Require files sidecar 0.0.8 or later, which declares the required process display identity; bump this plugin version to 0.0.7. Red: the manifest test rejected the old range. Green: the test passes with the new range and version.
 
 - P33: The files host page begins with its doctype and holds no import map. The host inserts the view import map after the doctype, for the core checklist item F212.12-1-10-6, so the copy in the page is removed. Red: the host page rule test failed on the page with the map. Green: `make test` passes 98 of 98, and the core `checkViewPage` accepts the page.

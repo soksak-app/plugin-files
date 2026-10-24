@@ -167,9 +167,9 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (subscribed.has(session)) return;
     subscribed.add(session);
     await Promise.all([sidecar.on(session, (body) => {
-      if (session === sessionOf(current)) onMessage(body);
+      if (current !== null && session === sessionOf(current)) onMessage(body);
     }), sidecar.onFailure(session, (reason) => {
-      if (session !== sessionOf(current)) return;
+      if (current === null || session !== sessionOf(current)) return;
       const error = new Error(errorText(reason));
       emitEvent("warn", "plugin.files.tree.failed", { error: error.message });
       rejectPending(error);
