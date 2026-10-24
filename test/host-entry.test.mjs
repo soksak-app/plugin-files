@@ -65,9 +65,33 @@ test("a declared status is registered, its first value is pushed, and each later
   let current = { n: 1 };
   await options.expose.status("files.tree", () => current, (fn) => { fn; return () => {}; });
   assert.deepEqual(registered, ["files.tree"]);
-  assert.deepEqual(calls.filter((call) => call.kind === "snapshot"), [{ kind: "snapshot", status: "files.tree", value: { n: 1 } }]);
+  assert.deepEqual(calls.filter((call) => call.kind === "snapshot"), [{ kind: "snapshot", status: "tree", value: { n: 1 } }]);
   await options.expose.command("files.refresh", () => null);
   assert.deepEqual(calls.filter((call) => call.kind === "command"), [{ kind: "command", name: "files.refresh" }]);
+});
+
+test("plugin host snapshots use plugin-local status names", async () => {
+  const { bridge, calls } = fakeBridge();
+  const registered = [];
+  const expose = { status: async (name) => { registered.push(name); } };
+  const listeners = new Map();
+  let options;
+  await startFilesHost({ bridge, expose, start: { project: null }, mount: async (value) => { options = value; } });
+
+  for (const [name, local] of [["files.tree", "tree"], ["files.bookmarks", "bookmarks"]]) {
+    let current = { name, revision: 1 };
+    await options.expose.status(name, () => current, (listener) => {
+      listeners.set(name, listener);
+      return () => listeners.delete(name);
+    });
+    current = { name, revision: 2 };
+    listeners.get(name)(current);
+    assert.deepEqual(calls.filter((call) => call.kind === "snapshot" && call.value.name === name), [
+      { kind: "snapshot", status: local, value: { name, revision: 1 } },
+      { kind: "snapshot", status: local, value: { name, revision: 2 } },
+    ]);
+  }
+  assert.deepEqual(registered, ["files.tree", "files.bookmarks"]);
 });
 
 test("host entry rejects missing or invalid bridge, exposure, start values and mount function", async () => {

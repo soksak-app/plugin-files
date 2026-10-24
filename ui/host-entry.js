@@ -3,6 +3,15 @@
 // and commands; each one goes through the bridge (docs/spec/plugin-host.md).
 import { createEmitter } from "./events.js";
 
+const STATUS_PREFIX = "files.";
+
+function localStatusName(name) {
+  if (typeof name !== "string" || !name.startsWith(STATUS_PREFIX) || name.length === STATUS_PREFIX.length) {
+    throw new TypeError(`files host status name must begin with ${STATUS_PREFIX} and include a local name`);
+  }
+  return name.slice(STATUS_PREFIX.length);
+}
+
 /**
  * Creates the emitter of the plugin events of the host page through the log of the bridge (runtime.log): each record is stored as
  * plugin.files.<event>, as the views store theirs. A refused record reaches the error route of the page (the bridge's log).
@@ -44,9 +53,10 @@ export async function startFilesHost({ bridge, expose, start, mount } = {}) {
     // A declared status is registered through the exposure, and each value of it is pushed as a declared UI snapshot. The
     // pull of the status is answered by the bridge, so the page answers no status request.
     status: async (name, read, subscribe) => {
+      const local = localStatusName(name);
       await expose.status(name, read, subscribe);
-      subscribe((value) => bridge.snapshots.push(name, value));
-      bridge.snapshots.push(name, read());
+      subscribe((value) => bridge.snapshots.push(local, value));
+      bridge.snapshots.push(local, read());
     },
     command: (name, run) => bridge.commands.register(name, run),
   };

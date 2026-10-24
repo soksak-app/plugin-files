@@ -7,3 +7,7 @@ The host runtime follows the project shown by its plugin host. The start value a
 A project change ends the previous sidecar session. Its registered message and failure callbacks may still arrive after the project changes, including after it changes to `null`. The runtime ignores callbacks for a session other than the current project's session. It does not report them as errors, mutate the current tree or bookmarks, or derive a session from a missing project.
 
 A later project with an `id` and `root` uses its own sidecar session. A callback from an earlier project is ignored even when it arrives after the later project is shown.
+
+## Declared status snapshots
+
+The plugin host registers each exposed status with its full manifest name, such as `files.tree`. The view bridge stores and answers snapshots by the plugin-local status name, such as `tree`. The host adapter therefore passes the suffix after `files.` to `bridge.snapshots.push` for the initial value and every subscribed value. It does not change the full name passed to `expose.status`.

@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- P39: Plugin host는 `files.tree`, `files.bookmarks`를 전체 이름으로 등록하고 declared-section pull이 요청하는 local name `tree`, `bookmarks`로 snapshot을 저장한다. 이전 adapter는 전체 이름만 저장해 `files.refresh` 뒤 두 pull이 `{seq: 0, value: null}`을 반환하고 sidebar section이 mount되지 않았다. Red: `test/host-entry.test.mjs`의 `plugin host snapshots use plugin-local status names`는 `files.tree`를 받아 기대값 `tree`와 달라 실패했다. Green: `test/host-entry.test.mjs` 7/7, `test/manifest-shape.test.mjs` 10/10이며 변경 module과 test의 `node --check`가 통과한다. 공개 Files `0.0.7`은 없으므로 candidate version은 `0.0.7`로 유지하며 archive는 P38-1까지 미배포다.
+
 - P38: Files host는 project가 `null`이 된 뒤 이전 sidecar session의 message와 failure callback을 무시한다. Red: 변경 전 host-runtime 소유 test에서 project-close event 뒤 이전 session message가 도착하자 `sessionOf`가 `Cannot read properties of null (reading 'id')`로 실패했다. Green: 이전 session callback 두 개를 무시하고 no-project status를 유지하며 error를 보고하지 않는다. `test/host-runtime.test.mjs` 25/25, `soksak-records` 56개 파일 검사가 통과한다. 보존된 Wails probe log는 host sequence 66의 app error를 기록하지만 message callback과 failure callback 중 어느 쪽인지는 구분하지 않는다. Source-level 원인은 현재 project가 `null`일 때 이전 session을 대조하는 것이다. SDK pin, plugin version, archive, registry, app profile은 바꾸지 않는다. P38-1과 core release gate P30이 완료되기 전까지 미배포다.
 
 - P36: 필수 process display identity를 선언한 files sidecar 0.0.8 이상을 요구하고 이 plugin version을 0.0.7로 올린다. Red: manifest test가 이전 범위에서 실패했다. Green: 새 범위와 version으로 통과한다.
