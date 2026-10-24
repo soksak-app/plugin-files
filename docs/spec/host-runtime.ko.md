@@ -22,6 +22,10 @@ Project가 바뀌면 이전 sidecar session은 끝난다. 이전 session에 등�
 
 Plugin host는 `files.tree`처럼 전체 manifest 이름으로 exposed status를 등록한다. View bridge는 `tree`처럼 plugin 안에서 사용하는 status 이름으로 snapshot을 저장하고 응답한다. 따라서 host adapter는 처음 값과 구독 값 모두에서 `files.` 뒤의 이름을 `bridge.snapshots.push`에 전달한다. `expose.status`에 전달하는 전체 이름은 바꾸지 않는다.
 
+## File-open refusal
+
+`files.open` command는 선택된 파일 경로를 `core.file.open`을 호출하는 `page.open`으로 보낸다. `-32000` 거부 `no plugin opens <path>`만 처리한다. 같은 project와 파일 선택이 현재 상태일 때 이 거부를 받으면 host는 `plugin.files.open.failed`를 기록하고 선택된 파일 행의 detail에 `열 수 없음: <오류>`로 거부를 publish한다. 처리된 이 거부는 application의 global error display로 보내지 않는다. 행은 기존 sidecar detail을 유지하고 뒤에 거부 문구를 둔다. 이후 다른 선택이나 refresh로 생긴 snapshot을 포함해 tree snapshot이 오면 거부를 지운다. command가 거부되기 전에 project나 선택 경로가 바뀌면 host는 실패를 기록하지만 현재 tree 행에는 붙이지 않는다. 다른 open 오류는 거부된 command로 남는다.
+
 ## Declared tree 확장
 
 Host는 declared status를 expose하기 전에 `runtime.native.on`으로 `declared-ui.expanded`를 구독한다. Event 형식은 `{status, tree, path, expanded}`다. Files host는 local status `tree`와 declared tree key `files`만 받는다. `path`는 declared tree root부터 branch까지의 node key 배열이며 파일 시스템 경로가 아니다. Host는 현재 `files.tree` 값에서 key 경로를 찾아 해당 node의 `params.path`를 sidecar request에 사용한다. Node key를 합치거나 이 값으로 파일 시스템 경로를 추정하지 않는다.

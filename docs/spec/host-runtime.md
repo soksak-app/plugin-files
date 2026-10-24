@@ -22,6 +22,10 @@ A repeated project message with the current `id` and `root` is not a project cha
 
 The plugin host registers each exposed status with its full manifest name, such as `files.tree`. The view bridge stores and answers snapshots by the plugin-local status name, such as `tree`. The host adapter therefore passes the suffix after `files.` to `bridge.snapshots.push` for the initial value and every subscribed value. It does not change the full name passed to `expose.status`.
 
+## File-open refusals
+
+The `files.open` command sends the selected file path through `page.open`, which calls `core.file.open`. It handles only the `-32000` refusal `no plugin opens <path>`. When that refusal arrives while the same project and file selection remain current, the host records `plugin.files.open.failed` and publishes the refusal in the selected file row's detail as `열 수 없음: <error>`. It does not send this handled refusal to the application's global error display. The row keeps any existing sidecar detail before the refusal text. A later tree snapshot clears the refusal, including a snapshot caused by another selection or a refresh. If the project or selected path changes before the command refuses, the host records the failure but does not attach it to the current tree row. Other open failures remain rejected commands.
+
 ## Declared tree expansion
 
 The host subscribes to `declared-ui.expanded` through `runtime.native.on` before it exposes the declared statuses. The event has `{status, tree, path, expanded}`. The Files host accepts only local status `tree` and declared tree key `files`. `path` is the array of node keys from the root of that declared tree to a branch; it is not a filesystem path. The host resolves the keys against its current `files.tree` value and uses that node's `params.path` for the sidecar request. It does not join node keys or infer a filesystem path from them.

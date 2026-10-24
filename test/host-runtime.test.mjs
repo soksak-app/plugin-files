@@ -284,6 +284,47 @@ test("a file row of the tree carries the open command, and the open command open
   host.dispose();
 });
 
+test("a refused open stays in the selected row without reaching the global error display", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([
+      { path: "note.zzz", name: "note.zzz", directory: false, depth: 0, selected: true },
+    ], "note.zzz"),
+    snapshot([
+      { path: "note.zzz", name: "note.zzz", directory: false, depth: 0, selected: true, detail: "tracked" },
+    ], "note.zzz"),
+  ] });
+  f.page.open = async () => { throw Object.assign(new Error("no plugin opens note.zzz"), { code: -32000 }); };
+  const host = await mountFilesHost(f);
+  const open = f.commands.get("files.open");
+
+  assert.equal(await open({ path: "note.zzz" }), null, "a refused open is handled by the Files row");
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.equal(tree.nodes[0].detail, "열 수 없음: no plugin opens note.zzz");
+  assert.deepEqual(f.errors, [], "a handled refusal does not reach the global error display");
+  assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.open.failed"), [
+    { level: "warn", name: "plugin.files.open.failed", fields: { error: "no plugin opens note.zzz" } },
+  ]);
+  await f.commands.get("files.refresh")();
+  const refreshed = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.equal(refreshed.nodes[0].detail, "tracked", "a later snapshot clears the refusal and keeps sidecar detail");
+  host.dispose();
+});
+
+test("an unexpected open failure remains a rejected command", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([
+    { path: "note.md", name: "note.md", directory: false, depth: 0, selected: true },
+  ], "note.md")] });
+  f.page.open = async () => { throw new Error("open transport failed"); };
+  const host = await mountFilesHost(f);
+
+  await assert.rejects(f.commands.get("files.open")({ path: "note.md" }), /open transport failed/);
+  assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.open.failed"), []);
+  assert.deepEqual(f.emitted.filter((record) => record.name === "plugin.files.command").map((record) => [record.level, record.fields.name, record.fields.ok]),
+    [["warn", "files.open", false]]);
+  assert.deepEqual(f.errors, []);
+  host.dispose();
+});
+
 test("the bookmarks status is served by the host from the project data, and its commands change the data", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([])], stored: { bookmarks: ["src"] } });
   const host = await mountFilesHost(f);

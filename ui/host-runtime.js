@@ -62,6 +62,8 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   let stopped = false;
   let nextRequest = 0;
   let generation = null;
+  let treeEntries = [];
+  let selectedPath = null;
   let bookmarks = [];
   // Set while the stored bookmarks cannot be read; a change waits until a read succeeds, so no stored list is overwritten.
   let bookmarksFailed = false;
@@ -97,7 +99,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       throw new Error("files sidecar returned an invalid selected path");
     }
     generation = tree.generation;
-    const entries = tree.entries.map((entry) => {
+    treeEntries = tree.entries.map((entry) => {
       if (!entry || typeof entry.path !== "string" || typeof entry.name !== "string" ||
           typeof entry.directory !== "boolean" || !Number.isInteger(entry.depth) || entry.depth < 0) {
         throw new Error("files sidecar returned an invalid tree row");
@@ -117,7 +119,8 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       if (entry.detail !== undefined) row.detail = entry.detail;
       return row;
     });
-    notify(treeValue({ root: rootOf(current), entries, selected: tree.selected, ...TREE_OPTIONS }));
+    selectedPath = tree.selected;
+    notify(treeValue({ root: rootOf(current), entries: treeEntries, selected: selectedPath, ...TREE_OPTIONS }));
   };
   const rejectPending = (error) => {
     for (const [id, call] of pending) {
@@ -237,11 +240,28 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (current === undefined) throw new Error("files host requires a ready-time project delivery");
     if (current === null) return null;
     if (path === undefined) throw new Error("files.select requires path, a string or null");
+    selectedPath = null;
     return request("select", { generation, path: path ?? "" });
   };
   const open = async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new Error("files.open requires a path");
-    return page.open(path);
+    const owner = current;
+    try {
+      return await page.open(path);
+    } catch (error) {
+      const message = errorText(error);
+      if (error?.code !== -32000 || message !== `no plugin opens ${path}`) throw error;
+      emitEvent("warn", "plugin.files.open.failed", { error: message });
+      if (owner !== undefined && owner === current && selectedPath === path) {
+        const entries = treeEntries.map((entry) => {
+          if (entry.path !== path) return entry;
+          const detail = [entry.detail, `열 수 없음: ${message}`].filter(Boolean).join(" · ");
+          return { ...entry, detail };
+        });
+        notify(treeValue({ root: rootOf(current), entries, selected: selectedPath, ...TREE_OPTIONS }));
+      }
+      return null;
+    }
   };
   // Reads the stored bookmarks again. A failed read shows the notice, and the change that asked for the read is refused.
   // A read of the bookmarks of a project that the plugin host no longer shows changes nothing.
@@ -332,6 +352,8 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     if (unchanged) return;
     current = next;
     generation = null;
+    treeEntries = [];
+    selectedPath = null;
     abandonPending();
     bookmarks = [];
     bookmarksFailed = false;
