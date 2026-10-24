@@ -7,7 +7,7 @@ const BOOKMARKS_KEY = "bookmarks";
 // A file row opens its file through the plugin command files.open, which the page runs with core.file.open (docs/spec/declared-ui.md, Tree keys).
 const TREE_OPTIONS = {
   openCommand: "files.open",
-  declaredCommands: ["files.refresh", "files.tree.toggle", "files.select", "files.open"],
+  declaredCommands: ["files.refresh", "files.select", "files.open"],
 };
 
 // The text of a thrown value: the message of an Error, and the value itself for any other thrown value.
@@ -44,6 +44,9 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   }
   if (typeof page.onProject !== "function") {
     throw new TypeError("files host requires page.onProject");
+  }
+  if (typeof page.onTreeExpanded !== "function") {
+    throw new TypeError("files host requires page.onTreeExpanded");
   }
   if (!expose || typeof expose.status !== "function" || typeof expose.command !== "function") {
     throw new TypeError("files host requires exposure status and command registration");
@@ -204,15 +207,31 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     }
   };
   const runSnapshot = () => request("snapshot");
-  const toggle = async ({ path } = {}) => {
-    if (current === null) return null;
-    if (typeof path !== "string") throw new Error("files.tree.toggle requires a path");
-    const tree = value.elements.find((element) => element.kind === "tree");
-    const flatten = (nodes) => nodes.flatMap((node) => [node, ...(node.children ? flatten(node.children) : [])]);
-    const entry = tree === undefined ? undefined : flatten(tree.nodes).find((node) => node.params?.path === path);
-    if (!entry?.branch) throw new Error(path + " is not a listed directory");
-    const operation = entry.expanded ? "collapse" : "expand";
-    return request(operation, { generation, path });
+  const onTreeExpanded = async (event) => {
+    try {
+      if (current === null) throw new Error("declared tree expansion requires a shown project");
+      if (!event || typeof event !== "object" || Array.isArray(event)) throw new TypeError("declared tree expansion event must be an object");
+      if (event.status !== "tree") throw new TypeError("declared tree expansion status must be tree");
+      if (event.tree !== "files") throw new TypeError("declared tree expansion tree must be files");
+      if (!Array.isArray(event.path) || event.path.length === 0 || event.path.some((key) => typeof key !== "string" || key === "")) {
+        throw new TypeError("declared tree expansion path must be a non-empty array of node keys");
+      }
+      if (typeof event.expanded !== "boolean") throw new TypeError("declared tree expansion expanded must be a boolean");
+      const tree = value.elements.find((element) => element.kind === "tree" && element.key === "files");
+      let nodes = tree?.nodes;
+      let node;
+      for (const key of event.path) {
+        node = Array.isArray(nodes) ? nodes.find((candidate) => candidate.key === key) : undefined;
+        if (!node) throw new Error("declared tree expansion path does not match the current tree");
+        nodes = node.children;
+      }
+      if (node.branch !== true || typeof node.params?.path !== "string" || node.params.path === "") {
+        throw new Error("declared tree expansion path does not name a current branch");
+      }
+      await request(event.expanded ? "expand" : "collapse", { generation, path: node.params.path });
+    } catch (error) {
+      await reportError(error, "files tree");
+    }
   };
   const select = async ({ path } = {}) => {
     if (current === null) return null;
@@ -337,6 +356,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
     }
   };
   page.onProject(onProjectEvent);
+  const stopTreeExpanded = await page.onTreeExpanded(onTreeExpanded);
   if (current !== null) {
     try {
       await loadBookmarks();
@@ -348,7 +368,6 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   await expose.status("files.tree", read, (fn) => { listeners.add(fn); return () => listeners.delete(fn); });
   await expose.status("files.bookmarks", readBookmarks, (fn) => { bookmarkListeners.add(fn); return () => bookmarkListeners.delete(fn); });
   await expose.command("files.refresh", recorded("files.refresh", runSnapshot, "files tree"));
-  await expose.command("files.tree.toggle", recorded("files.tree.toggle", toggle, "files tree"));
   await expose.command("files.select", recorded("files.select", select, "files tree"));
   await expose.command("files.open", recorded("files.open", open, undefined));
   await expose.command("files.bookmarks.add", recorded("files.bookmarks.add", addBookmark, "files bookmarks"));
@@ -367,6 +386,7 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   return {
     dispose() {
       stopped = true;
+      if (typeof stopTreeExpanded === "function") stopTreeExpanded();
       rejectPending(new Error("files host is disposed"));
       listeners.clear();
       bookmarkListeners.clear();

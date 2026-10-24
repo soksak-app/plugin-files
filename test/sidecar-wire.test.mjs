@@ -15,6 +15,7 @@ function wireHost(replyFor) {
   const statuses = new Map();
   const commands = new Map();
   const reports = [];
+  const expandedListeners = [];
   const sidecar = {
     async on(session, fn) { onMessage = fn; },
     async onFailure() {},
@@ -33,6 +34,7 @@ function wireHost(replyFor) {
     data: { async get() { return []; }, async set() { return null; } },
     emit() {},
     onProject() {},
+    onTreeExpanded(listener) { expandedListeners.push(listener); return () => expandedListeners.splice(expandedListeners.indexOf(listener), 1); },
   };
   const expose = {
     async status(name, read) { statuses.set(name, read); },
@@ -40,7 +42,8 @@ function wireHost(replyFor) {
   };
   // A line from the sidecar that carries no request id, such as a change line of a watched directory.
   const push = (line) => onMessage(line);
-  return { page, expose, requests, statuses, commands, reports, push };
+  const expand = async (event) => { for (const listener of expandedListeners) await listener(event); };
+  return { page, expose, requests, statuses, commands, reports, push, expand };
 }
 
 const treeOf = (value) => value.elements.find((element) => element.kind === "tree");
@@ -72,16 +75,18 @@ test("the select reply marks the selected row of the declared tree", async () =>
   host.dispose();
 });
 
-test("a failed listing of an expanded directory is reported as an error, not as a success", async () => {
+test("a failed declared expansion is reported as an error, not as a success", async () => {
   let fail = false;
-  // The snapshot expands src, so the toggle of src collapses it; the failure is set for the operation that the toggle sends.
+  // The snapshot expands src, and the event explicitly requests collapse; the failure is set for that operation.
   const f = wireHost((request) => (fail && request.operation === "collapse"
     ? wire.replies.expandFailed
     : { tree: wire.replies.snapshot.tree }));
   const host = await mountFilesHost(f);
   fail = true;
-  await assert.rejects(f.commands.get("files.tree.toggle")({ path: "src" }), /cannot list expanded directory src: permission denied/);
+  const src = treeOf(f.statuses.get("files.tree")()).nodes[0];
+  await f.expand({ status: "tree", tree: "files", path: [src.key], expanded: false });
   assert.deepEqual(f.reports.at(-1), { level: "error", where: "files tree", text: wire.replies.expandFailed.error });
+  assert.deepEqual(f.requests.at(-1), { ...wire.requests.expand, operation: "collapse" });
   host.dispose();
 });
 

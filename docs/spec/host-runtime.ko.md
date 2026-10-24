@@ -11,3 +11,9 @@ Project가 바뀌면 이전 sidecar session은 끝난다. 이전 session에 등�
 ## Declared status snapshot
 
 Plugin host는 `files.tree`처럼 전체 manifest 이름으로 exposed status를 등록한다. View bridge는 `tree`처럼 plugin 안에서 사용하는 status 이름으로 snapshot을 저장하고 응답한다. 따라서 host adapter는 처음 값과 구독 값 모두에서 `files.` 뒤의 이름을 `bridge.snapshots.push`에 전달한다. `expose.status`에 전달하는 전체 이름은 바꾸지 않는다.
+
+## Declared tree 확장
+
+Host는 declared status를 expose하기 전에 `runtime.native.on`으로 `declared-ui.expanded`를 구독한다. Event 형식은 `{status, tree, path, expanded}`다. Files host는 local status `tree`와 declared tree key `files`만 받는다. `path`는 declared tree root부터 branch까지의 node key 배열이며 파일 시스템 경로가 아니다. Host는 현재 `files.tree` 값에서 key 경로를 찾아 해당 node의 `params.path`를 sidecar request에 사용한다. Node key를 합치거나 이 값으로 파일 시스템 경로를 추정하지 않는다.
+
+Host는 `expanded`가 `true`면 sidecar operation `expand`, `false`면 `collapse`를 보내며 현재 sidecar generation과 확인한 파일 시스템 경로를 포함한다. Event는 원하는 상태를 지정하므로 현재 branch 상태로 toggle을 추정하지 않는다. Sidecar reply는 전체 `files.tree` snapshot을 publish한다. 현재 project가 없거나 tree 또는 status가 알 수 없거나, key 경로가 잘못됐거나 현재 branch를 지정하지 않으면 sidecar request 없이 host error 경로로 보고한다. Event callback의 rejection도 같은 경로로 보고한다. Host runtime이 dispose되면 event listener를 끝낸다.

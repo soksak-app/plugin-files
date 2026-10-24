@@ -37,6 +37,7 @@ export async function startFilesHost({ bridge, expose, start, mount } = {}) {
     project: start.project,
     // The project message of the host carries each change of the shown project, as the theme does (docs/spec/plugin-host.md).
     onProject: (listener) => bridge.runtime.project(listener),
+    onTreeExpanded: async (listener) => bridge.runtime.native.on("declared-ui.expanded", listener),
     sidecar: (name) => bridge.runtime.sidecar(name),
     report: ({ level, where, text }) => {
       if (level !== "error") throw new TypeError(`files host reports only errors, got ${level}`);

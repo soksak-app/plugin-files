@@ -6,6 +6,7 @@ import { startFilesHost } from "../ui/host-entry.js";
 // A view bridge with the methods of the host adapter, and the calls it receives.
 function fakeBridge() {
   const calls = [];
+  const nativeListeners = new Map();
   const bridge = {
     calls: {
       request: async (command, params) => {
@@ -17,13 +18,18 @@ function fakeBridge() {
     runtime: {
       log: Object.fromEntries(["error", "warn", "info", "debug", "trace"].map((level) => [level, (event, fields) => { calls.push({ kind: "log", level, event, fields }); }])),
       sidecar: (name) => ({ name }),
+      native: { on: (name, listener) => {
+        calls.push({ kind: "native.on", name });
+        nativeListeners.set(name, listener);
+        return () => nativeListeners.delete(name);
+      } },
       error: async (where, text) => { calls.push({ kind: "error", where, text }); },
       command: async (name, params) => { calls.push({ kind: "core", name, params }); },
     },
     snapshots: { push: (status, value) => { calls.push({ kind: "snapshot", status, value }); } },
     commands: { register: async (name, run) => { calls.push({ kind: "command", name }); return run; } },
   };
-  return { bridge, calls };
+  return { bridge, calls, nativeListeners };
 }
 
 test("host entry mounts the runtime with the page of the bridge, the status adapter and the page project", async () => {
@@ -54,6 +60,20 @@ test("the page opens a file through the core command, and reports errors through
     { kind: "error", where: "files tree", text: "listing failed" },
   ]);
   assert.throws(() => options.page.report({ level: "warn", where: "files tree", text: "x" }), /reports only errors/);
+});
+
+test("the host page subscribes to declared tree expansion through the native event bridge", async () => {
+  const { bridge, calls, nativeListeners } = fakeBridge();
+  let options;
+  await startFilesHost({ bridge, expose: { status: async () => {} }, start: { project: null }, mount: async (value) => { options = value; } });
+  const received = [];
+  const stop = await options.page.onTreeExpanded((event) => received.push(event));
+  const event = { status: "tree", tree: "files", path: ["stable-key"], expanded: true };
+  nativeListeners.get("declared-ui.expanded")(event);
+  assert.deepEqual(received, [event]);
+  assert.deepEqual(calls.filter(({ kind }) => kind === "native.on"), [{ kind: "native.on", name: "declared-ui.expanded" }]);
+  stop();
+  assert.equal(nativeListeners.has("declared-ui.expanded"), false);
 });
 
 test("a declared status is registered, its first value is pushed, and each later value is pushed", async () => {

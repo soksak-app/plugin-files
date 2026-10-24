@@ -34,6 +34,8 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
   let index = 0;
   const state = { hold: false, held: [] };
   const projectListeners = [];
+  const treeExpandedListeners = [];
+  const order = [];
   const sidecar = {
     async on(session, fn) { calls.push({ kind: "on", session }); messages.set(session, fn); message = fn; },
     async onFailure(session, fn) { calls.push({ kind: "onFailure", session }); sessionFailures.set(session, fn); failure = fn; },
@@ -56,9 +58,14 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     data,
     emit(level, name, fields) { emitted.push({ level, name, fields }); },
     onProject(listener) { projectListeners.push(listener); return () => {}; },
+    onTreeExpanded(listener) {
+      order.push("tree-expanded");
+      treeExpandedListeners.push(listener);
+      return () => treeExpandedListeners.splice(treeExpandedListeners.indexOf(listener), 1);
+    },
   };
   const expose = {
-    async status(name, read, subscribe) { statuses.set(name, { read, subscribe }); },
+    async status(name, read, subscribe) { order.push(`status:${name}`); statuses.set(name, { read, subscribe }); },
     async command(name, run) { commands.set(name, run); },
   };
   // Delivers a project event to each subscribed listener, as the main page posts the event project to the plugin host.
@@ -66,7 +73,12 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     assert.ok(projectListeners.length > 0, "page.onProject is not subscribed");
     for (const listener of projectListeners) await listener(value);
   };
+  const emitTreeExpanded = async (value) => {
+    assert.ok(treeExpandedListeners.length > 0, "page.onTreeExpanded is not subscribed");
+    for (const listener of treeExpandedListeners) await listener(value);
+  };
   return { page, expose, calls, statuses, commands, errors, opened, emitted, data, failures, state, emitProject,
+    emitTreeExpanded, treeExpandedListeners, order,
     message: (session) => session === undefined ? message : messages.get(session),
     failure: (session) => session === undefined ? failure : sessionFailures.get(session) };
 }
@@ -88,16 +100,19 @@ test("host page subscribes before snapshot and registers the declared tree statu
   assert.equal(send.session, "plugin:files:project-a:@soksak/sidecar-files");
   assert.equal(send.body.operation, "snapshot");
   assert.equal(f.statuses.has("files.tree"), true);
-  assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.tree.toggle", "files.select", "files.open", "files.bookmarks.add", "files.bookmarks.remove", "files.open.failed"]);
+  assert.deepEqual([...f.commands.keys()], ["files.refresh", "files.select", "files.open", "files.bookmarks.add", "files.bookmarks.remove", "files.open.failed"]);
   const value = f.statuses.get("files.tree").read();
   assert.equal(value.elements.find((element) => element.kind === "status-line").text, "/work/project");
   assert.deepEqual(value.elements.find((element) => element.kind === "tree").nodes.map((node) => node.label), ["src", "readme.md"]);
   host.dispose();
 });
 
-test("tree commands send sidecar operations with generation and publish each full snapshot", async () => {
+test("declared expansion and selection send sidecar operations with generation and publish each full snapshot", async () => {
   const f = fakeHost({ treeSnapshots: [
-    snapshot([{ path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false }]),
+    snapshot([
+      { path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false },
+      { path: "readme.md", name: "readme.md", directory: false, depth: 0, expanded: false, selected: false },
+    ]),
     snapshot([
       { path: "src", name: "src", directory: true, depth: 0, expanded: true, selected: false },
       { path: "src/main.go", name: "main.go", directory: false, depth: 1, expanded: false, selected: false, detail: "modified" },
@@ -108,7 +123,8 @@ test("tree commands send sidecar operations with generation and publish each ful
     ], "src/main.go"),
   ] });
   const host = await mountFilesHost(f);
-  await f.commands.get("files.tree.toggle")({ path: "src" });
+  const key = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree").nodes[0].key;
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [key], expanded: true });
   await f.commands.get("files.select")({ path: "src/main.go" });
   const operations = f.calls.filter(({ kind }) => kind === "send").map(({ body }) => body);
   assert.deepEqual(operations.map(({ operation }) => operation), ["snapshot", "expand", "select"]);
@@ -117,6 +133,100 @@ test("tree commands send sidecar operations with generation and publish each ful
   const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
   assert.equal(tree.nodes[0].children[0].selected, true);
   assert.equal(tree.nodes[0].children[0].detail, "modified");
+  host.dispose();
+});
+
+test("declared tree expansion events apply the requested sidecar operation and publish each snapshot", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([{ path: "report folder", name: "report folder", directory: true, depth: 0, expanded: false, selected: false }]),
+    snapshot([
+      { path: "report folder", name: "report folder", directory: true, depth: 0, expanded: true, selected: false },
+      { path: "report folder/readme.md", name: "readme.md", directory: false, depth: 1, expanded: false, selected: false },
+    ]),
+    snapshot([{ path: "report folder", name: "report folder", directory: true, depth: 0, expanded: false, selected: false }]),
+  ] });
+  const host = await mountFilesHost(f);
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  const key = tree.nodes[0].key;
+
+  assert.ok(f.order.indexOf("tree-expanded") >= 0, "the host did not subscribe to declared-ui.expanded");
+  assert.ok(f.order.indexOf("tree-expanded") < f.order.indexOf("status:files.tree"),
+    "the host exposed files.tree before subscribing to declared-ui.expanded");
+  assert.equal(f.treeExpandedListeners.length, 1);
+
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [key], expanded: true });
+  let published = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.equal(published.nodes[0].expanded, true);
+  assert.equal(published.nodes[0].children[0].params.path, "report folder/readme.md");
+
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [key], expanded: false });
+  published = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  assert.equal(published.nodes[0].expanded, undefined);
+  assert.deepEqual(f.calls.filter(({ kind }) => kind === "send").map(({ body }) => ({
+    operation: body.operation, generation: body.generation, path: body.path,
+  })), [
+    { operation: "snapshot", generation: undefined, path: undefined },
+    { operation: "expand", generation: 1, path: "report folder" },
+    { operation: "collapse", generation: 1, path: "report folder" },
+  ]);
+
+  host.dispose();
+  assert.equal(f.treeExpandedListeners.length, 0, "disposing the host kept the expansion event listener");
+});
+
+test("declared tree expansion reports invalid, stale and no-project events without sidecar requests", async () => {
+  const f = fakeHost({ treeSnapshots: [
+    snapshot([
+      { path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false },
+      { path: "readme.md", name: "readme.md", directory: false, depth: 0, expanded: false, selected: false },
+    ]),
+    snapshot([{ path: "docs", name: "docs", directory: true, depth: 0, expanded: false, selected: false }]),
+  ] });
+  const host = await mountFilesHost(f);
+  const before = f.calls.filter(({ kind }) => kind === "send").length;
+  const tree = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree");
+  for (const event of [
+    { status: "bookmarks", tree: "files", path: [tree.nodes[0].key], expanded: true },
+    { status: "tree", tree: "other", path: [tree.nodes[0].key], expanded: true },
+    { status: "tree", tree: "files", path: [], expanded: true },
+    { status: "tree", tree: "files", path: ["stale-key"], expanded: true },
+    { status: "tree", tree: "files", path: [tree.nodes[1].key], expanded: true },
+    { status: "tree", tree: "files", path: [tree.nodes[0].key], expanded: "true" },
+  ]) await f.emitTreeExpanded(event);
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, before);
+  assert.equal(f.errors.length, 6);
+  assert.match(f.errors[0].text, /status must be tree/);
+  assert.match(f.errors[1].text, /tree must be files/);
+  assert.match(f.errors[2].text, /path must be a non-empty array/);
+  assert.match(f.errors[3].text, /does not match the current tree/);
+  assert.match(f.errors[4].text, /does not name a current branch/);
+  assert.match(f.errors[5].text, /expanded must be a boolean/);
+
+  await f.emitProject({ id: "project-b", root: "/work/other" });
+  await settle();
+  const sendsAfterProjectChange = f.calls.filter(({ kind }) => kind === "send").length;
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [tree.nodes[0].key], expanded: true });
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, sendsAfterProjectChange);
+  assert.match(f.errors.at(-1).text, /does not match the current tree/);
+
+  await f.emitProject(null);
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [tree.nodes[0].key], expanded: true });
+  assert.equal(f.calls.filter(({ kind }) => kind === "send").length, sendsAfterProjectChange);
+  assert.match(f.errors.at(-1).text, /requires a shown project/);
+  host.dispose();
+});
+
+test("declared tree expansion reports a rejected sidecar callback through the error route", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([
+    { path: "src", name: "src", directory: true, depth: 0, expanded: false, selected: false },
+  ])] });
+  const host = await mountFilesHost(f);
+  f.failures.send = new Error("sidecar transport refused expansion");
+  const src = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree").nodes[0];
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [src.key], expanded: true });
+  assert.deepEqual(f.errors.at(-1), {
+    level: "error", where: "files tree", text: "sidecar transport refused expansion",
+  });
   host.dispose();
 });
 
@@ -195,7 +305,9 @@ test("each tree request, each change line and each failure of the sidecar is an 
   const requests = f.emitted.filter((record) => record.name === "plugin.files.tree.request");
   assert.deepEqual(requests.map((record) => [record.level, record.fields.operation, record.fields.ok]), [["debug", "snapshot", true]]);
   assert.equal(Number.isInteger(requests[0].fields.micros) && requests[0].fields.micros >= 0, true);
-  await assert.rejects(f.commands.get("files.tree.toggle")({ path: "src" }), /permission denied/);
+  const src = f.statuses.get("files.tree").read().elements.find((element) => element.kind === "tree").nodes[0];
+  await f.emitTreeExpanded({ status: "tree", tree: "files", path: [src.key], expanded: true });
+  assert.match(f.errors.at(-1).text, /permission denied/);
   const failed = f.emitted.filter((record) => record.name === "plugin.files.tree.request" && record.fields.ok === false);
   assert.equal(failed.length, 1, "a failed tree request is not recorded");
   assert.equal(failed[0].level, "warn");

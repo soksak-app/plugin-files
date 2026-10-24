@@ -80,21 +80,6 @@
         }
       },
       {
-        "name": "files.tree.toggle",
-        "description": "Expands a listed directory of the file tree, or folds it with its expanded subdirectories.",
-        "params": {
-          "type": "object",
-          "properties": {
-            "path": {
-              "type": "string"
-            }
-          }
-        },
-        "result": {
-          "type": "null"
-        }
-      },
-      {
         "name": "files.bookmarks.add",
         "description": "Adds a path relative to the project folder to the bookmarks unless it is already there.",
         "params": {
