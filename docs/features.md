@@ -2,6 +2,8 @@
 
 [한국어](features.ko.md)
 
+- [o] P37 — P0, follow-up to P30: Files `0.0.7` declares `engines.soksak: ">=0.0.11"`, which includes published core `v0.0.20`. Its manifest declares `host` and status-only sections, which that reader and exposure checker reject, so the range promises an installation that fails. Expected: declare `^0.0.21`, the core candidate that accepts this manifest, and keep public release P30 pending until a matching core release is published. Red: `test/core-version.test.mjs` fails with `">=0.0.11" !== "^0.0.21"`. Green: `node --test test/core-version.test.mjs` passes 1/1, and `CORE_PLUGIN_API_DIR` candidate checks pass manifest, exposure, engines and events. `make check` completes, but its records tool reports `Record checks passed: 0 files`, so it does not verify records. `git diff --check` passes. This item changes no SDK pin, plugin version, archive or registry.
+
 - [o] P36 — P1: Require files sidecar 0.0.8 or later because the current sidecar manifest requires a process display identity. Bump this plugin to 0.0.7. Red: `test/manifest-shape.test.mjs` failed against the previous `>=0.0.7` dependency range. Green: the owning test passes with the raised range and version.
 - [ ] P36-1 — P1: Publish files plugin version 0.0.7 with the sidecar minimum of 0.0.8, and update the installed plugin registry. The local archive exists; this dependency correction remains unreleased until the version is published.
 

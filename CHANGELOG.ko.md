@@ -2,6 +2,8 @@
 
 [English](CHANGELOG.md)
 
+- P37: Files `0.0.7`은 `engines.soksak` `^0.0.21`을 선언한다. 공개 core `v0.0.20`은 `host` 필드와 status-only section을 거부한다. Red: `test/core-version.test.mjs`가 `">=0.0.11" !== "^0.0.21"`로 실패한다. Green: 같은 test가 1/1 통과하고 candidate `make check`에서 manifest, exposure, engines, event 검사가 통과한다. Records 도구는 `Record checks passed: 0 files`를 보고해 record coverage를 제공하지 않는다. SDK pin, plugin version, archive, registry는 바꾸지 않았으며 P30은 public release gate로 남는다.
+
 ## 미배포
 
 - P36: 필수 process display identity를 선언한 files sidecar 0.0.8 이상을 요구하고 이 plugin version을 0.0.7로 올린다. Red: manifest test가 이전 범위에서 실패했다. Green: 새 범위와 version으로 통과한다.

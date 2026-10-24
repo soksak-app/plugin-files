@@ -2,6 +2,8 @@
 
 [English](features.md)
 
+- [o] P37 — P0, P30의 후속 항목: Files `0.0.7`은 공개 core `v0.0.20`을 포함하는 `engines.soksak: ">=0.0.11"`을 선언한다. Manifest는 `host`와 status-only section을 선언하며 해당 reader와 exposure checker는 이를 거부하므로, 이 범위는 실패하는 설치까지 지원한다고 주장한다. 기대 동작: 이 manifest를 받는 core candidate만 선언하는 `^0.0.21`을 사용하고, 일치하는 core release가 게시될 때까지 public release P30을 대기 상태로 둔다. Red: `test/core-version.test.mjs`가 `">=0.0.11" !== "^0.0.21"`로 실패한다. Green: `node --test test/core-version.test.mjs`가 1/1 통과하고 `CORE_PLUGIN_API_DIR` candidate 검사에서 manifest, exposure, engines, events가 통과한다. `make check`는 완료되지만 records 도구는 `Record checks passed: 0 files`를 보고하므로 record를 검증하지 않는다. `git diff --check`는 통과한다. 이 항목은 SDK pin, plugin version, archive 또는 registry를 바꾸지 않는다.
+
 - [o] P36 — P1: 현재 sidecar manifest가 process display identity를 필수로 요구하므로 files sidecar 0.0.8 이상을 사용한다. 이 plugin을 0.0.7로 올린다. Red: `test/manifest-shape.test.mjs`가 기존 `>=0.0.7` dependency 범위에서 실패했다. Green: 범위와 version을 올린 뒤 owning test가 통과한다.
 - [ ] P36-1 — P1: sidecar 최소 버전 0.0.8을 선언한 files plugin 0.0.7을 게시하고 설치된 plugin registry를 갱신한다. local archive는 준비됐지만 version이 게시될 때까지 이 dependency correction은 미배포 상태다.
 

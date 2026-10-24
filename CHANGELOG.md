@@ -2,6 +2,8 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P37: Files `0.0.7` now declares `engines.soksak` `^0.0.21` because published core `v0.0.20` rejects its `host` field and status-only sections. Red: `test/core-version.test.mjs` fails with `">=0.0.11" !== "^0.0.21"`. Green: the same test passes 1/1, and candidate `make check` passes manifest, exposure, engines and event checks. The records tool reports `Record checks passed: 0 files`, so it provides no record coverage. No SDK pin, plugin version, archive or registry changed; P30 remains the public release gate.
+
 ## Unreleased
 
 - P36: Require files sidecar 0.0.8 or later, which declares the required process display identity; bump this plugin version to 0.0.7. Red: the manifest test rejected the old range. Green: the test passes with the new range and version.
