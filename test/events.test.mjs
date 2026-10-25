@@ -33,12 +33,16 @@ test("plugin.json names the catalog, which declares only events of this plugin a
   assert.equal(manifest.events, "events.json");
   assert.ok(pkg.files.includes("events.json"));
   const catalog = JSON.parse(readFileSync(new URL("../events.json", import.meta.url), "utf8"));
-  assert.equal(catalog.schema, 2);
+  assert.equal(catalog.schema, 3);
   assert.deepEqual(catalog.layers, ["plugin"]);
   assert.ok(Object.keys(catalog.events).length > 0);
   for (const [name, event] of Object.entries(catalog.events)) {
     assert.match(name, /^plugin\.files\.[a-z_]+(\.[a-z_]+)*$/, name);
     assert.equal(event.layer, "plugin", name);
     assert.ok(event.description.length > 0, name);
+    assert.equal(event.fields.$schema, "https://json-schema.org/draft/2020-12/schema", name);
+    assert.equal(event.fields.type, "object", name);
+    assert.ok(Array.isArray(event.fields.required), name);
+    for (const field of event.fields.required) assert.ok(Object.hasOwn(event.fields.properties, field), `${name}.${field}`);
   }
 });

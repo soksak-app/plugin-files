@@ -6,6 +6,16 @@
 
 ## 미배포
 
+- F239-77-files: Files event catalog를 event name, class, level과
+  required/optional field 의미를 바꾸지 않고 schema 3 JSON Schema로 변환한다.
+  Red: 현재 core `events-check`가 schema 2를 거부하고 compact field map을 JSON
+  Schema keyword로 처리했다. Green: 현재 core `events-check`가 선언 7개와 source
+  emit을 모두 받으며 `test/events.test.mjs` 3/3과 현재 core `make check`가
+  통과한다. 전체 `pnpm test`는 113/122로 실패한다. Host-page/sidecar-wire 검사
+  여덟 개가 필요한 ready-time project delivery 없이 실행되고, manifest 검사 한 개는
+  `plugin.json`의 0.0.8 대신 sidecar 0.0.7을 기대한다. 이 fixture 실패는 catalog
+  변경 범위 밖이다. Runtime acceptance는 대기 중이다.
+
 - P47: P46을 포함하는 Files 0.0.8 local candidate를 준비했다. 공식 진단 package 검사는 manifest, exposure, engines, events와 records 다섯 검사를 통과한다. 새 registry는 P87 entry를 보존하고 Files 0.0.8을 추가하며, 새 설정에 Files sidecar 0.0.8과 함께 설치된다. 설치된 host runtime은 package의 P46 구현과 같다. Files는 `diagnostics.json`을 선언하지 않는다. Candidate archive SHA-256은 `75234f301dda839aa9a81eeeb7fb33c6f4de8a19ec4edfd54ef7783a7bfb2ced`, registry index SHA-256은 `4c192acd4fd8e121811641b38b18067d8c36e9b53b431aa75958cc2a22027c94`다. Local 상태이며 미배포이고 application은 실행하지 않았다.
 
 - P46: `core.file.open`의 예상된 `-32000` `no plugin opens <path>` 거부만 처리한다. 선택된 파일 행은 sidecar detail을 유지하면서 `열 수 없음: <오류>`를 표시하고 다음 tree snapshot에서 거부를 지운다. Host는 `plugin.files.open.failed`를 기록하고 처리된 거부를 application global error display에 보내지 않는다. 다른 open 오류는 계속 reject한다. Red: 새 host-runtime case는 변경 전 코드가 행을 publish하지 않고 `files.open`을 reject해 실패했다. Green: 거부와 예상 밖 오류를 확인하는 두 focused case가 통과하고, `test/host-runtime.test.mjs` filtered run은 2/2 통과한다.

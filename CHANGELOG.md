@@ -6,6 +6,17 @@
 
 ## Unreleased
 
+- F239-77-files: Convert the Files event catalog to schema 3 JSON Schema
+  without changing event names, classes, levels or required/optional fields.
+  Red: current core `events-check` rejected schema 2 and interpreted compact
+  field maps as JSON Schema keywords. Green: current core `events-check`
+  accepts all seven declarations and source emits; `test/events.test.mjs`
+  passes 3/3 and current-core `make check` passes. The full `pnpm test` run
+  remains non-green (113/122): eight host-page/sidecar-wire cases run without
+  the required ready-time project delivery, and one manifest test expects
+  sidecar 0.0.7 while `plugin.json` declares 0.0.8. These fixture failures are
+  outside this catalog change. Runtime acceptance is still pending.
+
 - P47: Prepare Files 0.0.8 as a local candidate containing P46. The official diagnostic pack passes the manifest, exposure, engine, event and record checks. A new registry preserves the P87 entries and adds Files 0.0.8; a fresh configuration installs it with Files sidecar 0.0.8. The installed host runtime matches the packaged P46 implementation. Files declares no `diagnostics.json`. The candidate archive SHA-256 is `75234f301dda839aa9a81eeeb7fb33c6f4de8a19ec4edfd54ef7783a7bfb2ced`, and the registry index SHA-256 is `4c192acd4fd8e121811641b38b18067d8c36e9b53b431aa75958cc2a22027c94`. It remains local and unreleased; no application was launched.
 
 - P46: Handle only the expected `-32000` `no plugin opens <path>` refusal from `core.file.open`. The selected file row shows `열 수 없음: <error>` and keeps sidecar detail; a later tree snapshot clears the refusal. The host records `plugin.files.open.failed` and does not send this handled refusal to the application's global error display. Other open errors remain rejected. Red: the new host-runtime case failed on unchanged code because `files.open` rejected instead of publishing the row. Green: both focused refusal and unexpected-error cases pass; `test/host-runtime.test.mjs` filtered run passes 2/2.

@@ -2,6 +2,8 @@
 
 [English](features.md)
 
+- [~] F239-77-files — P1, core F239-77 연결: 현재 core catalog reader가 Files package를 설치하고 검증할 수 있도록 event catalog를 schema 3 JSON Schema로 변환한다. Event name, class, level과 required/optional field 의미를 유지한다. Runtime acceptance에는 schema-3 core와 일치하는 plugin cohort의 새 설치가 필요하다.
+
 - [o] P38 — P0: Plugin host에서 해당 project가 더 이상 표시되지 않을 때 Files sidecar callback을 무시한다. 입력: 창에서 project를 닫은 뒤 Wails Files project-close probe가 이전 sidecar callback 중 `sessionOf(shown)`에서 `TypeError: null is not an object (evaluating 'shown.id')`를 보고한다. 기대 동작: `null` project는 유효하며 이전 sidecar session callback을 error나 상태 변경 없이 무시한다. Red: 변경 전 소유 host-runtime test가 `null` project message 뒤 이전 session callback 두 개를 호출해 `shown.id`에서 실패한다. Green: 같은 test가 통과하고 `test/host-runtime.test.mjs`와 저장소 검사가 통과한다. 보존된 app record는 host log seq 66이다. Source-level 원인은 이전 session callback에서 `current`가 `null`이 된 뒤 `sessionOf(current)`를 평가하는 것이다. Host log는 message callback과 failure callback 중 어느 쪽인지 구분하지 않는다. SDK pin, plugin version, archive, registry, app profile은 변경하지 않는다. 이 수정은 아직 미배포다.
 - [ ] P38-1 — P0: P38, P39, P40, P41을 포함한 Files `0.0.7`을 게시하고 설치 registry를 갱신한다. 입력: 공개 `0.0.7` release는 없고 기존 local archive에는 이 correction이 없다. 기대 동작: 새로운 immutable archive가 네 correction을 모두 포함하고 registry가 설치한다. Core release gate P30과 plugin-host `declared-ui.expanded` event gate F239-35-4가 해제되면 진행한다.
 
