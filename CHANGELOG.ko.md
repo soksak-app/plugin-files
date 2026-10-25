@@ -6,6 +6,8 @@
 
 ## 미배포
 
+- F239-77-files: 일치하는 설치 diagnostic cohort로 로컬 schema-3 catalog acceptance를 완료한다. 현재 SDK가 source 5개와 pending rule 0개, event 7개를 검사하며 양쪽 host 설치본의 catalog가 source와 정확히 일치하고 application log audit을 통과한다. Public publication은 별도다.
+
 - F239-77-files: Files event catalog를 event name, class, level과
   required/optional field 의미를 바꾸지 않고 schema 3 JSON Schema로 변환한다.
   Red: 현재 core `events-check`가 schema 2를 거부하고 compact field map을 JSON

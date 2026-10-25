@@ -6,6 +6,8 @@
 
 ## Unreleased
 
+- F239-77-files: Complete local schema-3 catalog acceptance with the matching installed diagnostic cohort. The current SDK checks 5 sources with zero pending rules and 7 events; both host installations contain the exact source catalog and pass application log audits. Public publication remains separate.
+
 - F239-77-files: Convert the Files event catalog to schema 3 JSON Schema
   without changing event names, classes, levels or required/optional fields.
   Red: current core `events-check` rejected schema 2 and interpreted compact
