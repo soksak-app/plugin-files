@@ -9,13 +9,17 @@ import { mountFilesHost } from "../ui/host-runtime.js";
 const wire = JSON.parse(readFileSync(new URL("./fixtures/sidecar-files/tree-wire.json", import.meta.url), "utf8"));
 
 /** A fake sidecar session that answers each request with the reply of the fixture for its operation. */
-function wireHost(replyFor) {
+function wireHost(replyFor, { projectReady = true } = {}) {
   const requests = [];
   let onMessage = null;
   const statuses = new Map();
   const commands = new Map();
   const reports = [];
   const expandedListeners = [];
+  let projectListener = null;
+  let projectDelivery = Promise.resolve();
+  let resolveSnapshot;
+  const snapshotReady = new Promise((resolve) => { resolveSnapshot = resolve; });
   const sidecar = {
     async on(session, fn) { onMessage = fn; },
     async onFailure() {},
@@ -23,7 +27,10 @@ function wireHost(replyFor) {
       const { id, ...rest } = body;
       requests.push(rest);
       const reply = replyFor(rest);
-      queueMicrotask(() => onMessage(reply.changed !== undefined ? reply : { id, ...reply }));
+      queueMicrotask(() => {
+        onMessage(reply.changed !== undefined ? reply : { id, ...reply });
+        if (rest.operation === "snapshot") resolveSnapshot();
+      });
     },
   };
   const page = {
@@ -33,7 +40,10 @@ function wireHost(replyFor) {
     async open() {},
     data: { async get() { return []; }, async set() { return null; } },
     emit() {},
-    onProject() {},
+    onProject(listener) {
+      projectListener = listener;
+      if (projectReady) projectDelivery = listener(page.project);
+    },
     onTreeExpanded(listener) { expandedListeners.push(listener); return () => expandedListeners.splice(expandedListeners.indexOf(listener), 1); },
   };
   const expose = {
@@ -43,7 +53,11 @@ function wireHost(replyFor) {
   // A line from the sidecar that carries no request id, such as a change line of a watched directory.
   const push = (line) => onMessage(line);
   const expand = async (event) => { for (const listener of expandedListeners) await listener(event); };
-  return { page, expose, requests, statuses, commands, reports, push, expand };
+  return {
+    page, expose, requests, statuses, commands, reports, push, expand,
+    ready: () => projectDelivery,
+    snapshotReady,
+  };
 }
 
 const treeOf = (value) => value.elements.find((element) => element.kind === "tree");
@@ -51,6 +65,8 @@ const treeOf = (value) => value.elements.find((element) => element.kind === "tre
 test("each request the host sends has the body of the declared wire contract", async () => {
   const f = wireHost((request) => ({ tree: wire.replies[request.operation === "snapshot" ? "snapshot" : "select"].tree }));
   const host = await mountFilesHost(f);
+  await f.ready();
+  await f.snapshotReady;
   assert.deepEqual(f.requests[0], wire.requests.snapshot);
   await f.commands.get("files.select")({ path: "src/main.go" });
   assert.deepEqual(f.requests[1], wire.requests.select);
@@ -60,6 +76,8 @@ test("each request the host sends has the body of the declared wire contract", a
 test("the snapshot reply becomes the declared tree with each directory detail and the selected row", async () => {
   const f = wireHost(() => ({ tree: wire.replies.snapshot.tree }));
   const host = await mountFilesHost(f);
+  await f.ready();
+  await f.snapshotReady;
   const tree = treeOf(f.statuses.get("files.tree")());
   assert.deepEqual(tree.nodes.map((node) => [node.label, node.detail ?? null]), [["src", "deleted"], ["readme.md", null]]);
   assert.deepEqual(tree.nodes[0].children.map((node) => [node.label, node.detail]), [["main.go", "modified"], ["old.go", "deleted"]]);
@@ -69,6 +87,8 @@ test("the snapshot reply becomes the declared tree with each directory detail an
 test("the select reply marks the selected row of the declared tree", async () => {
   const f = wireHost((request) => ({ tree: wire.replies[request.operation === "snapshot" ? "snapshot" : "select"].tree }));
   const host = await mountFilesHost(f);
+  await f.ready();
+  await f.snapshotReady;
   await f.commands.get("files.select")({ path: "src/main.go" });
   const tree = treeOf(f.statuses.get("files.tree")());
   assert.equal(tree.nodes[0].children[0].selected, true);
@@ -82,6 +102,8 @@ test("a failed declared expansion is reported as an error, not as a success", as
     ? wire.replies.expandFailed
     : { tree: wire.replies.snapshot.tree }));
   const host = await mountFilesHost(f);
+  await f.ready();
+  await f.snapshotReady;
   fail = true;
   const src = treeOf(f.statuses.get("files.tree")()).nodes[0];
   await f.expand({ status: "tree", tree: "files", path: [src.key], expanded: false });
@@ -93,6 +115,8 @@ test("a failed declared expansion is reported as an error, not as a success", as
 test("a stale generation reply is an error, not a value", async () => {
   const f = wireHost((request) => (request.operation === "select" ? wire.replies.staleGeneration : { tree: wire.replies.snapshot.tree }));
   const host = await mountFilesHost(f);
+  await f.ready();
+  await f.snapshotReady;
   await assert.rejects(f.commands.get("files.select")({ path: "src/main.go" }), /stale tree generation/);
   host.dispose();
 });
@@ -100,9 +124,19 @@ test("a stale generation reply is an error, not a value", async () => {
 test("a change line from the sidecar requests a new snapshot", async () => {
   const f = wireHost(() => ({ tree: wire.replies.snapshot.tree }));
   const host = await mountFilesHost(f);
+  await f.ready();
+  await f.snapshotReady;
   assert.equal(f.requests.length, 1);
   f.push(wire.change);
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.deepEqual(f.requests.slice(1), [wire.requests.snapshot]);
+  host.dispose();
+});
+
+test("project-bound operations are refused before ready-time project delivery", async () => {
+  const f = wireHost(() => ({ tree: wire.replies.snapshot.tree }), { projectReady: false });
+  const host = await mountFilesHost(f);
+  await assert.rejects(f.commands.get("files.select")({ path: "src/main.go" }), /requires a ready-time project delivery/);
+  assert.deepEqual(f.requests, []);
   host.dispose();
 });

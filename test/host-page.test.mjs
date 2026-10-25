@@ -12,10 +12,13 @@ const PROJECT = { id: "project-1", root: "/project" };
 const TREE = { generation: 1, entries: [], selected: null };
 const posted = [];
 let deliver = null;
+let resolveFirstSidecarSend;
+const firstSidecarSend = new Promise((resolve) => { resolveFirstSidecarSend = resolve; });
 
 // Answers a call of the page with its reply. A snapshot call is answered by the sidecar message that carries its tree.
 function respond(message) {
   if (message.command === undefined || message.id === undefined) return;
+  if (message.command === "runtime.sidecar.send" && message.params.body.operation === "snapshot") resolveFirstSidecarSend();
   queueMicrotask(() => {
     if (message.command === "runtime.sidecar.send") {
       deliver({ event: "sidecar.message", data: { id: message.params.id, body: { id: message.params.body.id, tree: TREE } } });
@@ -43,6 +46,10 @@ globalThis.window = {
 
 // The page starts when its module loads: the top-level await of ui/host.js completes after each status and command is registered.
 await import("../build/test/ui/host.js");
+// The document start value is not the project I/O authorization. The host delivers the current project through runtime.project after
+// the plugin page has installed its listener, as it does for a ready page in the application.
+deliver({ event: "project", data: PROJECT });
+await firstSidecarSend;
 
 const callsNamed = (command) => posted.filter((message) => message.command === command);
 const registrations = (kind) => posted
@@ -56,7 +63,8 @@ test("the page registers each declared status", () => {
 test("the page pushes the value of each status as a declared UI snapshot", () => {
   const pushed = posted.filter((message) => message.event === "declared-ui.snapshot").map((message) => message.status);
   for (const entry of manifest.exposes.status) {
-    assert.ok(pushed.includes(entry.name), `no declared UI snapshot was pushed for ${entry.name}`);
+    const localName = entry.name.slice("files.".length);
+    assert.ok(pushed.includes(localName), `no declared UI snapshot was pushed for ${entry.name}`);
   }
 });
 

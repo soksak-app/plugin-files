@@ -11,10 +11,19 @@
   Red: 현재 core `events-check`가 schema 2를 거부하고 compact field map을 JSON
   Schema keyword로 처리했다. Green: 현재 core `events-check`가 선언 7개와 source
   emit을 모두 받으며 `test/events.test.mjs` 3/3과 현재 core `make check`가
-  통과한다. 전체 `pnpm test`는 113/122로 실패한다. Host-page/sidecar-wire 검사
-  여덟 개가 필요한 ready-time project delivery 없이 실행되고, manifest 검사 한 개는
-  `plugin.json`의 0.0.8 대신 sidecar 0.0.7을 기대한다. 이 fixture 실패는 catalog
-  변경 범위 밖이다. Runtime acceptance는 대기 중이다.
+  통과한다. 당시 전체 `pnpm test`는 113/122로 실패했다. Host-page/sidecar-wire
+  검사 여덟 개가 필요한 ready-time project delivery 없이 실행되고, manifest 검사
+  한 개는 `plugin.json`의 0.0.8 대신 sidecar 0.0.7을 기대했다. F239-82-files가
+  해당 stale fixture와 assertion을 수정한다. Runtime acceptance는 대기 중이다.
+
+- F239-82-files: Host-page와 sidecar-wire test fake가 ready-time project
+  delivery를 사용하도록 맞추고, snapshot event는 local status name으로 비교하며
+  manifest 기대값을 package version 0.0.8로 갱신한다. Project delivery 전
+  project-bound operation이 거부되는 test를 추가한다. Red: 보존된 전체 package
+  run에서 project delivery 누락으로 host-page assertion 두 개와 sidecar-wire
+  assertion 여섯 개가 실패했고 manifest version assertion 하나도 오래된 값이었다.
+  Green: 변경한 소유 test 파일이 4/4, 7/7, 10/10 통과하며 production code는
+  바뀌지 않았다.
 
 - P47: P46을 포함하는 Files 0.0.8 local candidate를 준비했다. 공식 진단 package 검사는 manifest, exposure, engines, events와 records 다섯 검사를 통과한다. 새 registry는 P87 entry를 보존하고 Files 0.0.8을 추가하며, 새 설정에 Files sidecar 0.0.8과 함께 설치된다. 설치된 host runtime은 package의 P46 구현과 같다. Files는 `diagnostics.json`을 선언하지 않는다. Candidate archive SHA-256은 `75234f301dda839aa9a81eeeb7fb33c6f4de8a19ec4edfd54ef7783a7bfb2ced`, registry index SHA-256은 `4c192acd4fd8e121811641b38b18067d8c36e9b53b431aa75958cc2a22027c94`다. Local 상태이며 미배포이고 application은 실행하지 않았다.
 

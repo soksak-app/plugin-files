@@ -12,10 +12,20 @@
   field maps as JSON Schema keywords. Green: current core `events-check`
   accepts all seven declarations and source emits; `test/events.test.mjs`
   passes 3/3 and current-core `make check` passes. The full `pnpm test` run
-  remains non-green (113/122): eight host-page/sidecar-wire cases run without
-  the required ready-time project delivery, and one manifest test expects
-  sidecar 0.0.7 while `plugin.json` declares 0.0.8. These fixture failures are
-  outside this catalog change. Runtime acceptance is still pending.
+  at that time was non-green (113/122): eight host-page/sidecar-wire cases ran
+  without the required ready-time project delivery, and one manifest test
+  expected sidecar 0.0.7 while `plugin.json` declared 0.0.8. F239-82-files
+  updates those stale fixtures and assertions. Runtime acceptance is still
+  pending.
+
+- F239-82-files: Align host-page and sidecar-wire test fakes with ready-time
+  project delivery, compare snapshot events by their local status names, and
+  update the manifest expectation to package version 0.0.8. Add coverage that
+  project-bound operations reject before project delivery. Red: the preserved
+  full package run had two host-page and six sidecar-wire assertion failures
+  from missing project delivery, plus one stale manifest version assertion.
+  Green: the affected test files pass 4/4, 7/7 and 10/10; production code is
+  unchanged.
 
 - P47: Prepare Files 0.0.8 as a local candidate containing P46. The official diagnostic pack passes the manifest, exposure, engine, event and record checks. A new registry preserves the P87 entries and adds Files 0.0.8; a fresh configuration installs it with Files sidecar 0.0.8. The installed host runtime matches the packaged P46 implementation. Files declares no `diagnostics.json`. The candidate archive SHA-256 is `75234f301dda839aa9a81eeeb7fb33c6f4de8a19ec4edfd54ef7783a7bfb2ced`, and the registry index SHA-256 is `4c192acd4fd8e121811641b38b18067d8c36e9b53b431aa75958cc2a22027c94`. It remains local and unreleased; no application was launched.
 
