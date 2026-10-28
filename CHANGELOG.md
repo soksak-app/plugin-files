@@ -6,6 +6,13 @@
 
 ## Unreleased
 
+- P48: Pin the package SDK and release workflow CLI source to the same public
+  immutable core source at plugin API version 0.0.21. Lockfile-only resolution
+  fetches the source and the frozen lockfile check passes. Manifest, exposure,
+  engine, event and existing core-version checks pass. Files remains 0.0.8;
+  the engine range and sidecar minimum are unchanged. No package candidate was
+  built or published.
+
 - F239-77-files: Complete local schema-3 catalog acceptance with the matching installed diagnostic cohort. The current SDK checks 5 sources with zero pending rules and 7 events; both host installations contain the exact source catalog and pass application log audits. Public publication remains separate.
 
 - F239-77-files: Convert the Files event catalog to schema 3 JSON Schema

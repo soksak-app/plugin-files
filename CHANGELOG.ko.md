@@ -6,6 +6,13 @@
 
 ## 미배포
 
+- P48: Package SDK와 release workflow CLI source를 plugin API version 0.0.21인
+  동일한 공개 immutable core source에 고정한다. Lockfile-only resolution이
+  source를 가져오고 frozen lockfile 검사가 통과한다. Manifest, exposure,
+  engine, event 및 기존 core-version 검사가 통과한다. Files는 0.0.8을 유지하고
+  engine 범위와 sidecar 최소 버전은 바꾸지 않는다. Package candidate를 만들거나
+  게시하지 않았다.
+
 - F239-77-files: 일치하는 설치 diagnostic cohort로 로컬 schema-3 catalog acceptance를 완료한다. 현재 SDK가 source 5개와 pending rule 0개, event 7개를 검사하며 양쪽 host 설치본의 catalog가 source와 정확히 일치하고 application log audit을 통과한다. Public publication은 별도다.
 
 - F239-77-files: Files event catalog를 event name, class, level과
