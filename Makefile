@@ -1,16 +1,16 @@
 # files plugin repository 의 test, check 와 pack(docs/features.md). pack 은 core 의 sok 를 쓴다.
-.PHONY: test check pack push-check hooks
+.PHONY: install test check pack push-check hooks
 
 SOK ?= sok
 # DIAGNOSTICS=1 이면 diagnostics.json 을 담은 진단 package 를 쓴다.
 PACK_FLAGS = $(if $(DIAGNOSTICS),--diagnostics,)
 
 # test 는 이 plugin 의 테스트만 실행한다. SDK 도구와 SDK import 를 쓰지 않는다.
-node_modules: package.json
-	pnpm install
-	touch node_modules
+# The installation stage (core docs/spec/plugins.md#repositories): it installs the locked dependencies; the tests, checks and packs consume them without installing.
+install:
+	pnpm install --frozen-lockfile
 
-test: node_modules
+test:
 	pnpm test
 
 # check 는 설치된 @soksak/plugin-api 로 선언을 검사한다. CORE_PLUGIN_API_DIR 에 core 의 packages/plugin-api 소스
@@ -23,7 +23,7 @@ SDK_EXPOSURE = $(if $(CORE_PLUGIN_API_DIR),node $(CORE_PLUGIN_API_DIR)/exposure-
 SDK_ENGINES = $(if $(CORE_PLUGIN_API_DIR),node $(CORE_PLUGIN_API_DIR)/engines-check.js,pnpm exec soksak-engines)
 SDK_EVENTS = $(if $(CORE_PLUGIN_API_DIR),node $(CORE_PLUGIN_API_DIR)/events-check.js,pnpm exec soksak-events)
 SDK_RECORDS = $(if $(CORE_PLUGIN_API_DIR),node $(CORE_PLUGIN_API_DIR)/records-check.js,pnpm exec soksak-records)
-check: node_modules
+check:
 	node scripts/check-manifest.mjs
 	$(SDK_EXPOSURE)
 	$(SDK_ENGINES)
