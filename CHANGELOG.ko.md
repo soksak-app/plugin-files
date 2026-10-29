@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- F274-files: pre-push hook은 push가 게시하는 commit message만 검사한다. 시험과 검사는 CI가 실행한다.
 - P37: Files `0.0.7`은 `engines.soksak` `^0.0.21`을 선언한다. 공개 core `v0.0.20`은 `host` 필드와 status-only section을 거부한다. Red: `test/core-version.test.mjs`가 `">=0.0.11" !== "^0.0.21"`로 실패한다. Green: 같은 test가 1/1 통과하고 candidate `make check`에서 manifest, exposure, engines, event 검사가 통과한다. Records 도구는 `Record checks passed: 0 files`를 보고해 record coverage를 제공하지 않는다. SDK pin, plugin version, archive, registry는 바꾸지 않았으며 P30은 public release gate로 남는다.
 
 ## 미배포
