@@ -181,8 +181,11 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       if (current === null || session !== sessionOf(current)) return;
       const error = new Error(errorText(reason));
       emitEvent("warn", "plugin.files.tree.failed", { error: error.message });
+      // A waiting request is rejected to its caller, which reports the error with the request context (operation and project).
+      // The callback has no request context, so it reports the failure only when no request waits; otherwise the error would be reported twice.
+      const waiting = pending.size > 0;
       rejectPending(error);
-      reportError(error);
+      if (!waiting) reportError(error);
     })]);
   };
   const send = async (operation, params, shown) => {

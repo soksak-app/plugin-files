@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P88: files host page는 tree 요청이 기다리는 동안 sidecar의 session 실패를 `files tree`로 한 번만 보고한다. 실패 callback이 기다리는 요청을 거부하면서 실패도 보고해서, 호출자가 같은 글을 다시 보고했다. 이제 callback은 기다리는 요청이 없을 때만 보고한다. Red: `test/host-runtime.test.mjs`의 `a session failure of the sidecar while a tree request waits is reported once (P88)`가 `the failure is reported once, reported 2 times`로 실패했다. Green: 같은 시험이 통과하고, `test/host-runtime.test.mjs`가 37개 중 37개 통과한다.
 - P49: files host page는 sidecar 요청의 send를 기다리는 동안에도 그 답을 관찰한다. 그 사이의 session 실패와 이어지는 send 실패는 unhandled rejection이 아니라 `files tree`로 보고된다.
 - P6: CI와 release workflow가 완료되었다. `ci.yml`은 `main`의 모든 push를 macOS에서 테스트하고 검사하며, `release.yml`은 tag에서 release `v0.0.3`부터 `v0.0.6`까지 게시했다.
 - P50: files host page가 sidecar의 감시 실패, 곧 `id` 없이 `error`가 든 message를 `files sidecar watch failed: <text>`로 보고한다. 전에는 모르는 요청의 답으로 보고해서 글을 잃었다.

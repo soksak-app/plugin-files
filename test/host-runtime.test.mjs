@@ -703,3 +703,25 @@ test("a session failure while a sidecar send waits, and then the send refusal, r
     process.off("unhandledRejection", onUnhandled);
   }
 });
+
+test("a session failure of the sidecar while a tree request waits is reported once (P88)", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  let rejectSend;
+  let sendStarted;
+  const started = new Promise((resolve) => { sendStarted = resolve; });
+  f.failures.send = () => {
+    sendStarted();
+    return new Promise((_, reject) => { rejectSend = reject; });
+  };
+  const host = await mountFilesHost(f);
+  await started;
+  const text = "lstat /work/project/gone: no such file or directory";
+  f.failure("plugin:files:project-a:@soksak/sidecar-files")(text);
+  rejectSend(new Error("plugin host files: " + text));
+  await settle();
+  await settle();
+  const reports = f.errors.filter((record) => record.text === text);
+  assert.equal(reports.length, 1, `the failure is reported once, reported ${reports.length} times`);
+  assert.deepEqual(reports.map(({ level, where }) => ({ level, where })), [{ level: "error", where: "files tree" }]);
+  host.dispose();
+});
