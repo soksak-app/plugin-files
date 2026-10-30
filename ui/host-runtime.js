@@ -152,6 +152,15 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       reportError(new Error(`files sidecar watch failed: ${body.error}`));
       return;
     }
+    // A change and a watch failure are the declared messages without an id. Any other message without an id is reported with its
+    // event and keys, so the record names the message, such as a connection notice of a persistent sidecar, which this standard
+    // input and output sidecar does not send.
+    if (!Object.hasOwn(body, "id")) {
+      const kind = typeof body.event === "string" ? `event ${body.event}` : "no event";
+      const keys = Object.keys(body).sort();
+      reportError(new Error(`files sidecar sent an undeclared message without id: ${kind}; keys ${keys.length > 0 ? keys.join(", ") : "none"}`));
+      return;
+    }
     if (abandoned.delete(body.id)) return;
     const call = pending.get(body.id);
     if (!call) {

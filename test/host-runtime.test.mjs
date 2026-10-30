@@ -725,3 +725,21 @@ test("a session failure of the sidecar while a tree request waits is reported on
   assert.deepEqual(reports.map(({ level, where }) => ({ level, where })), [{ level: "error", where: "files tree" }]);
   host.dispose();
 });
+
+test("a sidecar message without id that the host does not declare is reported with its event and keys (P89)", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  await settle();
+  const before = f.errors.length;
+  const tree = f.statuses.get("files.tree").read();
+  // The connection notice of a persistent sidecar, which the host delivered to the files session in the core recovery check.
+  f.message()({ event: "connection", connected: true });
+  f.message()({ tree: snapshot([]) });
+  await settle();
+  assert.deepEqual(f.errors.slice(before).map(({ level, where, text }) => ({ level, where, text })), [
+    { level: "error", where: "files tree", text: "files sidecar sent an undeclared message without id: event connection; keys connected, event" },
+    { level: "error", where: "files tree", text: "files sidecar sent an undeclared message without id: no event; keys tree" },
+  ]);
+  assert.equal(f.statuses.get("files.tree").read(), tree, "an undeclared message changes the tree");
+  host.dispose();
+});

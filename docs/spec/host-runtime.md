@@ -18,6 +18,10 @@ A later project with an `id` and `root` uses its own sidecar session. A callback
 
 A repeated project message with the current `id` and `root` is not a project change. The runtime preserves its tree, bookmarks and pending work and starts no sidecar or project-data request. A changed `root` is a project change even when the `id` is unchanged.
 
+## Sidecar messages
+
+A message of the current session with an `id` is the reply to that request. A reply to a request of a previous project is dropped, and a reply whose `id` names no waiting request is reported as `files sidecar replied to unknown request <id>`. The files sidecar sends two messages without an `id`: `{changed}`, a change of a watched path, which the runtime records as `plugin.files.tree.changed` and answers with a `snapshot` request, and `{error}` with a string error, a watch failure, which the runtime reports as `files sidecar watch failed: <error>`. Any other message without an `id` is not declared for this session and is reported as `files sidecar sent an undeclared message without id: event <event>; keys <keys>`, with `no event` when it has no string `event` and its keys sorted, and it changes no tree. The files sidecar uses the standard input and output transport, so the connection notice `{event: "connection"}` of a persistent sidecar is such an undeclared message. A message that is not an object is reported as `files sidecar message must be an object`.
+
 ## Declared status snapshots
 
 The plugin host registers each exposed status with its full manifest name, such as `files.tree`. The view bridge stores and answers snapshots by the plugin-local status name, such as `tree`. The host adapter therefore passes the suffix after `files.` to `bridge.snapshots.push` for the initial value and every subscribed value. It does not change the full name passed to `expose.status`.

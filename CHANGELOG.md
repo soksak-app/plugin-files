@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P89: The files host page reports a sidecar message without `id` that it does not declare, such as the connection notice of a persistent sidecar, as `files sidecar sent an undeclared message without id: event <event>; keys <keys>`. It reported such a message as `files sidecar replied to unknown request undefined`, which named no message. Red: `a sidecar message without id that the host does not declare is reported with its event and keys (P89)` failed with `files sidecar replied to unknown request undefined`. Green: the same test passes, and `test/host-runtime.test.mjs` passes 38 of 38.
 - P88: The files host page reports a session failure of the sidecar once as `files tree` while a tree request waits. The failure callback rejected the waiting request and also reported the failure, so the caller reported the same text again; the callback now reports only when no request waits. Red: `a session failure of the sidecar while a tree request waits is reported once (P88)` failed with `the failure is reported once, reported 2 times`. Green: the same test passes, and `test/host-runtime.test.mjs` passes 37 of 37.
 - P49: The files host page observes the reply of a sidecar request while its send waits, so a session failure in that wait followed by a send failure is reported as `files tree` instead of as an unhandled rejection.
 - P6: The CI and release workflows are complete: `ci.yml` tests and checks every push to `main` on macOS, and `release.yml` published the releases `v0.0.3` through `v0.0.6` from their tags.

@@ -18,6 +18,10 @@ Project가 바뀌면 이전 sidecar session은 끝난다. 이전 session에 등�
 
 현재 `id`, `root`와 같은 project message는 project 변경이 아니다. Runtime은 tree, bookmarks, 진행 중인 작업을 유지하고 sidecar 또는 project-data request를 새로 시작하지 않는다. `id`가 같아도 `root`가 바뀌면 project 변경이다.
 
+## Sidecar message
+
+현재 session의 `id`가 있는 message는 그 요청의 답이다. 이전 project 요청의 답은 버리고, `id`가 기다리는 요청을 가리키지 않는 답은 `files sidecar replied to unknown request <id>`로 보고한다. files sidecar는 `id` 없는 message 두 가지를 보낸다. `{changed}`는 감시 중인 경로의 변경이며, runtime은 `plugin.files.tree.changed`로 기록하고 `snapshot` 요청으로 답한다. 문자열 error가 든 `{error}`는 감시 실패이며, runtime은 `files sidecar watch failed: <error>`로 보고한다. 다른 `id` 없는 message는 이 session에 선언되지 않았으므로 `files sidecar sent an undeclared message without id: event <event>; keys <keys>`로 보고한다. 문자열 `event`가 없으면 `no event`를 쓰고, key는 정렬해서 쓰며, tree는 바꾸지 않는다. files sidecar는 표준 입출력 transport를 쓰므로, persistent sidecar의 연결 알림 `{event: "connection"}`은 이런 선언되지 않은 message다. 객체가 아닌 message는 `files sidecar message must be an object`로 보고한다.
+
 ## Declared status snapshot
 
 Plugin host는 `files.tree`처럼 전체 manifest 이름으로 exposed status를 등록한다. View bridge는 `tree`처럼 plugin 안에서 사용하는 status 이름으로 snapshot을 저장하고 응답한다. 따라서 host adapter는 처음 값과 구독 값 모두에서 `files.` 뒤의 이름을 `bridge.snapshots.push`에 전달한다. `expose.status`에 전달하는 전체 이름은 바꾸지 않는다.
