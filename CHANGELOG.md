@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P50: The files host page reports a watch failure of the sidecar, a message with `error` and no `id`, as `files sidecar watch failed: <text>`; it reported it as a reply to an unknown request and lost the text.
 - F275-files: `make install` installs the locked dependencies; the tests, checks and builds no longer install.
 - F274-files: The pre-push hook checks only the commit messages that a push publishes; CI runs the tests and checks.
 - P37: Files `0.0.7` now declares `engines.soksak` `^0.0.21` because published core `v0.0.20` rejects its `host` field and status-only sections. Red: `test/core-version.test.mjs` fails with `">=0.0.11" !== "^0.0.21"`. Green: the same test passes 1/1, and candidate `make check` passes manifest, exposure, engines and event checks. The records tool reports `Record checks passed: 0 files`, so it provides no record coverage. No SDK pin, plugin version, archive or registry changed; P30 remains the public release gate.

@@ -367,6 +367,16 @@ test("each tree request, each change line and each failure of the sidecar is an 
   host.dispose();
 });
 
+test("a watch failure of the sidecar, a message with error and no id, is reported with its text", async () => {
+  const f = fakeHost({ treeSnapshots: [snapshot([])] });
+  const host = await mountFilesHost(f);
+  const before = f.errors.length;
+  f.message()({ error: "watch src: kevent: bad file descriptor" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(f.errors.slice(before).map((record) => record.text), ["files sidecar watch failed: watch src: kevent: bad file descriptor"]);
+  host.dispose();
+});
+
 test("a command is recorded with its result, and a failure to open a file is recorded as a warning", async () => {
   const f = fakeHost({ treeSnapshots: [snapshot([])] });
   const host = await mountFilesHost(f);

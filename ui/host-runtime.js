@@ -147,6 +147,11 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
       request("snapshot").catch(reportError);
       return;
     }
+    // A message with an error and no id is a watch failure of the session, which answers no request.
+    if (!Object.hasOwn(body, "id") && typeof body.error === "string") {
+      reportError(new Error(`files sidecar watch failed: ${body.error}`));
+      return;
+    }
     if (abandoned.delete(body.id)) return;
     const call = pending.get(body.id);
     if (!call) {
