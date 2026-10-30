@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P6: The CI and release workflows are complete: `ci.yml` tests and checks every push to `main` on macOS, and `release.yml` published the releases `v0.0.3` through `v0.0.6` from their tags.
 - P50: The files host page reports a watch failure of the sidecar, a message with `error` and no `id`, as `files sidecar watch failed: <text>`; it reported it as a reply to an unknown request and lost the text.
 - F275-files: `make install` installs the locked dependencies; the tests, checks and builds no longer install.
 - F274-files: The pre-push hook checks only the commit messages that a push publishes; CI runs the tests and checks.
