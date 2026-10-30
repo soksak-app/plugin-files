@@ -188,13 +188,17 @@ export async function mountFilesHost({ page, expose, project = page?.project } =
   const send = async (operation, params, shown) => {
     const body = { operation, id: "files-" + (++nextRequest), ...params };
     const response = new Promise((resolve, reject) => pending.set(body.id, { resolve, reject }));
-    try {
-      await sidecar.send(sessionOf(shown), body, []);
-    } catch (error) {
-      pending.delete(body.id);
-      throw error;
-    }
-    return response;
+    const deliver = async () => {
+      try {
+        await sidecar.send(sessionOf(shown), body, []);
+      } catch (error) {
+        pending.delete(body.id);
+        throw error;
+      }
+    };
+    // Both promises are observed: a session failure can reject the response while the send waits, and the send can fail after it.
+    const [result] = await Promise.all([response, deliver()]);
+    return result;
   };
   /** A tree request, with its result recorded as an event. */
   const request = async (operation, params = {}) => {

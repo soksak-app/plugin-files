@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P49: files host page는 sidecar 요청의 send를 기다리는 동안에도 그 답을 관찰한다. 그 사이의 session 실패와 이어지는 send 실패는 unhandled rejection이 아니라 `files tree`로 보고된다.
 - P6: CI와 release workflow가 완료되었다. `ci.yml`은 `main`의 모든 push를 macOS에서 테스트하고 검사하며, `release.yml`은 tag에서 release `v0.0.3`부터 `v0.0.6`까지 게시했다.
 - P50: files host page가 sidecar의 감시 실패, 곧 `id` 없이 `error`가 든 message를 `files sidecar watch failed: <text>`로 보고한다. 전에는 모르는 요청의 답으로 보고해서 글을 잃었다.
 - F275-files: `make install`이 고정된 의존성을 설치한다. 시험, 검사, build는 더 이상 설치하지 않는다.

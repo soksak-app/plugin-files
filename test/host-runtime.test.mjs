@@ -42,7 +42,8 @@ function fakeHost({ treeSnapshots, project = { id: "project-a", root: "/work/pro
     async onFailure(session, fn) { calls.push({ kind: "onFailure", session }); sessionFailures.set(session, fn); failure = fn; },
     async send(session, body, cids) {
       calls.push({ kind: "send", session, body, cids });
-      if (failures.send !== null) throw failures.send;
+      if (typeof failures.send === "function") await failures.send();
+      else if (failures.send !== null) throw failures.send;
       const tree = treeSnapshots[index++];
       const reply = () => messages.get(session)?.({ id: body.id, ...(tree instanceof Error ? { error: tree.message } : { tree }) });
       if (state.hold) state.held.push(reply); else queueMicrotask(reply);
@@ -673,3 +674,32 @@ test("a no-project refusal from an active project's sidecar request is reported 
   host.dispose();
 });
 
+
+test("a session failure while a sidecar send waits, and then the send refusal, reach the files report path without an unhandled rejection (P49)", async () => {
+  const unhandled = [];
+  const onUnhandled = (reason) => unhandled.push(reason instanceof Error ? reason.message : String(reason));
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const f = fakeHost({ treeSnapshots: [snapshot([])] });
+    let rejectSend;
+    let sendStarted;
+    const started = new Promise((resolve) => { sendStarted = resolve; });
+    f.failures.send = () => {
+      sendStarted();
+      return new Promise((_, reject) => { rejectSend = reject; });
+    };
+    const host = await mountFilesHost(f);
+    await started;
+    f.failure("plugin:files:project-a:@soksak/sidecar-files")("lstat /work/project/gone: no such file or directory");
+    rejectSend(new Error("plugin host files: lstat /work/project/gone: no such file or directory"));
+    await settle();
+    await settle();
+    assert.deepEqual(unhandled, [], "no rejection of the files host page is unhandled");
+    assert.ok(f.errors.length > 0, "the failure is reported");
+    assert.ok(f.errors.every(({ level, where }) => level === "error" && where === "files tree"));
+    assert.ok(f.errors.some(({ text }) => text === "lstat /work/project/gone: no such file or directory"));
+    host.dispose();
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+});
