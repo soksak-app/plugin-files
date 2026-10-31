@@ -22,4 +22,4 @@ View는 각 요청을 `@soksak/sidecar-files`에 session id `surface`로 보낸�
 ## Bookmarks view
 
 View는 project data key `bookmarks`(경로의 목록)를 `runtime.data.get`으로 읽고, 명령 `files.bookmarks.remove`로 경로를 지운다.
-이 명령은 목록을 `runtime.data.set`으로 쓴다. 경로의 목록이 아닌 저장 값은 오류이며, 그 값으로 목록을 그리지 않는다.
+이 명령은 목록을 `runtime.data.set`으로 쓴다. View는 첫 읽기 전에 `runtime.data.on`으로 구독하며, 변경 event가 key `bookmarks`를 가리키면 목록을 다시 읽는다. 다른 key의 변경은 아무것도 읽지 않는다. 경로의 목록이 아닌 저장 값은 오류이며, 그 값으로 목록을 그리지 않는다.

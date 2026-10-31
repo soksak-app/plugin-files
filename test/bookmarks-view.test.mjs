@@ -68,3 +68,22 @@ test("a read that fails is reported to the error line of the view", async () => 
   assert.deepEqual(view.host.errors.map((error) => error.text), ["stored bookmarks are unreadable"]);
   assert.equal(view.host.errors[0].where, "files bookmarks");
 });
+
+test("the bookmarks view re-reads the bookmarks when the project data of the key changes", async () => {
+  const view = await startBookmarks({ store: { bookmarks: ["src/main.go"] } });
+  assert.deepEqual(view.host.posted.filter((message) => message.command === "runtime.data.on").length, 1);
+  view.store.bookmarks = ["src/main.go", "readme.md"];
+  view.host.deliver({ event: "data", data: { key: "bookmarks" } });
+  await settle();
+  assert.equal(rowsOf(globalThis.document.body).length, 2, "a bookmark that another view stored is drawn");
+  assert.deepEqual(view.host.errors, []);
+});
+
+test("a change of another project data key does not re-read the bookmarks", async () => {
+  const view = await startBookmarks({ store: { bookmarks: ["src/main.go"] } });
+  const readsBefore = view.host.posted.filter((message) => message.command === "runtime.data.get").length;
+  view.host.deliver({ event: "data", data: { key: "other" } });
+  await settle();
+  const readsAfter = view.host.posted.filter((message) => message.command === "runtime.data.get").length;
+  assert.equal(readsAfter, readsBefore);
+});

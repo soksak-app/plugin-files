@@ -128,4 +128,11 @@ async function remove({ path } = {}) {
 
 await bridge.commands.register("files.bookmarks.remove", remove);
 if (project === null) showMessage(NO_PROJECT_TEXT);
-else await load();
+else {
+  // The subscription starts before the first read, so a write between the read and the subscription is not lost. The file tree
+  // view writes the same key, and a change of another key reads nothing.
+  await bridge.runtime.data.on(({ key }) => {
+    if (key === KEY) load();
+  });
+  await load();
+}

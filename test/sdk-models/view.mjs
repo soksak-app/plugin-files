@@ -107,7 +107,8 @@ export function createViewBridge({ handler, report }) {
     if (message.event !== undefined) {
       const key = message.event === "sidecar.message" ? `sidecar.message:${message.data.id}`
         : message.event === "sidecar.failure" ? `sidecar.failure:${message.data.id}`
-          : `native:${message.event}`;
+          : message.event === "data" ? "data"
+            : `native:${message.event}`;
       for (const listener of [...(listeners.get(key) ?? [])]) listener(message.data);
       return;
     }
@@ -152,6 +153,8 @@ export function createViewBridge({ handler, report }) {
     // The project of the window, as the host sends it with no call (the theme path).
     // The project data of the plugin for the project of the view: get(key) and set(key, value) answer the call of the key.
     data: {
+      // The subscription of the project data changes: the listener receives {key} for each change of a key of the view's project.
+      on: (listener) => listen("data", () => request("runtime.data.on", null), listener),
       get: (key) => {
         if (typeof key !== "string" || key === "") return Promise.reject(new TypeError("runtime.data.get requires a non-empty key"));
         return request("runtime.data.get", { key });
