@@ -13,6 +13,7 @@
 
 ## 미배포
 
+- F272-files: `main`에 push하면 tag가 없을 때 `soksak-release-gate`로 선언된 version을 core release `v0.0.21`의 `sok`와 함께 release한다. `@soksak/plugin-api`에 대한 의존은 그 release의 pack 파일이다. 어떤 workflow도 core를 checkout하지 않는다.
 - P48: Package SDK와 release workflow CLI source를 plugin API version 0.0.21인
   동일한 공개 immutable core source에 고정한다. Lockfile-only resolution이
   source를 가져오고 frozen lockfile 검사가 통과한다. Manifest, exposure,

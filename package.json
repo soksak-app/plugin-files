@@ -23,6 +23,6 @@
     "test": "node scripts/build-test.mjs && node --test test/"
   },
   "devDependencies": {
-    "@soksak/plugin-api": "git+https://github.com/soksak-app/core.git#4f82fb9c3307e3f4e6e834c3d336629275e45cac&path:/packages/plugin-api"
+    "@soksak/plugin-api": "https://github.com/soksak-app/core/releases/download/v0.0.21/soksak-plugin-api-0.0.21.tgz"
   }
 }

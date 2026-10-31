@@ -13,6 +13,7 @@
 
 ## Unreleased
 
+- F272-files: A push to `main` releases the declared version through `soksak-release-gate` when its tag is absent, with the `sok` of the core release `v0.0.21`, and the dependency on `@soksak/plugin-api` is the packed release file of that release; no workflow checks out core.
 - P48: Pin the package SDK and release workflow CLI source to the same public
   immutable core source at plugin API version 0.0.21. Lockfile-only resolution
   fetches the source and the frozen lockfile check passes. Manifest, exposure,
