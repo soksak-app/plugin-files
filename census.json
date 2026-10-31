@@ -1,1 +1,1 @@
-{"entrances": {}, "pending": {}}
+{"exclude": "^(ui/)?vendor/", "entrances": {}, "pending": {}}

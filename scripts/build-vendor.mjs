@@ -1,5 +1,5 @@
-// @pierre/trees 를 ui/vendor/trees.js 한 파일로 번들한다(docs/spec/plugins.md#third-party-libraries).
-// --check 는 새로 만든 번들이 커밋된 파일과 같은지 검사하고 다르면 실패한다.
+// Bundles @pierre/trees into the one file ui/vendor/trees.js, which the tree section view imports.
+// --check builds the bundle again and fails when it differs from the committed files.
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -7,7 +7,7 @@ import { build } from "esbuild";
 
 const OUTPUT = new URL("../ui/vendor/trees.js", import.meta.url);
 const NOTICES = new URL("../ui/vendor/trees.LICENSE.txt", import.meta.url);
-/* 번들에 들어간 패키지의 라이선스와 고지. 배포물에 함께 둔다. */
+/* The licenses and notices of the bundled packages, which the release ships beside the bundle. */
 const trees = dirname(realpathSync(new URL("../node_modules/@pierre/trees/package.json", import.meta.url)));
 const preact = dirname(createRequire(join(trees, "package.json")).resolve("preact/package.json"));
 const notices = [

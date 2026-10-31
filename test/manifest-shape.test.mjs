@@ -1,7 +1,9 @@
 // Checks the declarations of plugin.json and package.json, and the files that they name, with literal expectations.
 // The pinned plugin API validates the same declarations in make check (scripts/check-manifest.mjs).
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -64,8 +66,10 @@ test("the plugin declares no state module: the host page serves every status and
   assert.ok(pkg.files.includes("ui"));
 });
 
-test("the plugin ships no third-party library bundle", () => {
-  assert.equal(exists("ui/vendor"), false, "ui/vendor still exists");
+// The plugin draws its tree section with @pierre/trees, so the release ships the bundle that scripts/build-vendor.mjs writes.
+test("the vendored @pierre/trees bundle is the output of its build", () => {
+  const check = spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/build-vendor.mjs", import.meta.url)), "--check"], { encoding: "utf8" });
+  assert.equal(check.status, 0, `scripts/build-vendor.mjs --check failed: ${check.stderr}`);
 });
 
 // The sidecar declaration of the files sidecar (fixture copy of its sidecar.json): the operations that a plugin host may call.
