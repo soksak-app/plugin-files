@@ -12,7 +12,7 @@ const STATUS_SCHEMA = { type: "object", properties: { elements: { type: "array" 
 
 test("the plugin requires the current files sidecar process identity release", () => {
   assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.8");
-  assert.equal(pkg.version, "0.0.9");
+  assert.equal(pkg.version, "0.0.10");
 });
 
 test("plugin.json declares the plugin host page and no host state", () => {

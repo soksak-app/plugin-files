@@ -1,6 +1,6 @@
 {
   "name": "@soksak/plugin-files",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/soksak-app/plugin-files.git"
   },
   "engines": {
-    "soksak": "^0.0.23"
+    "soksak": "^0.0.24"
   },
   "files": [
     "events.json",
@@ -23,6 +23,6 @@
     "test": "node scripts/build-test.mjs && node --test test/"
   },
   "devDependencies": {
-    "@soksak/plugin-api": "https://github.com/soksak-app/core/releases/download/v0.0.23/soksak-plugin-api-0.0.23.tgz"
+    "@soksak/plugin-api": "https://github.com/soksak-app/core/releases/download/v0.0.24/soksak-plugin-api-0.0.24.tgz"
   }
 }
