@@ -192,6 +192,16 @@ const tree = new FileTree({
   },
 });
 tree.render({ containerWrapper: holder });
+// The library draws the rows in the open shadow root of its container, and it has no hook for a row element. The page marks each
+// row that the library draws when the root changes (a subtree mutation), and the provider of files.tree.row reads the rows drawn now.
+const treeRoot = tree.getFileTreeContainer()?.shadowRoot;
+if (!treeRoot) throw new Error("the tree library draws no shadow root for its rows");
+const treeRows = () => [...treeRoot.querySelectorAll("[data-item-path]")];
+const markRows = () => {
+  for (const row of treeRows()) row.dataset.expose = "files.tree.row";
+};
+markRows();
+new MutationObserver(markRows).observe(treeRoot, { childList: true, subtree: true });
 
 const applyTheme = () => Object.entries(themeStyles()).forEach(([name, value]) => holder.style.setProperty(name, value));
 applyTheme();
@@ -405,6 +415,7 @@ await Promise.all([
     return () => statusListeners.delete(listener);
   }),
   expose.dom("files.tree.refresh", refresh),
+  expose.dom("files.tree.row", treeRows),
   expose.dom("files.bookmarks.add", star),
   bridge.commands.register("files.refresh", handlers["files.refresh"]),
   bridge.commands.register("files.select", handlers["files.select"]),

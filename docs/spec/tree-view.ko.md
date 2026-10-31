@@ -31,6 +31,8 @@ Tree view는 status `files.tree`를 선언한다. 그 값은 `{rows, message}`�
 보이지 않으면 `null`이다. 북마크 view는 status `files.bookmarks`를 선언한다. 그 값은 저장된 순서의 북마크 경로 목록이다. 각 status는
 보고하는 상태가 바뀔 때마다 그 값을 watcher에게 알린다.
 
-Header button은 dom 이름을 가진다. 새로 고침 button은 `files.tree.refresh`, 별 button은 `files.bookmarks.add`이다. 북마크 행마다
-`files.bookmarks.item`을 가지며, 그 삭제 button은 `files.bookmarks.remove`를 가진다. 두 이름 모두 `many`를 선언한다. Tree 행은 dom
-이름을 갖지 않는다. 행은 `files.tree`로 읽고, `files.select`와 `files.tree.toggle`로 조작한다.
+Header button은 dom 이름을 가진다. 새로 고침 button은 `files.tree.refresh`, 별 button은 `files.bookmarks.add`이다. Tree 행은 dom 이름
+`files.tree.row`(`many`)를 가진다. Page는 이 이름의 provider 하나를 등록하며, 그 provider는 지금 library가 그리는 행, 즉 tree
+container의 열린 shadow root에서 `data-item-path`를 가진 요소를 돌려준다. Library는 행 요소에 대한 hook이 없으므로, page는 그 root가
+바뀔 때(subtree mutation) 각 행을 표시한다. 북마크 행마다 `files.bookmarks.item`을 가지며, 그 삭제 button은 `files.bookmarks.remove`를
+가진다. 두 이름 모두 `many`를 선언하고 provider를 하나씩 가지며, 그 provider는 지금 그려진 행을 돌려준다. 그래서 제거된 행은 제공되지 않는다.

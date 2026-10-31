@@ -206,6 +206,11 @@
         "description": "The refresh button of the file tree header, which lists the project folder again."
       },
       {
+        "name": "files.tree.row",
+        "description": "One visible row of the file tree, as the tree library draws it.",
+        "many": true
+      },
+      {
         "name": "files.bookmarks.add",
         "description": "The star button of the file tree header, which adds the selected file to the bookmarks."
       },

@@ -200,3 +200,30 @@ test("the refresh and star buttons carry their declared dom names", async () => 
   assert.ok(registered.some((entry) => entry.kind === "dom" && entry.name === "files.tree.refresh"));
   assert.ok(registered.some((entry) => entry.kind === "dom" && entry.name === "files.bookmarks.add"));
 });
+
+test("the tree rows are one provider that reads the rows the library draws, and each drawn row carries files.tree.row", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const { created } = await import("../build/test/sdk-models/expose.mjs");
+  const registered = registeredEntries(view.host).filter((entry) => entry.kind === "dom" && entry.name === "files.tree.row");
+  assert.equal(registered.length, 1, "files.tree.row is registered once");
+  const providers = created.at(-1).doms.get("files.tree.row");
+  assert.equal(providers?.length, 1, "one provider serves the name");
+  const rows = providers[0]();
+  assert.deepEqual(rows.map((row) => row.dataset.itemPath), ["src/", "src/main.go", "readme.md"]);
+  assert.deepEqual(rows.map((row) => row.dataset.expose), ["files.tree.row", "files.tree.row", "files.tree.row"]);
+});
+
+test("a row that the library draws later is marked, and a row it removes is not provided", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const { created } = await import("../build/test/sdk-models/expose.mjs");
+  const rows = () => created.at(-1).doms.get("files.tree.row")[0]();
+  view.tree.batch([{ type: "add", path: "notes.txt" }]);
+  await settle();
+  const added = rows().find((row) => row.dataset.itemPath === "notes.txt");
+  assert.ok(added, "the provider reads the row that the library drew");
+  assert.equal(added.dataset.expose, "files.tree.row", "the page marks the row that the library drew");
+  view.tree.batch([{ type: "remove", path: "readme.md" }]);
+  await settle();
+  assert.deepEqual(rows().map((row) => row.dataset.itemPath).includes("readme.md"), false);
+  assert.equal(created.at(-1).doms.get("files.tree.row").length, 1, "the changes register no provider");
+});

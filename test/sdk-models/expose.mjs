@@ -1,9 +1,11 @@
 // A consumer-side model of createExpose of the plugin API, for the replay of test/fixtures/contract/expose.json.
 // It covers the status registration and its request methods (status.get, status.watch, status.next, status.unwatch),
-// the dom registration (expose.dom, which marks the element with its name as the SDK does; the dom requests dom.act and
-// dom.rect are not modeled) and the dispose, which the plugin host page calls. The conformance test lists the cases of
-// the fixture that the model does not cover.
+// the dom registration (expose.dom with an element, which marks it with its name, or with a provider function, which the
+// page marks itself; the dom requests dom.act and dom.rect are not modeled) and the dispose, which the plugin host page
+// calls. The conformance test lists the cases of the fixture that the model does not cover.
 const CODE_UNKNOWN_STATUS = 1001;
+// Each created exposure, with the providers of each dom name: created.at(-1).doms.get(name) lists the provider functions.
+export const created = [];
 const CODE_METHOD_NOT_FOUND = -32601;
 
 /**
@@ -12,10 +14,11 @@ const CODE_METHOD_NOT_FOUND = -32601;
  */
 export function createExpose(port, load) {
   const statuses = new Map();
-  // The dom names registered by the page. A name is registered with the port once, and a name that is not declared many
-  // accepts one element, as the SDK does.
-  const doms = new Set();
+  // The providers of the dom names registered by the page. A name is registered with the port once, and a name that is not
+  // declared many accepts one provider, as the SDK does.
+  const doms = new Map();
   let disposed = false;
+  created.push({ doms });
 
 
   const changed = (entry, value) => {
@@ -78,17 +81,28 @@ export function createExpose(port, load) {
     await port.register("status", name);
   }
 
-  /** Registers a dom name for one element and marks the element with it. A name declared with many accepts several elements. */
-  async function dom(name, element) {
+  /**
+   * Registers a dom name. An element is marked with the name and provides itself; a function returns the current elements and
+   * marks none, so the page marks each element it draws.
+   */
+  async function dom(name, target) {
     if (disposed) throw new Error("exposure is disposed");
     const declarations = await load();
     const declared = (declarations.dom ?? []).find((entry) => entry.name === name);
     if (!declared) throw new Error(`dom ${name} is not declared`);
     if (!declared.many && doms.has(name)) throw new Error(`dom ${name} is already registered`);
-    element.dataset.expose = name;
-    if (doms.has(name)) return;
-    doms.add(name);
-    await port.register("dom", name);
+    let provide;
+    if (typeof target === "function") {
+      provide = target;
+    } else if (typeof target?.dataset === "object") {
+      target.dataset.expose = name;
+      provide = () => [target];
+    } else {
+      throw new TypeError(`dom ${name} takes an element or a function that returns the current elements`);
+    }
+    const first = !doms.has(name);
+    doms.set(name, [...(doms.get(name) ?? []), provide]);
+    if (first) await port.register("dom", name);
   }
 
   /**

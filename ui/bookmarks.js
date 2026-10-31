@@ -85,13 +85,14 @@ function showError(where, error) {
   bridge.runtime.error(where, text).catch((failure) => console.error(`files bookmarks could not write an error: ${failure instanceof Error ? failure.message : String(failure)}`));
 }
 
-// The rows by path. A row that stays keeps its element, so a press on it is not lost to a redraw of the list.
+// The drawn rows by path, each {row, remove}. A row that stays keeps its elements, so a press on it is not lost to a redraw of the list.
 const rowsByPath = new Map();
 let drawn = null;
 
 function createRow(path) {
   const row = document.createElement("li");
   row.className = "files-bookmarks__row";
+  row.dataset.expose = "files.bookmarks.item";
   const name = document.createElement("span");
   name.className = "files-bookmarks__path";
   name.textContent = path;
@@ -99,12 +100,10 @@ function createRow(path) {
   remove.type = "button";
   remove.className = "files-bookmarks__remove";
   remove.textContent = "삭제";
+  remove.dataset.expose = "files.bookmarks.remove";
   row.append(name, remove);
   binder.bind(remove, "files.bookmarks.remove", { path }, { failed: (error) => showError("files bookmarks", error) });
-  // A row that is created is registered once; the dom registry of the page keeps the element until the view ends.
-  expose.dom("files.bookmarks.item", row).catch((error) => showError("files bookmarks", error));
-  expose.dom("files.bookmarks.remove", remove).catch((error) => showError("files bookmarks", error));
-  return row;
+  return { row, remove };
 }
 
 /** Draws the paths of the list in order. A list equal to the drawn one changes nothing. */
@@ -114,11 +113,11 @@ function draw(paths) {
   drawn = key;
   const next = new Map();
   for (const path of paths) next.set(path, rowsByPath.get(path) ?? createRow(path));
-  for (const [path, row] of rowsByPath) if (!next.has(path)) row.remove();
+  for (const [path, drawnRow] of rowsByPath) if (!next.has(path)) drawnRow.row.remove();
   rowsByPath.clear();
-  for (const [path, row] of next) {
-    rowsByPath.set(path, row);
-    list.append(row);
+  for (const [path, drawnRow] of next) {
+    rowsByPath.set(path, drawnRow);
+    list.append(drawnRow.row);
   }
   listed = paths;
   showMessage(paths.length === 0 ? (project === null ? NO_PROJECT_TEXT : EMPTY_TEXT) : "");
@@ -159,6 +158,9 @@ await Promise.all([
     statusListeners.add(listener);
     return () => statusListeners.delete(listener);
   }),
+  // The providers read the rows as they are drawn now, so a removed row is not kept by the page.
+  expose.dom("files.bookmarks.item", () => [...rowsByPath.values()].map((drawnRow) => drawnRow.row)),
+  expose.dom("files.bookmarks.remove", () => [...rowsByPath.values()].map((drawnRow) => drawnRow.remove)),
   bridge.commands.register("files.bookmarks.remove", remove),
 ]);
 if (project === null) showMessage(NO_PROJECT_TEXT);

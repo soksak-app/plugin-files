@@ -34,6 +34,9 @@ order with `path`, `kind` (`file` or `directory`), `depth`, `expanded` and `sele
 `null` when no message row shows. The bookmarks view declares the status `files.bookmarks`, whose value is the list of the bookmarked
 paths in stored order. Each status notifies its watchers with the value after each change of the state it reports.
 
-The header buttons carry the dom names `files.tree.refresh` (the refresh button) and `files.bookmarks.add` (the star button). Each
-bookmark row carries `files.bookmarks.item`, and its remove button carries `files.bookmarks.remove`; both names declare `many`. The
-tree rows carry no dom name: a row is read through `files.tree` and operated through `files.select` and `files.tree.toggle`.
+The header buttons carry the dom names `files.tree.refresh` (the refresh button) and `files.bookmarks.add` (the star button). The tree
+rows carry the dom name `files.tree.row` (`many`). The page registers one provider of the name, which returns the rows that the library
+draws now: the elements with `data-item-path` in the open shadow root of the tree container. The library has no hook for a row element,
+so the page marks each row when that root changes (a subtree mutation). Each bookmark row carries `files.bookmarks.item`, and its remove
+button carries `files.bookmarks.remove`. Both names declare `many` and have one provider each, which returns the rows drawn now, so a
+removed row is not provided.

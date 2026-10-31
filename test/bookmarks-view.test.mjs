@@ -115,12 +115,23 @@ test("the bookmarks status notifies its watcher when a remove changes the list",
   assert.deepEqual(replyOf(view.host, next)?.result, { version: 2, value: ["readme.md"] });
 });
 
-test("each bookmark item and its remove button carry the declared dom names", async () => {
+test("the bookmark items and remove buttons are one provider each, which reads the rows drawn now", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
-  const named = (name) => findAll(globalThis.document.body, (element) => element.dataset.expose === name);
-  assert.equal(named("files.bookmarks.item").length, 2, "one item of each bookmark carries files.bookmarks.item");
-  assert.equal(named("files.bookmarks.remove").length, 2, "one remove button of each bookmark carries files.bookmarks.remove");
+  const { created } = await import("../build/test/sdk-models/expose.mjs");
+  const doms = created.at(-1).doms;
   const registered = registeredEntries(view.host).filter((entry) => entry.kind === "dom").map((entry) => entry.name);
-  assert.ok(registered.includes("files.bookmarks.item"));
-  assert.ok(registered.includes("files.bookmarks.remove"));
+  assert.equal(registered.filter((name) => name === "files.bookmarks.item").length, 1, "the item name is registered once");
+  assert.equal(registered.filter((name) => name === "files.bookmarks.remove").length, 1, "the remove name is registered once");
+  assert.equal(doms.get("files.bookmarks.item").length, 1, "one provider serves the item name");
+  assert.equal(doms.get("files.bookmarks.remove").length, 1, "one provider serves the remove name");
+  const items = () => doms.get("files.bookmarks.item")[0]();
+  assert.deepEqual(items().map((row) => row.dataset.expose), ["files.bookmarks.item", "files.bookmarks.item"]);
+  const [remove] = findAll(globalThis.document.body, (element) => element.dataset.params === JSON.stringify({ path: "src/main.go" }));
+  assert.equal(remove.dataset.expose, "files.bookmarks.remove", "the remove button of the first row carries its name");
+  remove.click();
+  await settle();
+  assert.equal(items().length, 1, "the removed row is not provided");
+  assert.deepEqual(doms.get("files.bookmarks.remove")[0]().map((button) => button.dataset.params), [JSON.stringify({ path: "readme.md" })]);
+  assert.equal(doms.get("files.bookmarks.item").length, 1, "a removal registers no provider");
+  assert.deepEqual(view.host.errors, []);
 });

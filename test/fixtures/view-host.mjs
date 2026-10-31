@@ -71,6 +71,8 @@ export function findAll(root, predicate) {
 
 /** Installs the DOM globals of a view page and returns the document. */
 export function installFakeDom() {
+  // Each MutationObserver of the page is kept with its target, so a fake DOM change of a target notifies its observers.
+  globalThis.mutationObservers = [];
   const document = {
     documentElement: new FakeElement("html", null),
     body: null,
@@ -88,8 +90,17 @@ export function installFakeDom() {
     }
   };
   globalThis.MutationObserver = class MutationObserver {
-    observe() {}
-    disconnect() {}
+    constructor(callback) {
+      this.callback = callback;
+      this.target = null;
+    }
+    observe(target) {
+      this.target = target;
+      globalThis.mutationObservers.push(this);
+    }
+    disconnect() {
+      globalThis.mutationObservers = globalThis.mutationObservers.filter((observer) => observer !== this);
+    }
   };
   globalThis.getComputedStyle = () => ({ getPropertyValue: () => "" });
   return document;

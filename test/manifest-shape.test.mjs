@@ -43,11 +43,12 @@ test("the plugin declares the statuses of the views and the dom names of their e
   assert.deepEqual(manifest.exposes.status.map((entry) => entry.name), ["files.tree", "files.bookmarks"]);
   assert.deepEqual(manifest.exposes.dom.map((entry) => entry.name), [
     "files.tree.refresh",
+    "files.tree.row",
     "files.bookmarks.add",
     "files.bookmarks.item",
     "files.bookmarks.remove",
   ]);
-  assert.deepEqual(manifest.exposes.dom.filter((entry) => entry.many).map((entry) => entry.name), ["files.bookmarks.item", "files.bookmarks.remove"]);
+  assert.deepEqual(manifest.exposes.dom.filter((entry) => entry.many).map((entry) => entry.name), ["files.tree.row", "files.bookmarks.item", "files.bookmarks.remove"]);
 });
 
 test("the section modules of the earlier sidebar form are removed", () => {
