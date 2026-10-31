@@ -13,6 +13,7 @@
 
 ## 미배포
 
+- F336-files: 0.0.11판은 core 0.0.25와 files sidecar 0.0.9가 필요하다.
 - F332-5-4: Tree 행은 dom 이름 `files.tree.row`를 가진다. Page는 이 이름의 provider를 한 번 등록하며, provider는 tree library가 그리는 행을 container의 열린 shadow root에서 읽어 돌려준다. Page는 그 root가 바뀔 때 각 행을 표시한다. 북마크 항목과 삭제 button은 같은 provider 형식을 쓰므로 제거된 행은 남지 않는다. Red: 커밋된 view에서 83개 중 3개 실패. Green: `make test`가 83개 중 83개 통과하고, `CORE_PLUGIN_API_DIR`을 지정한 `make check`가 통과한다. 고정된 0.0.24 검사는 `data requires a plugin host`로 여전히 실패한다(F332-5-3).
 - F332-5-4: tree와 북마크 view가 보이는 상태를 노출한다. `files.tree`는 보이는 행(path, kind, depth, 펼침, 선택)과 message 행 텍스트를, `files.bookmarks`는 북마크 경로를 보고한다. 새로 고침과 별 button, 북마크 항목과 그 삭제 button은 선언된 dom 이름을 가진다. Red: 변경 전 view와 manifest에서 81개 중 7개 실패. Green: `make test`가 81개 중 81개 통과. Tree 행은 dom 이름이 없다. `createExpose`가 요소별 등록을 view가 끝날 때까지 유지하기 때문이며, core가 dom provider를 제공할 때까지 항목은 보류된다(F332-5-4).
 - F332-5-2: tree와 북마크 section은 plugin의 view page이다. `ui/tree.html`은 vendor된 `@pierre/trees` bundle로 프로젝트 tree를 그리고 `snapshot`, `expand`, `collapse`, `select`를 `@soksak/sidecar-files`에 보낸다. `ui/bookmarks.html`은 프로젝트 data key `bookmarks`를 읽고 쓴다. manifest는 각 section을 `composition` `view`와 page로 선언하며, `host`, `hostOperations`와 status `files.tree`, `files.bookmarks`를 더 이상 선언하지 않는다. 폴더 펼침을 위해 명령 `files.tree.toggle`을 선언한다. host page 파일과 그 테스트를 제거했고, Red에서 143개 중 10개가 실패한 뒤 `make test`는 72개 중 72개를 통과한다. `CORE_PLUGIN_API_DIR`을 core plugin API 소스로 지정한 `make check`는 통과한다. 고정된 0.0.24 검사는 0.0.25 고정 때까지 보류된다(F332-5-3).

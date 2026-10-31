@@ -12,8 +12,8 @@ const manifest = JSON.parse(read("plugin.json"));
 const pkg = JSON.parse(read("package.json"));
 
 test("the plugin requires the current files sidecar process identity release", () => {
-  assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.8");
-  assert.equal(pkg.version, "0.0.10");
+  assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.9");
+  assert.equal(pkg.version, "0.0.11");
 });
 
 test("plugin.json declares the two sections as views of their pages, with the tree filling the sidebar", () => {
