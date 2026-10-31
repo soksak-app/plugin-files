@@ -26,3 +26,14 @@ The view reads the project data key `bookmarks` (a list of paths) with `runtime.
 `files.bookmarks.remove`, which writes the list through `runtime.data.set`. The view subscribes with `runtime.data.on` before its first read,
 and it re-reads the list when a change event names the key `bookmarks`; a change of another key reads nothing. A stored value that is not a
 list of paths is an error, and the list is not drawn from it.
+
+## Exposed state
+
+The tree view declares the status `files.tree`. Its value is `{rows, message}`: `rows` lists each visible row of the tree in display
+order with `path`, `kind` (`file` or `directory`), `depth`, `expanded` and `selected`, and `message` is the text of the message row, or
+`null` when no message row shows. The bookmarks view declares the status `files.bookmarks`, whose value is the list of the bookmarked
+paths in stored order. Each status notifies its watchers with the value after each change of the state it reports.
+
+The header buttons carry the dom names `files.tree.refresh` (the refresh button) and `files.bookmarks.add` (the star button). Each
+bookmark row carries `files.bookmarks.item`, and its remove button carries `files.bookmarks.remove`; both names declare `many`. The
+tree rows carry no dom name: a row is read through `files.tree` and operated through `files.select` and `files.tree.toggle`.

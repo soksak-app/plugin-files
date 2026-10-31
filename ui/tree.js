@@ -2,7 +2,7 @@
 // the files sidecar and draws the rows with the tree library. Each expansion, selection and refresh is a declared command of the
 // view; the commands send the sidecar requests, and each sidecar reply is the state that the view shows. A file opens with
 // core.file.open, which runs the plugin that declares its extension.
-import { createBinder } from "@soksak/plugin-api";
+import { createBinder, createExpose } from "@soksak/plugin-api";
 import { createViewBridge } from "@soksak/plugin-api/view";
 import { FileTree, themeToTreeStyles } from "./vendor/trees.js";
 import { createEmitter } from "./events.js";
@@ -92,6 +92,10 @@ const bridge = createViewBridge({
   },
 });
 const emitEvent = createEmitter(bridge.runtime, "files");
+// The message row text of the view; an empty text means that no message row shows.
+let messageText = "";
+// The watchers of the files.tree status, which receive its value on each change.
+const statusListeners = new Set();
 
 const sheet = new CSSStyleSheet();
 sheet.replaceSync(STYLE);
@@ -123,8 +127,10 @@ document.body.append(box);
 
 /** Shows a message line; an empty text hides the line. */
 const showMessage = (text) => {
+  messageText = text;
   message.textContent = text;
   message.hidden = text === "";
+  notifyTree();
 };
 
 /**
@@ -143,6 +149,21 @@ const binder = createBinder((name, params) => bridge.runtime.command(name, param
   },
 });
 const COMMANDS = ["files.refresh", "files.select", "files.open", "files.open.failed", "files.tree.toggle", "files.bookmarks.add"];
+
+// The exposure of the page: the declared status files.tree and the dom names of the header buttons. The requests of the surface
+// arrive as the host event exposure-request and are answered through exposureReply (core docs/spec/native-surfaces.md#view-surfaces).
+const expose = createExpose({
+  register: (kind, name) => bridge.exposure.register(kind, name),
+  onRequest: (answer) => bridge.runtime.native.on("exposure-request", ({ id, surface, method, params }) => {
+    if (surface !== start.surface) {
+      showError("files tree", new Error(`exposure request ${id} names surface ${surface}, not ${start.surface}`));
+      return;
+    }
+    answer({ id, method, params });
+  }),
+  reply: bridge.exposure.reply,
+  report: (text) => showError("files tree", new Error(text)),
+}, () => start.declarations);
 
 // The state of the view: the last tree reply, its generation, the selected path, the folders with a request that the next reply has
 // not answered, and the requests waiting for their replies.
@@ -209,6 +230,24 @@ function syncTree() {
   }
 }
 
+/** The value of the files.tree status: the visible rows of the tree and the message row text, or null when no message shows. */
+const treeStatus = () => ({
+  rows: rows.map((row) => ({
+    path: row.path,
+    kind: row.directory ? "directory" : "file",
+    depth: row.depth,
+    expanded: row.expanded,
+    selected: row.selected,
+  })),
+  message: messageText === "" ? null : messageText,
+});
+
+/** Calls each watcher of the files.tree status with its value. The status keeps a value that equals the last one, so a repeated call sends nothing. */
+function notifyTree() {
+  const value = treeStatus();
+  for (const listener of [...statusListeners]) listener(value);
+}
+
 /** Draws the rows of the last reply: the library paths, the git details, the selection, the message and the buttons. */
 function render() {
   const next = treePaths(rows);
@@ -224,6 +263,7 @@ function render() {
   syncTree();
   showMessage(rows.length === 0 ? EMPTY_TEXT : "");
   star.disabled = !rows.some((row) => row.path === selection && !row.directory);
+  notifyTree();
 }
 
 /** Takes a tree reply as the state of the view. An invalid reply throws, and the view keeps the state it had. */
@@ -360,6 +400,12 @@ const handlers = {
 };
 
 await Promise.all([
+  expose.status("files.tree", treeStatus, (listener) => {
+    statusListeners.add(listener);
+    return () => statusListeners.delete(listener);
+  }),
+  expose.dom("files.tree.refresh", refresh),
+  expose.dom("files.bookmarks.add", star),
   bridge.commands.register("files.refresh", handlers["files.refresh"]),
   bridge.commands.register("files.select", handlers["files.select"]),
   bridge.commands.register("files.tree.toggle", handlers["files.tree.toggle"]),

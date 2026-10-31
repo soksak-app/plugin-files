@@ -167,3 +167,28 @@ export function installViewWindow({ start, plugin = "files", runtime }) {
   };
   return host;
 }
+
+let exposureRequestId = 0;
+
+/**
+ * Sends one exposure request of the surface to the page, as the host forwards it, and returns its id. The page answers through
+ * the exposureReply call; replyOf finds that reply.
+ */
+export function sendExposureRequest(host, surface, method, params) {
+  const id = `probe-${++exposureRequestId}`;
+  host.deliver({ event: "exposure-request", data: { id, surface, method, params } });
+  return id;
+}
+
+/** The answer of the page to a request id, {result} or {error}, or undefined while the page has not replied. */
+export function replyOf(host, id) {
+  const replies = host.posted.filter((message) => message.command === "runtime.native.call" && message.params?.name === "exposureReply" && message.params.payload.id === id);
+  if (replies.length === 0) return undefined;
+  const { id: _id, ...answer } = replies[0].params.payload;
+  return answer;
+}
+
+/** The exposure entries that the page registered, as {kind, name} in registration order. */
+export function registeredEntries(host) {
+  return host.posted.filter((message) => message.command === "runtime.native.call" && message.params?.name === "registered").map((message) => message.params.payload);
+}

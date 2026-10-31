@@ -37,7 +37,60 @@
     }
   },
   "exposes": {
-    "status": [],
+    "status": [
+      {
+        "name": "files.tree",
+        "description": "The visible rows of the file tree, each with its path, kind, depth, expansion and selection, and the message row text or null.",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "file",
+                      "directory"
+                    ]
+                  },
+                  "depth": {
+                    "type": "integer"
+                  },
+                  "expanded": {
+                    "type": "boolean"
+                  },
+                  "selected": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "message": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "files.bookmarks",
+        "description": "The bookmarked paths of the project in stored order.",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "name": "files.refresh",
@@ -147,7 +200,26 @@
         }
       }
     ],
-    "dom": []
+    "dom": [
+      {
+        "name": "files.tree.refresh",
+        "description": "The refresh button of the file tree header, which lists the project folder again."
+      },
+      {
+        "name": "files.bookmarks.add",
+        "description": "The star button of the file tree header, which adds the selected file to the bookmarks."
+      },
+      {
+        "name": "files.bookmarks.item",
+        "description": "One bookmarked path of the bookmarks list.",
+        "many": true
+      },
+      {
+        "name": "files.bookmarks.remove",
+        "description": "The remove button of one bookmarked path.",
+        "many": true
+      }
+    ]
   },
   "events": "events.json"
 }

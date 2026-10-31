@@ -2,12 +2,17 @@
 // that answers the operations of the declared wire contract (test/fixtures/sidecar-files/tree-wire.json), and the tree library is
 // the consumer model of test/sdk-models/trees.mjs. The test plays the user's expansion, selection and star press through them.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
-import { findAll, installViewWindow, settle } from "./fixtures/view-host.mjs";
+import { fileURLToPath } from "node:url";
+import { findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
 
 const SIDECAR = "@soksak/sidecar-files";
 const SURFACE = "left/files.tree";
 const PROJECT = { id: "project-1", root: "/project" };
+// The exposes of the plugin manifest are the declarations that the host passes to the page as its start values.
+const DECLARATIONS = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "plugin.json"), "utf8")).exposes;
 let caseNumber = 0;
 
 /** A fake files sidecar that holds one tree and answers each operation with its reply, or with the error of the given reply. */
@@ -55,7 +60,7 @@ async function startTree({ sidecar, store = { bookmarks: [] } }) {
     params: null,
     origin: { directory: null },
     project: PROJECT,
-    declarations: {},
+    declarations: DECLARATIONS,
     diagnostics: null,
     section: { id: "files.tree", sidebar: "left", card: null },
   };
@@ -144,4 +149,54 @@ test("the star button adds the selected file to the stored bookmarks", async () 
   await settle();
   assert.deepEqual(view.store.bookmarks, ["readme.md"]);
   assert.deepEqual(view.host.errors, []);
+});
+
+test("the tree status reports each visible row with its path, kind, depth, expansion and selection", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const id = sendExposureRequest(view.host, SURFACE, "status.get", { name: "files.tree" });
+  await settle();
+  assert.deepEqual(replyOf(view.host, id), {
+    result: {
+      rows: [
+        { path: "src", kind: "directory", depth: 0, expanded: true, selected: false },
+        { path: "src/main.go", kind: "file", depth: 1, expanded: false, selected: false },
+        { path: "readme.md", kind: "file", depth: 0, expanded: false, selected: false },
+      ],
+      message: null,
+    },
+  });
+  assert.ok(registeredEntries(view.host).some((entry) => entry.kind === "status" && entry.name === "files.tree"));
+});
+
+test("the tree status notifies its watcher when the selection changes", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.tree" });
+  await settle();
+  assert.deepEqual(replyOf(view.host, watch), { result: null });
+  const next = sendExposureRequest(view.host, SURFACE, "status.next", { name: "files.tree", version: 1 });
+  await settle();
+  assert.equal(replyOf(view.host, next), undefined, "the watcher waits while the selection is unchanged");
+  view.tree.options.onSelectionChange(["readme.md"]);
+  await settle();
+  const changed = replyOf(view.host, next);
+  assert.equal(changed?.result?.version, 2);
+  assert.equal(changed.result.value.rows.find((row) => row.path === "readme.md").selected, true);
+});
+
+test("the message row of the tree status shows the text of a failed listing", async () => {
+  const text = "cannot list expanded directory src: permission denied";
+  const view = await startTree({ sidecar: filesSidecar(INITIAL, { failSnapshot: text }) });
+  const id = sendExposureRequest(view.host, SURFACE, "status.get", { name: "files.tree" });
+  await settle();
+  assert.deepEqual(replyOf(view.host, id), { result: { rows: [], message: text } });
+});
+
+test("the refresh and star buttons carry their declared dom names", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const named = (name) => findAll(globalThis.document.body, (element) => element.dataset.expose === name);
+  assert.equal(named("files.tree.refresh").length, 1, "the refresh button carries files.tree.refresh");
+  assert.equal(named("files.bookmarks.add").length, 1, "the star button carries files.bookmarks.add");
+  const registered = registeredEntries(view.host);
+  assert.ok(registered.some((entry) => entry.kind === "dom" && entry.name === "files.tree.refresh"));
+  assert.ok(registered.some((entry) => entry.kind === "dom" && entry.name === "files.bookmarks.add"));
 });

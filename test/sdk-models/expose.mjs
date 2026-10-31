@@ -1,7 +1,8 @@
 // A consumer-side model of createExpose of the plugin API, for the replay of test/fixtures/contract/expose.json.
-// It covers the status registration and its request methods (status.get, status.watch, status.next, status.unwatch)
-// and the dispose, which the plugin host page calls. The conformance test lists the cases of the fixture that the
-// model does not cover.
+// It covers the status registration and its request methods (status.get, status.watch, status.next, status.unwatch),
+// the dom registration (expose.dom, which marks the element with its name as the SDK does; the dom requests dom.act and
+// dom.rect are not modeled) and the dispose, which the plugin host page calls. The conformance test lists the cases of
+// the fixture that the model does not cover.
 const CODE_UNKNOWN_STATUS = 1001;
 const CODE_METHOD_NOT_FOUND = -32601;
 
@@ -11,6 +12,9 @@ const CODE_METHOD_NOT_FOUND = -32601;
  */
 export function createExpose(port, load) {
   const statuses = new Map();
+  // The dom names registered by the page. A name is registered with the port once, and a name that is not declared many
+  // accepts one element, as the SDK does.
+  const doms = new Set();
   let disposed = false;
 
 
@@ -74,6 +78,19 @@ export function createExpose(port, load) {
     await port.register("status", name);
   }
 
+  /** Registers a dom name for one element and marks the element with it. A name declared with many accepts several elements. */
+  async function dom(name, element) {
+    if (disposed) throw new Error("exposure is disposed");
+    const declarations = await load();
+    const declared = (declarations.dom ?? []).find((entry) => entry.name === name);
+    if (!declared) throw new Error(`dom ${name} is not declared`);
+    if (!declared.many && doms.has(name)) throw new Error(`dom ${name} is already registered`);
+    element.dataset.expose = name;
+    if (doms.has(name)) return;
+    doms.add(name);
+    await port.register("dom", name);
+  }
+
   /**
    * Ends the registration: the watches stop and the port unregisters. The fixture has no case with a pending request at
    * dispose, so the model drops those requests without a reply.
@@ -90,5 +107,5 @@ export function createExpose(port, load) {
     await port.unregister?.();
   }
 
-  return { status, dispose };
+  return { status, dom, dispose };
 }

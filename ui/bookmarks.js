@@ -1,12 +1,13 @@
 // The bookmarks section view (docs/spec/native-surfaces.md#view-surfaces). It draws the bookmarked project paths of the project data
 // key bookmarks and removes a path through the declared command files.bookmarks.remove. The file tree view adds a path to the same key.
-import { createBinder } from "@soksak/plugin-api";
+import { createBinder, createExpose } from "@soksak/plugin-api";
 import { createViewBridge } from "@soksak/plugin-api/view";
 
 const KEY = "bookmarks";
 const EMPTY_TEXT = "북마크 없음";
 const NO_PROJECT_TEXT = "프로젝트 없음";
 const project = window.sokSurface.project;
+const start = window.sokSurface;
 
 /*
  * The section's styles. A path fills the free width and is cut with an ellipsis when it overflows; the remove button stands apart
@@ -46,6 +47,28 @@ const binder = createBinder((name, params) => bridge.runtime.command(name, param
   },
 });
 
+// The exposure of the page: the declared status files.bookmarks and the dom names of the items and their remove buttons. The
+// requests of the surface arrive as the host event exposure-request and are answered through exposureReply.
+const expose = createExpose({
+  register: (kind, name) => bridge.exposure.register(kind, name),
+  onRequest: (answer) => bridge.runtime.native.on("exposure-request", ({ id, surface, method, params }) => {
+    if (surface !== start.surface) {
+      showError("files bookmarks", new Error(`exposure request ${id} names surface ${surface}, not ${start.surface}`));
+      return;
+    }
+    answer({ id, method, params });
+  }),
+  reply: bridge.exposure.reply,
+  report: (text) => showError("files bookmarks", new Error(text)),
+}, () => start.declarations);
+// The paths that the list draws, and the watchers of the files.bookmarks status, which receive the paths on each change.
+let listed = [];
+const statusListeners = new Set();
+const notifyBookmarks = () => {
+  const value = [...listed];
+  for (const listener of [...statusListeners]) listener(value);
+};
+
 /** Shows a message line; an empty text hides the line. */
 function showMessage(text) {
   message.textContent = text;
@@ -78,6 +101,9 @@ function createRow(path) {
   remove.textContent = "삭제";
   row.append(name, remove);
   binder.bind(remove, "files.bookmarks.remove", { path }, { failed: (error) => showError("files bookmarks", error) });
+  // A row that is created is registered once; the dom registry of the page keeps the element until the view ends.
+  expose.dom("files.bookmarks.item", row).catch((error) => showError("files bookmarks", error));
+  expose.dom("files.bookmarks.remove", remove).catch((error) => showError("files bookmarks", error));
   return row;
 }
 
@@ -94,7 +120,9 @@ function draw(paths) {
     rowsByPath.set(path, row);
     list.append(row);
   }
+  listed = paths;
   showMessage(paths.length === 0 ? (project === null ? NO_PROJECT_TEXT : EMPTY_TEXT) : "");
+  notifyBookmarks();
 }
 
 /** The stored list of paths. A stored value of another form throws, and the list is not drawn from it. */
@@ -126,7 +154,13 @@ async function remove({ path } = {}) {
   return null;
 }
 
-await bridge.commands.register("files.bookmarks.remove", remove);
+await Promise.all([
+  expose.status("files.bookmarks", () => [...listed], (listener) => {
+    statusListeners.add(listener);
+    return () => statusListeners.delete(listener);
+  }),
+  bridge.commands.register("files.bookmarks.remove", remove),
+]);
 if (project === null) showMessage(NO_PROJECT_TEXT);
 else {
   // The subscription starts before the first read, so a write between the read and the subscription is not lost. The file tree

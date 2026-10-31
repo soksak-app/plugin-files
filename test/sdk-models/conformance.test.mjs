@@ -16,7 +16,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 
 const NOT_CALLED_BY_PAGE = "the plugin host page does not call";
 const EXCLUDED_CASES = {
-  "expose.dom.act-rect-and-refusals": `${NOT_CALLED_BY_PAGE} expose.dom; the page registers no dom name`,
+  "expose.dom.act-rect-and-refusals": "the model answers no dom request (dom.act and dom.rect); the page registers dom names through expose.dom, which the view tests replay",
   "expose.dispose.removes-bindings": `${NOT_CALLED_BY_PAGE} expose.bind; the model has no binding`,
   "expose.bind.function-params-are-read-at-each-run": `${NOT_CALLED_BY_PAGE} expose.bind; the model has no binding`,
   "snapshot.receiver.acknowledges-then-delivers": "the page receives no snapshot message; the receiver is the workbench side",

@@ -23,3 +23,14 @@ View는 각 요청을 `@soksak/sidecar-files`에 session id `surface`로 보낸�
 
 View는 project data key `bookmarks`(경로의 목록)를 `runtime.data.get`으로 읽고, 명령 `files.bookmarks.remove`로 경로를 지운다.
 이 명령은 목록을 `runtime.data.set`으로 쓴다. View는 첫 읽기 전에 `runtime.data.on`으로 구독하며, 변경 event가 key `bookmarks`를 가리키면 목록을 다시 읽는다. 다른 key의 변경은 아무것도 읽지 않는다. 경로의 목록이 아닌 저장 값은 오류이며, 그 값으로 목록을 그리지 않는다.
+
+## 노출되는 상태
+
+Tree view는 status `files.tree`를 선언한다. 그 값은 `{rows, message}`이다. `rows`는 보이는 tree의 행을 표시 순서대로 나열하며, 각 행은
+`path`, `kind`(`file` 또는 `directory`), `depth`, `expanded`, `selected`를 가진다. `message`는 message 행의 텍스트이고, message 행이
+보이지 않으면 `null`이다. 북마크 view는 status `files.bookmarks`를 선언한다. 그 값은 저장된 순서의 북마크 경로 목록이다. 각 status는
+보고하는 상태가 바뀔 때마다 그 값을 watcher에게 알린다.
+
+Header button은 dom 이름을 가진다. 새로 고침 button은 `files.tree.refresh`, 별 button은 `files.bookmarks.add`이다. 북마크 행마다
+`files.bookmarks.item`을 가지며, 그 삭제 button은 `files.bookmarks.remove`를 가진다. 두 이름 모두 `many`를 선언한다. Tree 행은 dom
+이름을 갖지 않는다. 행은 `files.tree`로 읽고, `files.select`와 `files.tree.toggle`로 조작한다.
