@@ -34,7 +34,7 @@
           "micros"
         ]
       },
-      "description": "One tree request of the plugin host to the files sidecar (snapshot, expand, collapse or select) and its result; error is the text of the failure and the level is warn for a failed request."
+      "description": "One tree request of the file tree view to the files sidecar (snapshot, expand, collapse or select) and its result; error is the text of the failure and the level is warn for a failed request."
     },
     "plugin.files.tree.changed": {
       "layer": "plugin",
@@ -72,24 +72,6 @@
       },
       "description": "The files sidecar reported a failure that no request caused; error is its text."
     },
-    "plugin.files.project": {
-      "layer": "plugin",
-      "class": "call",
-      "level": "debug",
-      "fields": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "shown": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "shown"
-        ]
-      },
-      "description": "The plugin host received the project message of the window; shown is false when the window shows no project and the tree is reset to no project."
-    },
     "plugin.files.open.failed": {
       "layer": "plugin",
       "class": "call",
@@ -107,63 +89,6 @@
         ]
       },
       "description": "A file of the tree did not open; error is the refusal that the message row shows."
-    },
-    "plugin.files.command": {
-      "layer": "plugin",
-      "class": "call",
-      "level": [
-        "debug",
-        "warn"
-      ],
-      "fields": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          },
-          "micros": {
-            "type": "number"
-          },
-          "error": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "ok",
-          "micros"
-        ]
-      },
-      "description": "The result of a command of the plugin; error is present only when ok is false and the level is warn then."
-    },
-    "plugin.files.host.report": {
-      "layer": "plugin",
-      "class": "call",
-      "level": [
-        "debug",
-        "warn"
-      ],
-      "fields": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "text"
-        ]
-      },
-      "description": "The view bridge of the plugin host page reported a lost or skipped call or snapshot; kind names the loss and text names its command, status or place. The level is debug for a skipped snapshot and warn for the others."
     }
   }
 }

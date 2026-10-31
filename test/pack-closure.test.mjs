@@ -1,6 +1,6 @@
-// Checks the import map of ui/host.html and the files that the page imports against the packed file list of
-// `npm pack --dry-run --json`. A page resolves its imports at its own origin, so each mapped core name must name a
-// core target (sok://core/), and each relative import must be a file of the package.
+// Checks the import maps and the files of the view pages of plugin.json (each section page) against the packed file list of
+// `npm pack --dry-run --json`. A page resolves its imports at its own origin, so each mapped core name must name a core target
+// (sok://core/), and each relative import must be a file of the package.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CORE_ROOT = "sok://core/";
-const HOST_PAGE = "ui/host.html";
+const manifest = JSON.parse(readFileSync(path.join(root, "plugin.json"), "utf8"));
+const PAGES = manifest.sections.map((section) => section.composition.page);
 
 const readText = (file) => readFileSync(path.join(root, file), "utf8");
 
@@ -48,10 +49,11 @@ function closureOf(entry) {
   return { files: [...files], names: [...names] };
 }
 
-const hostScript = () => {
-  const match = readText(HOST_PAGE).match(/<script type="module" src="([^"]+)"><\/script>/);
-  assert.ok(match, `${HOST_PAGE} has no module script`);
-  return path.posix.normalize(path.posix.join("ui", match[1]));
+// The module that each view page loads, as a path of the package.
+const moduleOf = (page) => {
+  const match = readText(page).match(/<script type="module" src="([^"]+)"><\/script>/);
+  assert.ok(match, `${page} has no module script`);
+  return path.posix.normalize(path.posix.join(path.posix.dirname(page), match[1]));
 };
 
 test("every entry of the page import map names a core target", () => {
@@ -60,25 +62,28 @@ test("every entry of the page import map names a core target", () => {
   }
 });
 
-test("every bare name that the page closure imports is mapped", () => {
-  const imports = VIEW_IMPORTS;
-  const { names } = closureOf(hostScript());
-  for (const name of names) {
-    const mapped = Object.keys(imports).some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
-    assert.ok(mapped, `${name} is imported by the page closure but not mapped`);
+test("every bare name that the closure of each view page imports is mapped", () => {
+  for (const page of PAGES) {
+    const { names } = closureOf(moduleOf(page));
+    for (const name of names) {
+      const mapped = Object.keys(VIEW_IMPORTS).some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
+      assert.ok(mapped, `${name} is imported by the closure of ${page} but not mapped`);
+    }
   }
 });
 
-test("every file of the page closure exists and is in the package", () => {
+test("every file of each view page closure exists and is in the package", () => {
   const packed = packedFiles();
-  for (const file of [HOST_PAGE, ...closureOf(hostScript()).files]) {
-    assert.ok(existsSync(path.join(root, file)), `${file} does not exist`);
-    assert.ok(packed.has(file), `${file} is not in the package`);
+  for (const page of PAGES) {
+    for (const file of [page, ...closureOf(moduleOf(page)).files]) {
+      assert.ok(existsSync(path.join(root, file)), `${file} does not exist`);
+      assert.ok(packed.has(file), `${file} is not in the package`);
+    }
   }
 });
 
 // The view import map of a page (docs/spec/plugins.md#view-surfaces): five entries, each naming a core target. A page imports
-// no other name, so the page of the files host imports the view bridge and the exposure, and no page API of a surface.
+// no other name, so each view page of the files plugin imports the view bridge and the SDK entry, and no page API of a surface.
 // The plugin API names are built from parts, so this file does not contain the SDK name.
 const PLUGIN_API = "@soksak/" + "plugin-api";
 const VIEW_IMPORTS = {
@@ -89,17 +94,21 @@ const VIEW_IMPORTS = {
   "@soksak/shared/": "sok://core/shared/",
 };
 
-test("the host page begins with its doctype and holds no import map, because the host inserts the view import map", () => {
-  const html = readText(HOST_PAGE);
-  assert.match(html, /^<!doctype html>/i);
-  assert.doesNotMatch(html, /<script type="importmap">/);
+test("each view page begins with its doctype and holds no import map, because the host inserts the view import map", () => {
+  for (const page of PAGES) {
+    const html = readText(page);
+    assert.match(html, /^<!doctype html>/i, page);
+    assert.doesNotMatch(html, /<script type="importmap">/, page);
+  }
 });
 
-test("the page closure imports only names of the view import map", () => {
-  const { names } = closureOf(hostScript());
-  for (const name of names) {
-    const allowed = Object.keys(VIEW_IMPORTS).some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
-    assert.ok(allowed, `${name} is imported by the page closure but is not in the view import map`);
+test("the closure of each view page imports only names of the view import map, and the bridge", () => {
+  for (const page of PAGES) {
+    const { names } = closureOf(moduleOf(page));
+    for (const name of names) {
+      const allowed = Object.keys(VIEW_IMPORTS).some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
+      assert.ok(allowed, `${name} is imported by the closure of ${page} but is not in the view import map`);
+    }
+    assert.ok(names.includes(`${PLUGIN_API}/view`), `${page} does not import the view bridge`);
   }
-  assert.ok(names.includes(`${PLUGIN_API}/view`), "the page does not import the view bridge");
 });

@@ -10,57 +10,45 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const exists = (path) => existsSync(new URL(`../${path}`, import.meta.url));
 const manifest = JSON.parse(read("plugin.json"));
 const pkg = JSON.parse(read("package.json"));
-const STATUS_SCHEMA = { type: "object", properties: { elements: { type: "array" } } };
 
 test("the plugin requires the current files sidecar process identity release", () => {
   assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.8");
   assert.equal(pkg.version, "0.0.10");
 });
 
-test("plugin.json declares the plugin host page and no host state", () => {
-  assert.deepEqual(manifest.host, { page: "ui/host.html" });
-  assert.ok(exists("ui/host.html"), "ui/host.html is missing");
-  assert.ok(pkg.files.includes("ui/host.html"), "package.json files omit ui/host.html");
+test("plugin.json declares the two sections as views of their pages, with the tree filling the sidebar", () => {
+  assert.deepEqual(manifest.sections, [
+    { id: "files.tree", name: "파일 트리", composition: { kind: "view", page: "ui/tree.html" }, height: "fill" },
+    { id: "files.bookmarks", name: "북마크", composition: { kind: "view", page: "ui/bookmarks.html" }, height: 160 },
+  ]);
 });
 
-test("the host page loads the page entry module", () => {
-  assert.match(read("ui/host.html"), /<script type="module" src="\.\/host\.js"><\/script>/);
-  assert.ok(exists("ui/host.js"), "ui/host.js is missing");
+test("plugin.json declares no plugin host page and no host operations", () => {
+  assert.equal(manifest.host, undefined, "plugin.json still declares a host page");
+  assert.equal(manifest.hostOperations, undefined, "plugin.json still declares host operations");
+  assert.equal(exists("ui/host.html"), false, "ui/host.html still exists");
+  assert.equal(exists("ui/host.js"), false, "ui/host.js still exists");
+  assert.equal(pkg.files.includes("ui/host.html"), false, "package.json files still name ui/host.html");
 });
 
-test("every section names one declared status of the plugin and declares no module", () => {
-  const statuses = manifest.exposes.status.map(({ name }) => name);
-  const backed = [];
-  for (const section of manifest.sections) {
-    assert.deepEqual(Object.keys(section).filter((key) => key === "module" || key === "status").sort(), ["status"], section.id);
-    assert.equal(typeof section.status, "string", section.id);
-    assert.ok(statuses.includes(section.status), `${section.id} names ${section.status}, which the plugin does not expose`);
-    backed.push(section.status);
-  }
-  assert.equal(new Set(backed).size, backed.length, "one status backs at most one section");
-  assert.deepEqual(manifest.sections.map(({ id, status }) => [id, status]), [["files.tree", "files.tree"], ["files.bookmarks", "files.bookmarks"]]);
-});
-
-test("the declared sidebar statuses use the declared UI schema", () => {
-  assert.deepEqual(manifest.exposes.status.map(({ name }) => name), ["files.tree", "files.bookmarks"]);
-  for (const name of ["files.tree", "files.bookmarks"]) {
-    assert.deepEqual(manifest.exposes.status.find((entry) => entry.name === name).schema, STATUS_SCHEMA, name);
+test("each section page loads its view module", () => {
+  for (const [page, module] of [["ui/tree.html", "./tree.js"], ["ui/bookmarks.html", "./bookmarks.js"]]) {
+    assert.match(read(page), new RegExp(`<script type="module" src="${module.replace(/\./g, "\\.")}"></script>`), page);
+    assert.ok(exists(page.replace(/\.html$/, ".js")), `${page} has no module`);
   }
 });
 
-test("the tree section fills the sidebar and the bookmarks section does not", () => {
-  assert.equal(manifest.sections.find(({ id }) => id === "files.tree").fill, true);
-  assert.equal(manifest.sections.find(({ id }) => id === "files.bookmarks").fill, undefined);
+test("the plugin declares no status: the views draw their sections and no page serves a status", () => {
+  assert.deepEqual(manifest.exposes.status, []);
 });
 
 test("the section modules of the earlier sidebar form are removed", () => {
   assert.equal(exists("ui/sections"), false, "ui/sections still exists");
 });
 
-test("the plugin declares no state module: the host page serves every status and command, and the catalog is published", () => {
+test("the plugin declares no state module and publishes its catalog", () => {
   assert.equal(manifest.state, undefined, "plugin.json still declares a state module");
   assert.equal(exists("ui/state.js"), false, "ui/state.js still exists");
-  assert.ok(exists("ui/host.js"), "ui/host.js is missing");
   assert.ok(pkg.files.includes("plugin.json"));
   assert.ok(pkg.files.includes("events.json"));
   assert.ok(pkg.files.includes("ui"));
@@ -70,16 +58,4 @@ test("the plugin declares no state module: the host page serves every status and
 test("the vendored @pierre/trees bundle is the output of its build", () => {
   const check = spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/build-vendor.mjs", import.meta.url)), "--check"], { encoding: "utf8" });
   assert.equal(check.status, 0, `scripts/build-vendor.mjs --check failed: ${check.stderr}`);
-});
-
-// The sidecar declaration of the files sidecar (fixture copy of its sidecar.json): the operations that a plugin host may call.
-const sidecar = JSON.parse(read("test/fixtures/sidecar-files/sidecar.json"));
-const TREE_OPERATIONS = ["snapshot", "expand", "collapse", "select"];
-
-test("plugin.json lets the plugin host call the tree operations of the files sidecar, which the sidecar declares read-only", () => {
-  assert.deepEqual(manifest.hostOperations, { "@soksak/sidecar-files": TREE_OPERATIONS });
-  assert.ok(manifest.dependencies["@soksak/sidecar-files"] !== undefined, "the sidecar is not a dependency");
-  for (const operation of manifest.hostOperations["@soksak/sidecar-files"]) {
-    assert.ok(sidecar.hostReadOperations.includes(operation), `${operation} is not a host read operation of the sidecar`);
-  }
 });

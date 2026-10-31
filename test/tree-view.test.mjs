@@ -1,0 +1,147 @@
+// The file tree section view at the consumer boundary: the page runs over a fake view window, its sidecar is a fake files sidecar
+// that answers the operations of the declared wire contract (test/fixtures/sidecar-files/tree-wire.json), and the tree library is
+// the consumer model of test/sdk-models/trees.mjs. The test plays the user's expansion, selection and star press through them.
+import assert from "node:assert/strict";
+import test from "node:test";
+import { findAll, installViewWindow, settle } from "./fixtures/view-host.mjs";
+
+const SIDECAR = "@soksak/sidecar-files";
+const SURFACE = "left/files.tree";
+const PROJECT = { id: "project-1", root: "/project" };
+let caseNumber = 0;
+
+/** A fake files sidecar that holds one tree and answers each operation with its reply, or with the error of the given reply. */
+function filesSidecar(initial, { failSnapshot = null } = {}) {
+  let tree = structuredClone(initial);
+  const setDirectory = (path, expanded) => {
+    const row = tree.entries.find((item) => item.path === path);
+    if (!row || !row.directory) return { error: `no directory ${path}` };
+    row.expanded = expanded;
+    tree = { ...tree, generation: tree.generation + 1 };
+    return { tree };
+  };
+  return (body) => {
+    if (body.operation === "snapshot") return failSnapshot !== null ? { error: failSnapshot } : { tree };
+    if (body.generation !== tree.generation) return { error: `stale tree generation ${body.generation}; current generation is ${tree.generation}` };
+    if (body.operation === "expand") return setDirectory(body.path, true);
+    if (body.operation === "collapse") return setDirectory(body.path, false);
+    if (body.operation === "select") {
+      tree = {
+        ...tree,
+        generation: tree.generation + 1,
+        selected: body.path === "" ? null : body.path,
+        entries: tree.entries.map((item) => ({ ...item, selected: item.path === body.path })),
+      };
+      return { tree };
+    }
+    return { error: `unknown operation ${body.operation}` };
+  };
+}
+
+const INITIAL = {
+  generation: 1,
+  selected: null,
+  entries: [
+    { path: "src", name: "src", directory: true, depth: 0, expanded: true, selected: false },
+    { path: "src/main.go", name: "main.go", directory: false, depth: 1, expanded: false, selected: false, detail: "modified" },
+    { path: "readme.md", name: "readme.md", directory: false, depth: 0, expanded: false, selected: false },
+  ],
+};
+
+/** Starts the tree view with a fresh module instance. The store holds the stored project data of the page. */
+async function startTree({ sidecar, store = { bookmarks: [] } }) {
+  const start = {
+    surface: SURFACE,
+    params: null,
+    origin: { directory: null },
+    project: PROJECT,
+    declarations: {},
+    diagnostics: null,
+    section: { id: "files.tree", sidebar: "left", card: null },
+  };
+  const sent = [];
+  const host = installViewWindow({
+    start,
+    runtime(message, view) {
+      const { command, params } = message;
+      if (command === "runtime.sidecar.send") {
+        sent.push(params.body);
+        const reply = sidecar(params.body);
+        queueMicrotask(() => view.deliver({ event: "sidecar.message", data: { id: params.id, body: { id: params.body.id, ...reply } } }));
+        return null;
+      }
+      if (command === "runtime.data.get") return structuredClone(store[params.key]);
+      if (command === "runtime.data.set") {
+        store[params.key] = structuredClone(params.value);
+        return null;
+      }
+      return null;
+    },
+  });
+  const before = (await import("../build/test/sdk-models/trees.mjs")).trees.length;
+  caseNumber += 1;
+  await import(`../build/test/ui/tree.js?case=${caseNumber}`);
+  await settle();
+  const { trees } = await import("../build/test/sdk-models/trees.mjs");
+  assert.equal(trees.length, before + 1, "the page created one tree");
+  return { host, sent, store, tree: trees.at(-1), sendsOf: (operation) => sent.filter((body) => body.operation === operation) };
+}
+
+test("the tree view asks the sidecar for the project root and draws its rows", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  assert.deepEqual(view.sent.map((body) => body.operation), ["snapshot"]);
+  const calls = view.host.posted.filter((message) => message.command === "runtime.sidecar.send");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].params.sidecar, SIDECAR);
+  assert.equal(calls[0].params.id, SURFACE, "the sidecar session is the surface of the view");
+  assert.deepEqual([...view.tree.paths.keys()], ["src/", "src/main.go", "readme.md"]);
+  assert.equal(view.host.errors.length, 0);
+});
+
+test("collapsing and expanding a folder sends collapse and expand with the generation and the path", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  view.tree.getItem("src").collapse();
+  await settle();
+  assert.deepEqual(view.sendsOf("collapse").map(({ generation, path }) => ({ generation, path })), [{ generation: 1, path: "src" }]);
+  assert.equal(view.tree.getItem("src").isExpanded(), false, "the library shows the folder as the sidecar reply states it");
+  view.tree.getItem("src").expand();
+  await settle();
+  assert.deepEqual(view.sendsOf("expand").map(({ generation, path }) => ({ generation, path })), [{ generation: 2, path: "src" }]);
+  assert.equal(view.tree.getItem("src").isExpanded(), true);
+});
+
+test("selecting a file sends select with the generation and the path, and the reply marks the row", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  view.tree.options.onSelectionChange(["readme.md"]);
+  await settle();
+  assert.deepEqual(view.sendsOf("select").map(({ generation, path }) => ({ generation, path })), [{ generation: 1, path: "readme.md" }]);
+  assert.equal(view.tree.getItem("readme.md").isSelected(), true);
+});
+
+test("a failed snapshot is reported to the error line of the view with its text", async () => {
+  const text = "cannot list expanded directory src: permission denied";
+  const view = await startTree({ sidecar: filesSidecar(INITIAL, { failSnapshot: text }) });
+  assert.deepEqual(view.host.errors.map((error) => error.text), [text]);
+  assert.equal(view.host.errors[0].where, "files tree");
+  assert.equal(view.tree.paths.size, 0, "no row is drawn from a failed listing");
+});
+
+test("a sidecar failure of the session is reported to the error line of the view", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  view.host.deliver({ event: "sidecar.failure", data: { id: SURFACE, reason: "restart limit" } });
+  await settle();
+  assert.deepEqual(view.host.errors.map((error) => error.text), ["restart limit"]);
+});
+
+test("the star button adds the selected file to the stored bookmarks", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  view.tree.options.onSelectionChange(["readme.md"]);
+  await settle();
+  const [star] = findAll(globalThis.document.body, (element) => element.dataset.command === "files.bookmarks.add");
+  assert.ok(star, "the star button is bound to files.bookmarks.add");
+  assert.equal(star.disabled, false, "the star button is enabled for a selected file");
+  star.click();
+  await settle();
+  assert.deepEqual(view.store.bookmarks, ["readme.md"]);
+  assert.deepEqual(view.host.errors, []);
+});

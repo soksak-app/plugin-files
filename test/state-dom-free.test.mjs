@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-// The two host page modules that build and send the declared files values (core docs/spec/plugin-processes.md, Layer rules).
-const sourcePaths = ["../ui/declared-data.js", "../ui/host-runtime.js"];
+// The DOM-free rules of the tree view, which the view page imports (core docs/spec/plugin-processes.md, Layer rules).
+const sourcePaths = ["../ui/tree-model.js"];
 const forbidden = ["document", "window", "innerHTML", "createElement", "querySelector", "appendChild"];
 
 function assertDomFree(source) {

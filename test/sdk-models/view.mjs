@@ -150,6 +150,17 @@ export function createViewBridge({ handler, report }) {
       };
     },
     // The project of the window, as the host sends it with no call (the theme path).
+    // The project data of the plugin for the project of the view: get(key) and set(key, value) answer the call of the key.
+    data: {
+      get: (key) => {
+        if (typeof key !== "string" || key === "") return Promise.reject(new TypeError("runtime.data.get requires a non-empty key"));
+        return request("runtime.data.get", { key });
+      },
+      set: (key, value) => {
+        if (typeof key !== "string" || key === "") return Promise.reject(new TypeError("runtime.data.set requires a non-empty key"));
+        return request("runtime.data.set", { key, value });
+      },
+    },
     project(listener) {
       if (typeof listener !== "function") throw new TypeError("runtime.project requires a listener");
       if (!listeners.has("project")) listeners.set("project", new Set());

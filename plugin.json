@@ -6,28 +6,24 @@
     {
       "id": "files.tree",
       "name": "파일 트리",
-      "status": "files.tree",
-      "fill": true
+      "composition": {
+        "kind": "view",
+        "page": "ui/tree.html"
+      },
+      "height": "fill"
     },
     {
       "id": "files.bookmarks",
       "name": "북마크",
-      "status": "files.bookmarks"
+      "composition": {
+        "kind": "view",
+        "page": "ui/bookmarks.html"
+      },
+      "height": 160
     }
   ],
-  "host": {
-    "page": "ui/host.html"
-  },
   "dependencies": {
     "@soksak/sidecar-files": ">=0.0.8"
-  },
-  "hostOperations": {
-    "@soksak/sidecar-files": [
-      "snapshot",
-      "expand",
-      "collapse",
-      "select"
-    ]
   },
   "data": {
     "bookmarks": {
@@ -41,32 +37,7 @@
     }
   },
   "exposes": {
-    "status": [
-      {
-        "name": "files.tree",
-        "description": "The declared UI value: project-root status-line, toolbar buttons, the project tree with selection and git detail, and the no-project and empty-tree states.",
-        "schema": {
-          "type": "object",
-          "properties": {
-            "elements": {
-              "type": "array"
-            }
-          }
-        }
-      },
-      {
-        "name": "files.bookmarks",
-        "description": "The declared UI list of bookmarked project paths with removal commands and an empty-state label.",
-        "schema": {
-          "type": "object",
-          "properties": {
-            "elements": {
-              "type": "array"
-            }
-          }
-        }
-      }
-    ],
+    "status": [],
     "commands": [
       {
         "name": "files.refresh",
@@ -150,6 +121,24 @@
           "properties": {
             "error": {
               "type": "string"
+            }
+          }
+        },
+        "result": {
+          "type": "null"
+        }
+      },
+      {
+        "name": "files.tree.toggle",
+        "description": "Expands or collapses a folder of the file tree: the sidecar lists the folder or stops listing it, and the tree shows its reply. expanded is the state that the tree library shows.",
+        "params": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "expanded": {
+              "type": "boolean"
             }
           }
         },

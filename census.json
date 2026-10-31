@@ -1,1 +1,16 @@
-{"exclude": "^(ui/)?vendor/", "entrances": {}, "pending": {}}
+{
+  "exclude": "^(ui/)?vendor/",
+  "entrances": {},
+  "pending": {},
+  "emitters": {
+    "js": [
+      {
+        "call": "emitEvent",
+        "bare": true,
+        "level": 0,
+        "event": 1,
+        "fields": 2
+      }
+    ]
+  }
+}

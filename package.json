@@ -16,8 +16,7 @@
   "files": [
     "events.json",
     "plugin.json",
-    "ui",
-    "ui/host.html"
+    "ui"
   ],
   "scripts": {
     "build": "node scripts/build-vendor.mjs",

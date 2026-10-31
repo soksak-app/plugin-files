@@ -1,7 +1,7 @@
 // Checks plugin.json with validateManifest of the plugin API. make check runs it. The API is the installed
 // @soksak/plugin-api, or the packages/plugin-api source of core when CORE_PLUGIN_API_DIR names it. The import map of
-// ui/host.html is not checked against the API: the pinned release publishes the page import map (PAGE_IMPORTS) only,
-// and the host page is a view page with the view import map, which the plugin tests check (test/pack-closure.test.mjs).
+// The page import maps of ui/*.html are not checked against the API: the pinned release publishes the page import map (PAGE_IMPORTS) only,
+// and each section page is a view page with the view import map, which the plugin tests check (test/pack-closure.test.mjs).
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
