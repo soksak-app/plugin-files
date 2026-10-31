@@ -13,6 +13,7 @@
 
 ## Unreleased
 
+- F332-5-1: The vendored `@pierre/trees` build is restored. `pnpm run build` bundles `vendor/trees.js` into `ui/vendor/trees.js` and writes `ui/vendor/trees.LICENSE.txt`; the dev dependencies `@pierre/trees` 1.0.0-beta.4 and `esbuild` 0.28.2 and the `pnpm-lock.yaml` that `pnpm install` regenerated are restored. `make test` fails at `test/manifest-shape.test.mjs` on `ui/vendor still exists`, the assertion of the removed state; F332-5-1 is held until that assertion checks the restored bundle.
 - F326-files: Version 0.0.10 requires core `^0.0.24` and uses the plugin API release file and the `sok` of core `v0.0.24`.
 - F324-files: Version 0.0.9 requires core `^0.0.23`, uses the plugin API release file of core `v0.0.23`, and packs its release with the `sok` inside the core `v0.0.23` application zip of the Tauri host.
 - F272-files: A push to `main` releases the declared version through `soksak-release-gate` when its tag is absent, with the `sok` of the core release `v0.0.21`, and the dependency on `@soksak/plugin-api` is the packed release file of that release; no workflow checks out core.

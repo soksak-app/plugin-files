@@ -20,9 +20,12 @@
     "ui/host.html"
   ],
   "scripts": {
+    "build": "node scripts/build-vendor.mjs",
     "test": "node scripts/build-test.mjs && node --test test/"
   },
   "devDependencies": {
-    "@soksak/plugin-api": "https://github.com/soksak-app/core/releases/download/v0.0.24/soksak-plugin-api-0.0.24.tgz"
+    "@pierre/trees": "1.0.0-beta.4",
+    "@soksak/plugin-api": "https://github.com/soksak-app/core/releases/download/v0.0.24/soksak-plugin-api-0.0.24.tgz",
+    "esbuild": "0.28.2"
   }
 }

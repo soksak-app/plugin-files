@@ -13,6 +13,7 @@
 
 ## 미배포
 
+- F332-5-1: vendor된 `@pierre/trees` build를 복원한다. `pnpm run build`가 `vendor/trees.js`를 `ui/vendor/trees.js`로 bundle하고 `ui/vendor/trees.LICENSE.txt`를 쓴다. dev dependency `@pierre/trees` 1.0.0-beta.4와 `esbuild` 0.28.2, 그리고 `pnpm install`이 다시 만든 `pnpm-lock.yaml`을 복원한다. `make test`는 `test/manifest-shape.test.mjs`의 `ui/vendor still exists`에서 실패한다. 이 assertion은 제거된 상태를 검사한다. F332-5-1은 이 assertion이 복원된 bundle을 검사할 때까지 보류한다.
 - F326-files: version 0.0.10은 core `^0.0.24`를 요구하고 core `v0.0.24`의 plugin API release file과 `sok`를 쓴다.
 - F324-files: version 0.0.9은 core `^0.0.23`을 요구하고, core `v0.0.23`의 plugin API release file을 쓰며, core `v0.0.23` Tauri host application zip 안의 `sok`로 release를 pack한다.
 - F272-files: `main`에 push하면 tag가 없을 때 `soksak-release-gate`로 선언된 version을 core release `v0.0.21`의 `sok`와 함께 release한다. `@soksak/plugin-api`에 대한 의존은 그 release의 pack 파일이다. 어떤 workflow도 core를 checkout하지 않는다.
