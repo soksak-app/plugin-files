@@ -8,7 +8,7 @@ import test from "node:test";
 
 const DIGESTS = {
   "declared-ui-snapshot.json": "92c119d777954ed2f07cf1e98fcd61ac90f0f9a074a0e0965c8290d1465d519b",
-  "expose.json": "4d2f89e569fe8fb2c7a2b60d8217f6cd6b7d43a4ea77a07f5e2cbc9ba60cc8aa",
+  "expose.json": "9f6cd5261c98d0ee3a4c614c6f36aa91a84a27979b1520e90622915174bd3f93",
   "view-bridge.json": "c4b5439c0cdd8156eabf1ff07db21a989314ca7fabcd1c319ec983bef4c1dd9e",
   "view-commands.json": "37205ccb654de3249e37912f0f6375805d970a28cd08bcdb5083f2ab7239c37d",
   "view-native.json": "0044f4bdd08436d487e22db57c2fa8664dbea24a4152e28b24c112b4bace3c80",

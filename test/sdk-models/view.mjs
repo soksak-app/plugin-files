@@ -200,6 +200,7 @@ export function createViewBridge({ handler, report }) {
   const exposure = {
     register: (kind, name) => request("runtime.native.call", { name: "registered", payload: { kind, name } }).then(() => undefined),
     reply: (id, payload) => request("runtime.native.call", { name: "exposureReply", payload: { id, ...payload } }).then(() => undefined),
+    changed: (name, value, version) => request("runtime.native.call", { name: "changed", payload: { name, value, version } }).then(() => undefined),
   };
 
   // Makes the snapshot store fail every later read with the message.

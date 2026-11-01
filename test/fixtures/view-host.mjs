@@ -191,6 +191,13 @@ export function sendExposureRequest(host, surface, method, params) {
   return id;
 }
 
+/** The payloads {name, value, version} of the changed calls of the page for a status name, in the order the page sent them. */
+export function changedOf(host, name) {
+  return host.posted
+    .filter((message) => message.command === "runtime.native.call" && message.params?.name === "changed" && message.params.payload.name === name)
+    .map((message) => message.params.payload);
+}
+
 /** The answer of the page to a request id, {result} or {error}, or undefined while the page has not replied. */
 export function replyOf(host, id) {
   const replies = host.posted.filter((message) => message.command === "runtime.native.call" && message.params?.name === "exposureReply" && message.params.payload.id === id);

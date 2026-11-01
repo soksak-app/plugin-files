@@ -162,6 +162,7 @@ const expose = createExpose({
     answer({ id, method, params });
   }),
   reply: bridge.exposure.reply,
+  changed: bridge.exposure.changed,
   report: (text) => showError("files tree", new Error(text)),
 }, () => start.declarations);
 

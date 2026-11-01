@@ -57,6 +57,7 @@ test("expose cases replay against the exposure model", async () => {
   for (const testCase of replayable("expose")) {
     const registered = [];
     const replies = [];
+    const changed = [];
     const subscribers = new Set();
     let handle = null;
     let value = testCase.initial;
@@ -65,10 +66,11 @@ test("expose cases replay against the exposure model", async () => {
       unregister: async () => { registered.push({ kind: "unregister" }); },
       onRequest: (answer) => { handle = answer; },
       reply: (id, payload) => { replies.push({ id, payload }); },
+      changed: (name, changedValue, version) => { changed.push(clone({ name, value: changedValue, version })); },
     }, () => testCase.declarations);
     for (const [index, step] of testCase.steps.entries()) {
       const label = `${testCase.id}#${index}`;
-      const before = { registered: registered.length, replies: replies.length };
+      const before = { registered: registered.length, replies: replies.length, changed: changed.length };
       let throws = null;
       try {
         if (step.status) await expose.status(step.status.name, () => value, (fn) => { subscribers.add(fn); return () => subscribers.delete(fn); });
@@ -90,7 +92,14 @@ test("expose cases replay against the exposure model", async () => {
         throws = errorText(failure);
       }
       await settle();
-      const output = { registered: registered.slice(before.registered), replies: replies.slice(before.replies), effects: [], result: null, throws };
+      const output = {
+        registered: registered.slice(before.registered),
+        replies: replies.slice(before.replies),
+        changed: changed.slice(before.changed),
+        effects: [],
+        result: null,
+        throws,
+      };
       assert.deepEqual(output, step.output, label);
     }
   }

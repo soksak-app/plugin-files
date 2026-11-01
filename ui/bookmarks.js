@@ -59,6 +59,7 @@ const expose = createExpose({
     answer({ id, method, params });
   }),
   reply: bridge.exposure.reply,
+  changed: bridge.exposure.changed,
   report: (text) => showError("files bookmarks", new Error(text)),
 }, () => start.declarations);
 // The paths that the list draws, and the watchers of the files.bookmarks status, which receive the paths on each change.

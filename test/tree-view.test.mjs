@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
+import { changedOf, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
 
 const SIDECAR = "@soksak/sidecar-files";
 const SURFACE = "left/files.tree";
@@ -168,19 +168,37 @@ test("the tree status reports each visible row with its path, kind, depth, expan
   assert.ok(registeredEntries(view.host).some((entry) => entry.kind === "status" && entry.name === "files.tree"));
 });
 
-test("the tree status notifies its watcher when the selection changes", async () => {
+test("the tree status sends its current value as a changed event with version 1 when a watch starts", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.tree" });
   await settle();
   assert.deepEqual(replyOf(view.host, watch), { result: null });
-  const next = sendExposureRequest(view.host, SURFACE, "status.next", { name: "files.tree", version: 1 });
+  assert.deepEqual(changedOf(view.host, "files.tree"), [
+    {
+      name: "files.tree",
+      value: {
+        rows: [
+          { path: "src", kind: "directory", depth: 0, expanded: true, selected: false },
+          { path: "src/main.go", kind: "file", depth: 1, expanded: false, selected: false },
+          { path: "readme.md", kind: "file", depth: 0, expanded: false, selected: false },
+        ],
+        message: null,
+      },
+      version: 1,
+    },
+  ]);
+});
+
+test("the tree status sends each changed selection as a changed event with the next version", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.tree" });
   await settle();
-  assert.equal(replyOf(view.host, next), undefined, "the watcher waits while the selection is unchanged");
+  assert.deepEqual(replyOf(view.host, watch), { result: null });
   view.tree.options.onSelectionChange(["readme.md"]);
   await settle();
-  const changed = replyOf(view.host, next);
-  assert.equal(changed?.result?.version, 2);
-  assert.equal(changed.result.value.rows.find((row) => row.path === "readme.md").selected, true);
+  const sent = changedOf(view.host, "files.tree");
+  assert.deepEqual(sent.map((payload) => payload.version), [1, 2]);
+  assert.equal(sent[1].value.rows.find((row) => row.path === "readme.md").selected, true);
 });
 
 test("the message row of the tree status shows the text of a failed listing", async () => {

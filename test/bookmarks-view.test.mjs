@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
+import { changedOf, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
 
 const PROJECT = { id: "project-1", root: "/project" };
 const SURFACE = "left/files.bookmarks";
@@ -102,17 +102,23 @@ test("the bookmarks status reports the bookmark paths in stored order", async ()
   assert.ok(registeredEntries(view.host).some((entry) => entry.kind === "status" && entry.name === "files.bookmarks"));
 });
 
-test("the bookmarks status notifies its watcher when a remove changes the list", async () => {
+test("the bookmarks status sends its current value as a changed event with version 1 when a watch starts", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
   const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.bookmarks" });
   await settle();
   assert.deepEqual(replyOf(view.host, watch), { result: null });
-  const next = sendExposureRequest(view.host, SURFACE, "status.next", { name: "files.bookmarks", version: 1 });
+  assert.deepEqual(changedOf(view.host, "files.bookmarks"), [{ name: "files.bookmarks", value: ["src/main.go", "readme.md"], version: 1 }]);
+});
+
+test("the bookmarks status sends the changed list as a changed event when a remove changes it", async () => {
+  const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
+  const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.bookmarks" });
   await settle();
+  assert.deepEqual(replyOf(view.host, watch), { result: null });
   const [remove] = findAll(globalThis.document.body, (element) => element.dataset.params === JSON.stringify({ path: "src/main.go" }));
   remove.click();
   await settle();
-  assert.deepEqual(replyOf(view.host, next)?.result, { version: 2, value: ["readme.md"] });
+  assert.deepEqual(changedOf(view.host, "files.bookmarks").at(-1), { name: "files.bookmarks", value: ["readme.md"], version: 2 });
 });
 
 test("the bookmark items and remove buttons are one provider each, which reads the rows drawn now", async () => {
