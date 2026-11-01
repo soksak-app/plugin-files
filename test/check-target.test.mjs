@@ -25,10 +25,10 @@ test("check runs the SDK validation subset without running plugin tests", () => 
   assert.equal(output.includes("pnpm test"), false);
 });
 
-test("pack runs check before the plugin pack command", () => {
+test("pack runs check before pnpm pack", () => {
   const output = make("-n", "pack", "OUT=/tmp/files-check-package");
   const check = output.indexOf("soksak-exposure");
-  const pack = output.indexOf("plugin pack . /tmp/files-check-package");
+  const pack = output.indexOf("pnpm pack --pack-destination /tmp/files-check-package");
   assert.ok(check >= 0, "pack omitted the check prerequisites");
   assert.ok(pack > check, "pack ran before check");
 });

@@ -1,9 +1,5 @@
-# files plugin repository 의 test, check 와 pack(docs/features.md). pack 은 core 의 sok 를 쓴다.
+# files plugin repository 의 test, check 와 pack(docs/features.md). pack 은 pnpm pack 으로 release 를 쓴다.
 .PHONY: install test check pack push-check hooks
-
-SOK ?= sok
-# DIAGNOSTICS=1 이면 diagnostics.json 을 담은 진단 package 를 쓴다.
-PACK_FLAGS = $(if $(DIAGNOSTICS),--diagnostics,)
 
 # test 는 이 plugin 의 테스트만 실행한다. SDK 도구와 SDK import 를 쓰지 않는다.
 # The installation stage (core docs/spec/plugins.md#repositories): it installs the locked dependencies; the tests, checks and packs consume them without installing.
@@ -32,7 +28,7 @@ check:
 
 pack: check
 	@test -n "$(OUT)" || { echo "make pack OUT=<folder>" >&2; exit 2; }
-	$(SOK) plugin pack . $(OUT) $(PACK_FLAGS)
+	pnpm pack --pack-destination $(OUT)
 
 # The check that a push needs: the commit messages of the pushed range, because a published commit message is kept; CI runs
 # the tests and checks on the pushed commits.

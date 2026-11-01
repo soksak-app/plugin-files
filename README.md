@@ -7,7 +7,7 @@ Files plugin: sidebar sections for the project directory. The plugin format is d
 ```sh
 make test                                   # tests of this plugin
 make check                                  # SDK checks of the pinned core release
-make pack OUT=<folder> SOK=<core>/target/debug/sok   # the plugin release
+make pack OUT=<folder> # the plugin release
 make hooks                                  # once after cloning: check commit messages and records at commit time
 ```
 
