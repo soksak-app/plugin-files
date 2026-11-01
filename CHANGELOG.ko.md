@@ -16,6 +16,7 @@
 
 ## 미배포
 
+- F367-files: `engines.soksak`은 `^0.0.29`이고, version은 0.0.15다. Red: core version test가 `^0.0.28`에서 실패했다. Green: 통과한다.
 - F364-files: `engines.soksak`은 `^0.0.28`이고, version은 0.0.14다. Red: core version test가 `^0.0.27`에서 실패했다. Green: 통과한다.
 - F360-files: `engines.soksak`는 `^0.0.27`이므로 core 0.0.27이 plugin을 설치하며, version은 0.0.13다. Red: `the files package requires only core 0.0.27`가 `^0.0.26`에서 실패했다. Green: 통과한다.
 - F342-files: tree와 bookmarks section은 `createExpose`에 `changed`를 넘긴다. 그래서 status watch는 현재 값과 이후의 다른 각 값을 version과 함께 `changed` 호출로 보내고, `status.next` 요청에는 응답하지 않는다. Red: `test/tree-view.test.mjs`와 `test/bookmarks-view.test.mjs`의 22개 test 중 4개가 `changed` 호출에서 `+ []`로 실패했다. Green: `pnpm test`가 85개 중 85개 통과한다.

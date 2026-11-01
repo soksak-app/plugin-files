@@ -16,6 +16,7 @@
 
 ## Unreleased
 
+- F367-files: `engines.soksak` is `^0.0.29`, and the version is 0.0.15. Red: the core version test failed on `^0.0.28`. Green: it passes.
 - F364-files: `engines.soksak` is `^0.0.28`, and the version is 0.0.14. Red: the core version test failed on `^0.0.27`. Green: it passes.
 - F360-files: `engines.soksak` is `^0.0.27`, so core 0.0.27 installs the plugin, and the version is 0.0.13. Red: `the files package requires only core 0.0.27` failed on `^0.0.26`. Green: it passes.
 - F342-files: The tree and bookmarks sections pass `changed` to `createExpose`, so a status watch sends its current value and each later different value as a `changed` call with its version, and no request `status.next` is answered. Red: 4 of 22 tests of `test/tree-view.test.mjs` and `test/bookmarks-view.test.mjs` failed with `+ []` on the `changed` calls. Green: `pnpm test` passes 85 of 85 tests.
