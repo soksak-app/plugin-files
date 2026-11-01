@@ -81,5 +81,5 @@ test("no workflow checks out another repository", { timeout: 1000 }, () => {
 
 test("the dependency on core is the packed release file of the core release that package.json pins", { timeout: 1000 }, () => {
   assert.equal(PACKAGE.devDependencies[PLUGIN_API],
-    "https://github.com/soksak-app/core/releases/download/v0.0.25/soksak-plugin-api-0.0.25.tgz");
+    "https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz");
 });
