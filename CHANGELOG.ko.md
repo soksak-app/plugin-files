@@ -16,6 +16,7 @@
 
 ## 미배포
 
+- F360-files: `engines.soksak`는 `^0.0.27`이므로 core 0.0.27이 plugin을 설치하며, version은 0.0.13다. Red: `the files package requires only core 0.0.27`가 `^0.0.26`에서 실패했다. Green: 통과한다.
 - F342-files: tree와 bookmarks section은 `createExpose`에 `changed`를 넘긴다. 그래서 status watch는 현재 값과 이후의 다른 각 값을 version과 함께 `changed` 호출로 보내고, `status.next` 요청에는 응답하지 않는다. Red: `test/tree-view.test.mjs`와 `test/bookmarks-view.test.mjs`의 22개 test 중 4개가 `changed` 호출에서 `+ []`로 실패했다. Green: `pnpm test`가 85개 중 85개 통과한다.
 - F336-files: 0.0.11판은 core 0.0.25와 files sidecar 0.0.9가 필요하다.
 - F332-5-4: Tree 행은 dom 이름 `files.tree.row`를 가진다. Page는 이 이름의 provider를 한 번 등록하며, provider는 tree library가 그리는 행을 container의 열린 shadow root에서 읽어 돌려준다. Page는 그 root가 바뀔 때 각 행을 표시한다. 북마크 항목과 삭제 button은 같은 provider 형식을 쓰므로 제거된 행은 남지 않는다. Red: 커밋된 view에서 83개 중 3개 실패. Green: `make test`가 83개 중 83개 통과하고, `CORE_PLUGIN_API_DIR`을 지정한 `make check`가 통과한다. 고정된 0.0.24 검사는 `data requires a plugin host`로 여전히 실패한다(F332-5-3).

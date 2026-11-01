@@ -16,6 +16,7 @@
 
 ## Unreleased
 
+- F360-files: `engines.soksak` is `^0.0.27`, so core 0.0.27 installs the plugin, and the version is 0.0.13. Red: `the files package requires only core 0.0.27` failed on `^0.0.26`. Green: it passes.
 - F342-files: The tree and bookmarks sections pass `changed` to `createExpose`, so a status watch sends its current value and each later different value as a `changed` call with its version, and no request `status.next` is answered. Red: 4 of 22 tests of `test/tree-view.test.mjs` and `test/bookmarks-view.test.mjs` failed with `+ []` on the `changed` calls. Green: `pnpm test` passes 85 of 85 tests.
 - F336-files: Version 0.0.11 requires core 0.0.25 and files sidecar 0.0.9.
 - F332-5-4: The tree rows carry the dom name `files.tree.row`, which the page registers once with a provider that returns the rows the tree library draws, read from the open shadow root of its container; the page marks each row when that root changes. The bookmark items and remove buttons use the same provider form, so a removed row is not kept. Red: 3 of 83 tests failed on the committed views. Green: `make test` passes 83 of 83, and `make check` with `CORE_PLUGIN_API_DIR` passes. The pinned 0.0.24 check still fails at `data requires a plugin host` (F332-5-3).
