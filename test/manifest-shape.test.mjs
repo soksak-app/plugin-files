@@ -13,7 +13,7 @@ const pkg = JSON.parse(read("package.json"));
 
 test("the plugin requires the current files sidecar process identity release", () => {
   assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.9");
-  assert.equal(pkg.version, "0.0.13");
+  assert.equal(pkg.version, "0.0.14");
 });
 
 test("plugin.json declares the two sections as views of their pages, with the tree filling the sidebar", () => {
