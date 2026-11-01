@@ -1,5 +1,5 @@
 // Checks the declarations of plugin.json and package.json, and the files that they name, with literal expectations.
-// The pinned plugin API validates the same declarations in make check (scripts/check-manifest.mjs).
+// The application validates plugin.json at installation.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";

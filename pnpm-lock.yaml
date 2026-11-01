@@ -11,9 +11,12 @@ importers:
       '@pierre/trees':
         specifier: 1.0.0-beta.4
         version: 1.0.0-beta.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@soksak/plugin-api':
-        specifier: https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz
-        version: https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz
+      '@soksak/kit-events':
+        specifier: https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz
+        version: https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz
+      '@soksak/kit-records':
+        specifier: https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz
+        version: https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
@@ -182,16 +185,18 @@ packages:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
 
-  '@soksak/plugin-api@https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz':
-    resolution: {integrity: sha512-IYoZ2gzOFk8HVszSCClBKZhKkJbPQhLGKtgmIB4/g4hYU/71qBM9Vbbg6sDZVjtnpWMtpZHNnoLiXFnXEYJxbw==, tarball: https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz}
-    version: 0.0.26
+  '@soksak/kit-events@https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz':
+    resolution: {integrity: sha512-ozuCebor/xbblmKqk+XIkoAE37ANoK4SLVSZmN/TMfWQ5pkyNIfz7ri2vLlG+cawcX9J8rLYjO13rWCSPiXqTg==, tarball: https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz}
+    version: 0.0.1
+    hasBin: true
+
+  '@soksak/kit-records@https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz':
+    resolution: {integrity: sha512-Otp1aORvqozSgInZEahjajshJo99SQzKXGdZbDkMDDnCkUgARvXbch9N05Sdd6Li5qL6FIH3RT1LQvO5b7cpXQ==, tarball: https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz}
+    version: 0.0.1
     hasBin: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
-
-  es-module-lexer@3.0.4:
-    resolution: {integrity: sha512-BldNY5mwkVu+cQ5Ymn3e6hB9Sx8XHx4ZevWbiUyZbfKxJxYO27Hf0wfzkxIaD5CAJMaGl3YspKELj0ff/7nCMA==}
 
   esbuild@0.28.2:
     resolution: {integrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==}
@@ -318,10 +323,11 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@soksak/plugin-api@https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz':
+  '@soksak/kit-events@https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz':
     dependencies:
       ajv: 8.20.0
-      es-module-lexer: 3.0.4
+
+  '@soksak/kit-records@https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz': {}
 
   ajv@8.20.0:
     dependencies:
@@ -329,8 +335,6 @@ snapshots:
       fast-uri: 3.1.9
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
-
-  es-module-lexer@3.0.4: {}
 
   esbuild@0.28.2:
     optionalDependencies:

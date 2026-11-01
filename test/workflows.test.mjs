@@ -38,8 +38,7 @@ for (const [file, steps] of Object.entries(WORKFLOWS)) {
 }
 
 // The release starts on a push to main, runs ci.yml and the release gate, and writes the release with pnpm pack; it downloads
-// no core release, no workflow checks out another repository, and the dependency on core is the packed release file of a core
-// release that package.json pins (core docs/spec/plugins.md). The package name is built from parts, as the SDK boundary of test/
+// no core release, and no workflow checks out another repository. The package name is built from parts, as the SDK boundary of test/
 // requires.
 const RELEASE_TEXT = readFileSync(path.join(ROOT, ".github", "workflows", "release.yml"), "utf8");
 const PLUGIN_API = "@soksak/" + "plugin-api";
@@ -79,7 +78,12 @@ test("no workflow checks out another repository", { timeout: 1000 }, () => {
   }
 });
 
-test("the dependency on core is the packed release file of the core release that package.json pins", { timeout: 1000 }, () => {
-  assert.equal(PACKAGE.devDependencies[PLUGIN_API],
-    "https://github.com/soksak-app/core/releases/download/v0.0.26/soksak-plugin-api-0.0.26.tgz");
+test("the checks come from the kit releases, and no check reads the plugin API of core", { timeout: 1000 }, () => {
+  assert.equal(PACKAGE.devDependencies[PLUGIN_API], undefined, "package.json must not pin the plugin API of core");
+  assert.equal(PACKAGE.devDependencies["@soksak/kit-records"], "https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz");
+  assert.equal(PACKAGE.devDependencies["@soksak/kit-events"], "https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz");
+  for (const file of ["Makefile", ".githooks/commit-msg", ".githooks/pre-commit"]) {
+    assert.doesNotMatch(readFileSync(path.join(ROOT, file), "utf8"), /CORE_PLUGIN_API_DIR|soksak-exposure|soksak-engines|node_modules\/@soksak|check-manifest|check-test-cases/,
+      `${file} must run only the commands of the kit releases`);
+  }
 });
