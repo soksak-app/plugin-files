@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- F379-files: `engines.soksak`은 `^0.0.30`이고, version은 0.0.16다. Red: core version test가 `^0.0.29`에서 실패했다. Green: 통과한다.
 - F355-3-4-files: 검사는 core의 plugin API 대신 records kit과 events kit release에서 온다. application이 설치할 때 manifest를 검증하고 registry 검사가 exposed 이름을 각 listed core와 비교하므로, manifest, exposure, engines 검사와 `CORE_PLUGIN_API_DIR`는 지웠다. Red: `the checks come from the kit releases, and no check reads the plugin API of core`가 실패했다. Green: 통과하고, `make test`와 `make check`가 통과한다.
 - F355-7-files: 0.0.12판은 plugin release의 `pnpm pack` 형태를 설치하는 첫 core release인 core `^0.0.26`을 요구한다.
 - F355-4-files: `make pack OUT=<folder>`는 `pnpm pack`으로 release를 쓰고, release.yml은 더 이상 core release를 내려받지 않는다. core 0.0.25는 plugin의 `pnpm pack` 파일을 설치하고 `sok plugin pack`이 없기 때문이다. `@soksak/plugin-api`는 core release `v0.0.25`에 pin된다.
