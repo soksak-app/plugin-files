@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- F389-files: `engines.soksak` is `^0.0.32`, and the version is 0.0.18. Red: the core version test failed on `^0.0.31`. Green: it passes.
 - F387-files: `engines.soksak` is `^0.0.31`, and the version is 0.0.17. Red: the core version test failed on `^0.0.30`. Green: it passes.
 - F379-files: `engines.soksak` is `^0.0.30`, and the version is 0.0.16. Red: the core version test failed on `^0.0.29`. Green: it passes.
 - F355-3-4-files: The checks come from the records kit and events kit releases instead of the plugin API of core; the manifest, exposure and engines checks and `CORE_PLUGIN_API_DIR` are removed, because the application validates the manifest at installation and the registry check compares the exposed names with each listed core. Red: `the checks come from the kit releases, and no check reads the plugin API of core` failed. Green: it passes, and `make test` and `make check` pass.

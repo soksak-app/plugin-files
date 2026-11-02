@@ -1,5 +1,6 @@
 # 기능
 
+- [o] F389-files — P0, core F389 연결: plugin은 `engines.soksak` `^0.0.32`를 선언하므로 core release 0.0.32가 그것을 설치하며, version은 0.0.18다. 입력: `engines.soksak`은 core 0.0.31만 허용하는 `^0.0.31`이었다. 기대: `engines.soksak`은 `^0.0.32`이고 release run이 `v0.0.18`을 게시한다. 결과: core version test가 `^0.0.31`에서 실패했고(Red) test가 통과하며(Green), `make test`와 `make check`가 통과한다.
 - [o] F387-files — P0, core F387 연결: plugin은 `engines.soksak` `^0.0.31`를 선언하므로 core release 0.0.31이 그것을 설치하며, version은 0.0.17다. 입력: `engines.soksak`은 core 0.0.30만 허용하는 `^0.0.30`이었다. 기대: `engines.soksak`은 `^0.0.31`이고 release run이 `v0.0.17`을 게시한다. 결과: core version test가 `^0.0.30`에서 실패했고(Red) 통과하며(Green), `make check`가 통과한다.
 - [o] F379-files — P0, core F379 연결: plugin은 `engines.soksak` `^0.0.30`를 선언하므로 core release 0.0.30가 그것을 설치하며, version은 0.0.16다. 입력: `engines.soksak`은 core 0.0.29만 허용하는 `^0.0.29`이었다. 기대: `engines.soksak`은 `^0.0.30`이고 release run이 `v0.0.16`을 게시한다. 결과: core version test가 `^0.0.29`에서 실패했고(Red) 통과하며(Green), `make check`가 통과한다.
 - [o] F367-files — P0, core F367 연결: plugin은 `engines.soksak` `^0.0.29`를 선언하므로 core release 0.0.29가 그것을 설치하며, version은 0.0.15다. 입력: `engines.soksak`은 core 0.0.28만 허용하는 `^0.0.28`이었다. 기대: `engines.soksak`은 `^0.0.29`이고 release run이 `v0.0.15`을 게시한다. 결과: core version test가 `^0.0.28`에서 실패했고(Red) 통과하며(Green), `make test`와 `make check`가 통과한다.

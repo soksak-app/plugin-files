@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- F389-files: `engines.soksak`은 `^0.0.32`이고, version은 0.0.18다. Red: core version test가 `^0.0.31`에서 실패했다. Green: 통과한다.
 - F387-files: `engines.soksak`은 `^0.0.31`이고, version은 0.0.17다. Red: core version test가 `^0.0.30`에서 실패했다. Green: 통과한다.
 - F379-files: `engines.soksak`은 `^0.0.30`이고, version은 0.0.16다. Red: core version test가 `^0.0.29`에서 실패했다. Green: 통과한다.
 - F355-3-4-files: 검사는 core의 plugin API 대신 records kit과 events kit release에서 온다. application이 설치할 때 manifest를 검증하고 registry 검사가 exposed 이름을 각 listed core와 비교하므로, manifest, exposure, engines 검사와 `CORE_PLUGIN_API_DIR`는 지웠다. Red: `the checks come from the kit releases, and no check reads the plugin API of core`가 실패했다. Green: 통과하고, `make test`와 `make check`가 통과한다.
