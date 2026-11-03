@@ -171,6 +171,7 @@ const expose = createExpose({
 let generation = null;
 let rows = [];
 let selection = null;
+let selecting = null;
 let paths = [];
 const pending = new Set();
 const waiting = new Map();
@@ -178,6 +179,10 @@ let nextRequest = 0;
 // syncing guards the changes that the view makes to the library, so the library notifies none of them back as a user change.
 let syncing = false;
 let syncingSelection = false;
+
+// The library names a directory with its trailing slash; the page and the sidecar name it without. The placeholder row of a folder
+// without children selects nothing.
+const selectedPath = (item) => (item.endsWith(PLACEHOLDER) ? null : item.replace(/\/$/, ""));
 
 const tree = new FileTree({
   paths: [],
@@ -188,20 +193,26 @@ const tree = new FileTree({
   onSelectionChange(picked) {
     if (syncingSelection) return;
     const file = [...picked].reverse().find((path) => !path.endsWith(PLACEHOLDER));
-    const path = file === undefined ? null : file.replace(/\/$/, "");
+    const path = file === undefined ? null : selectedPath(file);
     if (path !== selection) binder.run("files.select", { path }).catch((error) => showError("files tree", error));
   },
 });
 tree.render({ containerWrapper: holder });
 // The library draws the rows in the open shadow root of its container, and it has no hook for a row element. The page marks each
 // row that the library draws when the root changes (a subtree mutation), and the provider of files.tree.row reads the rows drawn now.
+// A row points to files.select under a delegated root. The library also notifies the selection of a click, and a keyboard selection
+// only through that notification, so files.select answers both from one request.
 const treeRoot = tree.getFileTreeContainer()?.shadowRoot;
 if (!treeRoot) throw new Error("the tree library draws no shadow root for its rows");
 const treeRows = () => [...treeRoot.querySelectorAll("[data-item-path]")];
 const markRows = () => {
-  for (const row of treeRows()) row.dataset.expose = "files.tree.row";
+  for (const row of treeRows()) {
+    row.dataset.expose = "files.tree.row";
+    binder.mark(row, "files.select", { path: selectedPath(row.dataset.itemPath) });
+  }
 };
 markRows();
+binder.delegate(treeRoot, { failed: (error) => showError("files tree", error) });
 new MutationObserver(markRows).observe(treeRoot, { childList: true, subtree: true });
 
 const applyTheme = () => Object.entries(themeStyles()).forEach(([name, value]) => holder.style.setProperty(name, value));
@@ -369,7 +380,13 @@ const handlers = {
   "files.select": async ({ path } = {}) => {
     if (path === undefined) throw new TypeError("files.select requires path, a string or null");
     if (path !== null && typeof path !== "string") throw new TypeError("files.select requires path, a string or null");
-    publish(await request("select", { generation, path: path ?? "" }));
+    if (path === selection) return;
+    if (selecting?.path === path) return selecting.done;
+    const done = request("select", { generation, path: path ?? "" }).then(publish).finally(() => {
+      if (selecting?.done === done) selecting = null;
+    });
+    selecting = { path, done };
+    return done;
   },
   "files.tree.toggle": async ({ path, expanded } = {}) => {
     if (typeof path !== "string" || path === "" || typeof expanded !== "boolean") throw new TypeError("files.tree.toggle requires path and expanded");

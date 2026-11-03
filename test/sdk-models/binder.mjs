@@ -9,6 +9,22 @@ export function createBinder(run, { check, changed = () => {} }) {
       check(name);
       return run(name, params);
     },
+    // mark points an element to a command; delegate runs the command of a marked element on a click in the root.
+    mark(element, name, params) {
+      check(name);
+      element.dataset.command = name;
+      if (params && Object.keys(params).length > 0) element.dataset.params = JSON.stringify(params);
+      return element;
+    },
+    delegate(root, { failed } = {}) {
+      root.addEventListener("click", ({ target }) => {
+        if (!target.dataset.command) return;
+        const done = run(target.dataset.command, JSON.parse(target.dataset.params ?? "{}"), target);
+        return failed ? Promise.resolve(done).catch(failed) : done;
+      });
+      changed();
+      return root;
+    },
     bind(element, name, params = {}, { event = "click", failed } = {}) {
       check(name);
       element.dataset.command = name;

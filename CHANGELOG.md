@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P91: Each row of the file tree points to `files.select` under a delegated root, so the binder audit finds no unconnected row. A click sends one select request. Red: the row carried no `data-params`. Green: `test/tree-view.test.mjs` passes.
 - F402-files: `engines.soksak` is `^0.0.33`, and the version is 0.0.19. Red: the core version test failed on `^0.0.32`. Green: it passes.
 - P90: The repository uses the records kit 0.0.6, whose release gate accepts a closed item with a `Closed:` reason.
 - P38-1, P36-1, P26, P26-4, P26-8, P30, P27: Seven held items are closed, because version 0.0.18 contains their corrections or F332-5 removed the plugin host that they name.

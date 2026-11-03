@@ -231,6 +231,20 @@ test("the tree rows are one provider that reads the rows the library draws, and 
   assert.deepEqual(rows.map((row) => row.dataset.expose), ["files.tree.row", "files.tree.row", "files.tree.row"]);
 });
 
+test("each drawn row runs files.select with its path, and a click on it selects once", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const { created } = await import("../build/test/sdk-models/expose.mjs");
+  const rows = created.at(-1).doms.get("files.tree.row")[0]();
+  assert.deepEqual(rows.map((row) => [row.dataset.command, JSON.parse(row.dataset.params)]),
+    [["files.select", { path: "src" }], ["files.select", { path: "src/main.go" }], ["files.select", { path: "readme.md" }]]);
+  rows.at(-1).click();
+  await settle();
+  assert.deepEqual(view.sendsOf("select").map(({ path }) => path), ["readme.md"], "one click sends one select");
+  rows.at(-1).click();
+  await settle();
+  assert.deepEqual(view.sendsOf("select").map(({ path }) => path), ["readme.md"], "a click on the selected row sends nothing");
+});
+
 test("a row that the library draws later is marked, and a row it removes is not provided", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const { created } = await import("../build/test/sdk-models/expose.mjs");

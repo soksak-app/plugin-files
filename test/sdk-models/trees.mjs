@@ -13,6 +13,14 @@ export function themeToTreeStyles() {
 class FakeShadowRoot {
   constructor() {
     this.rows = [];
+    this.clicks = new Set();
+  }
+  addEventListener(type, listener) {
+    if (type !== "click") throw new Error(`the fake shadow root answers click only, not ${type}`);
+    this.clicks.add(listener);
+  }
+  removeEventListener(type, listener) {
+    this.clicks.delete(listener);
   }
   querySelectorAll(selector) {
     if (selector !== "[data-item-path]") throw new Error(`the fake shadow root answers [data-item-path] only, not ${selector}`);
@@ -44,8 +52,18 @@ export class FileTree {
   draw() {
     const root = this.container.shadowRoot;
     const before = new Map(root.rows.map((row) => [row.dataset.itemPath, row]));
-    root.rows = [...this.paths.keys()].map((path) => before.get(path) ?? { dataset: { itemPath: path } });
+    root.rows = [...this.paths.keys()].map((path) => before.get(path) ?? this.row(path));
     root.changed();
+  }
+  // A click selects the row in the library, which notifies the selection, and then reaches the listeners of the root.
+  row(path) {
+    const row = { dataset: { itemPath: path }, click: () => {
+      for (const [key, state] of this.paths) state.selected = key === path;
+      this.draw();
+      this.options.onSelectionChange?.(this.getSelectedPaths());
+      for (const listener of this.container.shadowRoot.clicks) listener({ target: row });
+    } };
+    return row;
   }
   batch(operations) {
     for (const operation of operations) {
