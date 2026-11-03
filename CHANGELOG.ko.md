@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P38-1, P36-1, P26, P26-4, P26-8, P30, P27: version 0.0.18이 수정을 담거나 F332-5가 항목이 말하는 plugin host를 제거했으므로 hold 항목 7개를 닫았다.
 - F389-files: `engines.soksak`은 `^0.0.32`이고, version은 0.0.18다. Red: core version test가 `^0.0.31`에서 실패했다. Green: 통과한다.
 - F387-files: `engines.soksak`은 `^0.0.31`이고, version은 0.0.17다. Red: core version test가 `^0.0.30`에서 실패했다. Green: 통과한다.
 - F379-files: `engines.soksak`은 `^0.0.30`이고, version은 0.0.16다. Red: core version test가 `^0.0.29`에서 실패했다. Green: 통과한다.
