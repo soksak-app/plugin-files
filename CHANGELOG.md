@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P90: The repository uses the records kit 0.0.6, whose release gate accepts a closed item with a `Closed:` reason.
 - P38-1, P36-1, P26, P26-4, P26-8, P30, P27: Seven held items are closed, because version 0.0.18 contains their corrections or F332-5 removed the plugin host that they name.
 - F389-files: `engines.soksak` is `^0.0.32`, and the version is 0.0.18. Red: the core version test failed on `^0.0.31`. Green: it passes.
 - F387-files: `engines.soksak` is `^0.0.31`, and the version is 0.0.17. Red: the core version test failed on `^0.0.30`. Green: it passes.

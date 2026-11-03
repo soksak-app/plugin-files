@@ -80,7 +80,7 @@ test("no workflow checks out another repository", { timeout: 1000 }, () => {
 
 test("the checks come from the kit releases, and no check reads the plugin API of core", { timeout: 1000 }, () => {
   assert.equal(PACKAGE.devDependencies[PLUGIN_API], undefined, "package.json must not pin the plugin API of core");
-  assert.equal(PACKAGE.devDependencies["@soksak/kit-records"], "https://github.com/soksak-app/kit-records/releases/download/v0.0.1/soksak-kit-records-0.0.1.tgz");
+  assert.equal(PACKAGE.devDependencies["@soksak/kit-records"], "https://github.com/soksak-app/kit-records/releases/download/v0.0.6/soksak-kit-records-0.0.6.tgz");
   assert.equal(PACKAGE.devDependencies["@soksak/kit-events"], "https://github.com/soksak-app/kit-events/releases/download/v0.0.1/soksak-kit-events-0.0.1.tgz");
   for (const file of ["Makefile", ".githooks/commit-msg", ".githooks/pre-commit"]) {
     assert.doesNotMatch(readFileSync(path.join(ROOT, file), "utf8"), /CORE_PLUGIN_API_DIR|soksak-exposure|soksak-engines|node_modules\/@soksak|check-manifest|check-test-cases/,
