@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- F402-files: `engines.soksak`은 `^0.0.33`이고 version은 0.0.19이다. Red: core version test가 `^0.0.32`에서 실패했다. Green: 통과한다.
 - P90: 이 저장소는 records kit 0.0.6을 쓰며, 그 release gate는 `Closed:` 사유가 있는 닫힌 항목을 받아들인다.
 - P38-1, P36-1, P26, P26-4, P26-8, P30, P27: version 0.0.18이 수정을 담거나 F332-5가 항목이 말하는 plugin host를 제거했으므로 hold 항목 7개를 닫았다.
 - F389-files: `engines.soksak`은 `^0.0.32`이고, version은 0.0.18다. Red: core version test가 `^0.0.31`에서 실패했다. Green: 통과한다.
