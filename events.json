@@ -89,6 +89,26 @@
         ]
       },
       "description": "A file of the tree did not open; error is the refusal that the message row shows."
+    },
+    "plugin.files.tree.reply.earlier": {
+      "layer": "plugin",
+      "class": "call",
+      "level": [
+        "debug"
+      ],
+      "fields": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "description": "A reply of the files sidecar to a request of an earlier document of the surface, which the reloaded view does not wait for."
     }
   }
 }

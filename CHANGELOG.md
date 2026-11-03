@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P92: A request id of the file tree names its document, so a reply to a request of an earlier document of the surface is recorded as `plugin.files.tree.reply.earlier` instead of an error. Red: `the reply of an earlier document reported an error` failed. Green: `test/tree-view.test.mjs` passes.
 - P91: Each row of the file tree points to `files.select` under a delegated root, so the binder audit finds no unconnected row. A click sends one select request. Red: the row carried no `data-params`. Green: `test/tree-view.test.mjs` passes.
 - F402-files: `engines.soksak` is `^0.0.33`, and the version is 0.0.19. Red: the core version test failed on `^0.0.32`. Green: it passes.
 - P90: The repository uses the records kit 0.0.6, whose release gate accepts a closed item with a `Closed:` reason.

@@ -123,6 +123,18 @@ test("selecting a file sends select with the generation and the path, and the re
   assert.equal(view.tree.getItem("readme.md").isSelected(), true);
 });
 
+test("a reply to a request of an earlier document of the surface is not an error, and an unknown reply of this document is", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const reply = (id) => view.host.deliver({ event: "sidecar.message", data: { id: SURFACE, body: { id, tree: INITIAL } } });
+  reply("files-earlier-document-1");
+  await settle();
+  assert.deepEqual(view.host.errors, [], "the reply of an earlier document reported an error");
+  const [{ id }] = view.sendsOf("snapshot");
+  reply(`${id}0`);
+  await settle();
+  assert.deepEqual(view.host.errors.map((error) => error.text), [`files sidecar replied to unknown request ${id}0`]);
+});
+
 test("a failed snapshot is reported to the error line of the view with its text", async () => {
   const text = "cannot list expanded directory src: permission denied";
   const view = await startTree({ sidecar: filesSidecar(INITIAL, { failSnapshot: text }) });

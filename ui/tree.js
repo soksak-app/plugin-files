@@ -175,6 +175,8 @@ let selecting = null;
 let paths = [];
 const pending = new Set();
 const waiting = new Map();
+// A request id names the document that sent it: a reloaded view of the surface can receive the reply to a request of its earlier document.
+const REQUEST_PREFIX = `files-${crypto.randomUUID()}-`;
 let nextRequest = 0;
 // syncing guards the changes that the view makes to the library, so the library notifies none of them back as a user change.
 let syncing = false;
@@ -304,7 +306,7 @@ async function request(operation, params = {}) {
   // Without a project the session is not subscribed, so a request would wait for a reply that cannot come.
   if (project === null) throw new Error("the file tree has no project to list");
   const started = performance.now();
-  const id = `files-${++nextRequest}`;
+  const id = `${REQUEST_PREFIX}${++nextRequest}`;
   const response = new Promise((resolve, reject) => waiting.set(id, { resolve, reject }));
   try {
     const [tree] = await Promise.all([response, sidecar.send(session, { operation, id, ...params }, [])]);
@@ -341,6 +343,10 @@ const onMessage = (body) => {
     return;
   }
   const call = waiting.get(body.id);
+  if (!call && !String(body.id).startsWith(REQUEST_PREFIX)) {
+    emitEvent("debug", "plugin.files.tree.reply.earlier", { id: String(body.id) });
+    return;
+  }
   if (!call) {
     showError("files tree", new Error(`files sidecar replied to unknown request ${body.id}`));
     return;

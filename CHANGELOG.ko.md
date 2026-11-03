@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P92: file tree의 요청 id는 document를 나타내므로, surface의 이전 document 요청에 대한 응답은 오류 대신 `plugin.files.tree.reply.earlier`로 기록된다. Red: `the reply of an earlier document reported an error`가 실패했다. Green: `test/tree-view.test.mjs`가 통과한다.
 - P91: File tree의 각 row는 delegated root 아래에서 `files.select`를 가리키므로 binder audit이 연결되지 않은 row를 찾지 않는다. click 한 번은 select 요청 하나를 보낸다. Red: row에 `data-params`가 없었다. Green: `test/tree-view.test.mjs`가 통과한다.
 - F402-files: `engines.soksak`은 `^0.0.33`이고 version은 0.0.19이다. Red: core version test가 `^0.0.32`에서 실패했다. Green: 통과한다.
 - P90: 이 저장소는 records kit 0.0.6을 쓰며, 그 release gate는 `Closed:` 사유가 있는 닫힌 항목을 받아들인다.
