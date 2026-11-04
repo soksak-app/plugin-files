@@ -1,19 +1,17 @@
 // A consumer-side model of createViewBridge of the plugin API view entry, for the cases of test/fixtures/contract that the
 // view page of the files host uses: the call layer (calls.request), runtime.native.on and the exposure messages,
-// commands.register with the host requests of its commands, runtime.sidecar, and the answer to the declared UI snapshot
-// pull. The host messages arrive through the deliver function, which stands for window.sokView.attach.
-import { createSnapshotSender, SNAPSHOT_ACK_EVENT, SNAPSHOT_REQUEST_COMMAND } from "./snapshots.mjs";
+// commands.register with the host requests of its commands, and runtime.sidecar. The host messages arrive through the
+// deliver function, which stands for window.sokView.attach.
 
 const UNREGISTERED_COMMAND = 1002;
 const FAILED_COMMAND = -32000;
-const INVALID_PARAMS = -32602;
 
 const PLUGIN = /^[a-z][a-z0-9-]*$/;
 
-/** Creates the bridge of one view page. The plugin is the host of window.location, which must be a sok://<plugin id> page. */
-export function createViewBridge({ handler, report }) {
+/** Creates the bridge of one view page. The plugin is the host of window.location, which must be a soksak://<plugin id> page. */
+export function createViewBridge({ handler }) {
   const plugin = globalThis.window.location.host;
-  if (!PLUGIN.test(plugin)) throw new Error(`view channel requires a view page on sok://<plugin id>, got ${globalThis.window.location.href}`);
+  if (!PLUGIN.test(plugin)) throw new Error(`view channel requires a view page on soksak://<plugin id>, got ${globalThis.window.location.href}`);
   const listeners = new Map();
   const subscriptions = new Map();
   const handlers = new Map();
@@ -21,15 +19,7 @@ export function createViewBridge({ handler, report }) {
   let sequence = 0;
   // The last project message of the host; undefined until the host sends one (runtime.project replays it).
   let lastProject;
-  let acknowledgement = null;
   const post = (message) => handler.postMessage(message);
-
-  const snapshots = createSnapshotSender({
-    plugin,
-    send: post,
-    onMessage: (listener) => { acknowledgement = listener; return () => { acknowledgement = null; }; },
-    report,
-  });
 
   function request(command, params) {
     const id = ++sequence;
@@ -56,29 +46,6 @@ export function createViewBridge({ handler, report }) {
     });
   }
 
-  // The snapshot store of the view. A fault makes every later read fail with its message.
-  let storeFault = null;
-  const answerSnapshotRequest = ({ id, params }) => {
-    const status = params?.status;
-    if (typeof status !== "string" || status === "") {
-      post({ sok: 1, reply: id, error: { code: INVALID_PARAMS, message: "declared-ui.snapshot.request requires a status name" } });
-      return;
-    }
-    if (!snapshots.has(status)) {
-      post({ sok: 1, reply: id, result: { seq: 0, value: null } });
-      return;
-    }
-    // A read that fails answers the request with its error and reports it; it never answers an empty value.
-    try {
-      if (storeFault !== null) throw new Error(storeFault);
-      post({ sok: 1, reply: id, result: snapshots.pull(status) });
-    } catch (error) {
-      const text = String(error?.message ?? error);
-      report({ where: `declared-ui.snapshot.request ${status}`, text });
-      post({ sok: 1, reply: id, error: { code: FAILED_COMMAND, message: text } });
-    }
-  };
-
   async function runCommand({ id, command, params, cids }) {
     const run = handlers.get(command);
     if (run === undefined) {
@@ -93,15 +60,11 @@ export function createViewBridge({ handler, report }) {
     }
   }
 
-  // The host messages: acknowledgements, events, replies to calls, snapshot pulls and command requests.
+  // The host messages: events, replies to calls and command requests.
   function deliver(message) {
     if (message.event === "project") {
       lastProject = message.data;
       for (const listener of [...(listeners.get("project") ?? [])]) listener(message.data);
-      return;
-    }
-    if (message.event === SNAPSHOT_ACK_EVENT) {
-      acknowledgement({ event: message.event, ...message.data });
       return;
     }
     if (message.event !== undefined) {
@@ -110,10 +73,6 @@ export function createViewBridge({ handler, report }) {
           : message.event === "data" ? "data"
             : `native:${message.event}`;
       for (const listener of [...(listeners.get(key) ?? [])]) listener(message.data);
-      return;
-    }
-    if (message.command === SNAPSHOT_REQUEST_COMMAND) {
-      answerSnapshotRequest(message);
       return;
     }
     if (message.command !== undefined) {
@@ -203,8 +162,5 @@ export function createViewBridge({ handler, report }) {
     changed: (name, value, version) => request("runtime.native.call", { name: "changed", payload: { name, value, version } }).then(() => undefined),
   };
 
-  // Makes the snapshot store fail every later read with the message.
-  const fault = (text) => { storeFault = text; };
-
-  return { calls: { request }, runtime, commands, exposure, snapshots, deliver, fault };
+  return { calls: { request }, runtime, commands, exposure, deliver };
 }

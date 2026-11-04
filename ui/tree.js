@@ -84,11 +84,11 @@ function themeStyles() {
   };
 }
 
-// The bridge reports its lost calls and snapshots here. A count or a skipped call is not an error; each other report is shown.
+// The bridge reports its open, lost and late calls here. A count of the open calls is not an error; each other report is shown.
 const bridge = createViewBridge({
   handler: window.webkit.messageHandlers["sok-view"],
   report: (event) => {
-    if (event.kind === "open-calls" || event.kind === "skipped") return;
+    if (event.kind === "open-calls") return;
     showError(event.where ?? "view bridge", event.text ?? event.kind);
   },
 });

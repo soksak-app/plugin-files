@@ -6,7 +6,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createExpose } from "./expose.mjs";
-import { createSnapshotSender, SNAPSHOT_ACK_EVENT, SNAPSHOT_REQUEST_COMMAND } from "./snapshots.mjs";
 import { createViewBridge } from "./view.mjs";
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`../fixtures/contract/${name}.json`, import.meta.url), "utf8")).cases;
@@ -19,20 +18,17 @@ const EXCLUDED_CASES = {
   "expose.dom.act-rect-and-refusals": "the model answers no dom request (dom.act and dom.rect); the page registers dom names through expose.dom, which the view tests replay",
   "expose.dispose.removes-bindings": `${NOT_CALLED_BY_PAGE} expose.bind; the model has no binding`,
   "expose.bind.function-params-are-read-at-each-run": `${NOT_CALLED_BY_PAGE} expose.bind; the model has no binding`,
-  "snapshot.receiver.acknowledges-then-delivers": "the page receives no snapshot message; the receiver is the workbench side",
   "view.bridge.events-delivered-in-order": `${NOT_CALLED_BY_PAGE} a theme subscription; the theme reaches the page through the document-start script`,
   "view.bridge.refuses-malformed-host-message": "the view channel refuses a message without the marker before the bridge receives it",
   "view.bridge.tab-state-read-write": `${NOT_CALLED_BY_PAGE} tab.state; the plugin host has no tab state`,
 };
 const REPLAYED_COUNTS = {
   expose: 5,
-  "declared-ui-snapshot": 6,
-  "view-snapshot-pull": 5,
   "view-native": 4,
   "view-commands": 3,
-  "view-bridge": 5,
+  "view-bridge": 4,
 };
-const CASES_OF = ["expose", "declared-ui-snapshot", "view-snapshot-pull", "view-native", "view-commands", "view-bridge"];
+const CASES_OF = ["expose", "view-native", "view-commands", "view-bridge"];
 
 /** The cases of a copied file that replay: every case except the excluded ones. */
 function replayable(name) {
@@ -40,7 +36,7 @@ function replayable(name) {
 }
 
 // A window for a view page of the given url: the channel attaches its host message listener to window.sokView.
-function viewWindow(url = "sok://probe/") {
+function viewWindow(url = "soksak://probe/") {
   const location = new URL(url);
   globalThis.window = { location: { host: location.host, href: url }, sokView: { attach() {} } };
 }
@@ -105,71 +101,13 @@ test("expose cases replay against the exposure model", async () => {
   }
 });
 
-test("declared UI snapshot sender cases replay against the snapshot sender model", async () => {
-  for (const testCase of replayable("declared-ui-snapshot")) {
-    const sent = [];
-    const reports = [];
-    let acknowledge = null;
-    const sender = createSnapshotSender({
-      plugin: "demo",
-      send: (message) => sent.push(clone(message)),
-      onMessage: (listener) => { acknowledge = listener; },
-      report: (event) => reports.push(clone(event)),
-    });
-    for (const [index, step] of testCase.steps.entries()) {
-      const label = `${testCase.id}#${index}`;
-      const sentBefore = sent.length;
-      const reportsBefore = reports.length;
-      let result = null;
-      let throws = null;
-      try {
-        if (step.push) sender.push(step.push.status, step.push.value);
-        else if (step.ack) acknowledge({ event: SNAPSHOT_ACK_EVENT, plugin: "demo", status: step.ack.status, seq: step.ack.seq });
-        else if (step.peerLost !== undefined) sender.peerLost(step.peerLost);
-        else if (step.pull) result = sender.pull(step.pull.status);
-        else throw new Error(`unknown snapshot step in ${label}`);
-      } catch (failure) {
-        throws = errorText(failure);
-      }
-      const output = { sent: sent.slice(sentBefore), reports: reports.slice(reportsBefore), delivered: [], result, throws };
-      assert.deepEqual(output, step.output, label);
-    }
-  }
-});
-
-test("view snapshot pull cases replay against the view bridge model", async () => {
-  for (const testCase of replayable("view-snapshot-pull")) {
-    viewWindow();
-    const posted = [];
-    const reports = [];
-    const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) }, report: (event) => reports.push(clone(event)) });
-    for (const [index, step] of testCase.steps.entries()) {
-      const label = `${testCase.id}#${index}`;
-      const before = posted.length;
-      const reportsBefore = reports.length;
-      let throws = null;
-      try {
-        if (step.push) bridge.snapshots.push(step.push.status, step.push.value);
-        else if (step.fault !== undefined) bridge.fault(step.fault);
-        else if (step.request) bridge.deliver({ sok: 1, id: step.request.id, command: SNAPSHOT_REQUEST_COMMAND, params: step.request.params });
-        else throw new Error(`unknown pull step in ${label}`);
-      } catch (failure) {
-        throws = errorText(failure);
-      }
-      await settle();
-      assert.equal(throws, null, label);
-      assert.deepEqual({ posted: posted.slice(before), reports: reports.slice(reportsBefore) }, step.output, label);
-    }
-  }
-});
-
 test("view native cases replay against the view bridge model", async () => {
   for (const testCase of replayable("view-native")) {
     viewWindow();
     const posted = [];
     const delivered = [];
     const removers = new Map();
-    const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) }, report: () => {} });
+    const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) } });
     const answer = (reply) => bridge.deliver({ sok: 1, id: posted.at(-1).id, ...reply });
     const listenerOf = (label) => (data) => delivered.push({ listener: label, data: clone(data) });
     for (const [index, step] of testCase.steps.entries()) {
@@ -216,7 +154,7 @@ test("view command cases replay against the command model", async () => {
   for (const testCase of replayable("view-commands")) {
     viewWindow();
     const posted = [];
-    const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) }, report: () => {} });
+    const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) } });
     for (const [index, step] of testCase.steps.entries()) {
       const label = `${testCase.id}#${index}`;
       const before = posted.length;
@@ -255,7 +193,7 @@ test("view bridge cases replay against the view bridge model", async () => {
       try {
         if (step.action === "create") {
           viewWindow(step.input?.url);
-          bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) }, report: () => {} });
+          bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) } });
           output = step.output?.plugin === undefined ? { ready: true } : { ready: true, plugin: globalThis.window.location.host };
         } else if (step.action === "request") {
           pendingCall = bridge.calls.request(step.input.command, step.input.params);
