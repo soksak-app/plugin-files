@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P97: The core compatibility document states `^0.0.34`, the range that the package declares, and a test compares both documents with `engines.soksak`. Red: the test failed with `^0.0.24` against `^0.0.34`. Green: it passes.
 - P96: The tree and bookmarks section views serve `files.view.frames`, `files.view.history` and a ready status each, which `diagnostics.json` declares with the module `ui/section-diagnostics.js`, so the view benchmark of core measures both sections. `files.tree.view.ready` declares the text `test-project` of the head title and `files.bookmarks.view.ready` the text `북마크 없음` of the message line, the texts of the benchmark state, each as an enum of one string of the schema subset of core; each is ready only while its view shows the text, and the entries leave what a view shows unchanged. Red: 21 of 26 tests failed before the entries, 25 of 41 failed with the status `files.view.ready`, `required` and `const` failed the schema subset test and the public validator of core, a built status name failed the exposure check of core, and the fresh-state test failed with `ready: false` under the condition `project === null`. Green: `make test` and `make check` pass.
 - F432-files: `engines.soksak` is `^0.0.34`, and the version is 0.0.20. Red: the core version test failed on `^0.0.33`. Green: it passes.
 - P93: The tree and bookmarks sections show the text of the sidebar instead of the default serif text of a web view, and the bookmarks rows and message start at the gutter of the tree title.
