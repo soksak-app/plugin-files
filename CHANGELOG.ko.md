@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- F432-files: `engines.soksak`은 `^0.0.34`이고, version은 0.0.20이다. Red: core version test가 `^0.0.33`에서 실패했다. Green: 통과한다.
 - P93: tree와 bookmarks section이 web view 기본 serif 대신 sidebar의 글자를 보이고, bookmarks 행과 메시지가 tree 제목의 gutter에서 시작한다.
 - P92: file tree의 요청 id는 document를 나타내므로, surface의 이전 document 요청에 대한 응답은 오류 대신 `plugin.files.tree.reply.earlier`로 기록된다. Red: `the reply of an earlier document reported an error`가 실패했다. Green: `test/tree-view.test.mjs`가 통과한다.
 - P91: File tree의 각 row는 delegated root 아래에서 `files.select`를 가리키므로 binder audit이 연결되지 않은 row를 찾지 않는다. click 한 번은 select 요청 하나를 보낸다. Red: row에 `data-params`가 없었다. Green: `test/tree-view.test.mjs`가 통과한다.
