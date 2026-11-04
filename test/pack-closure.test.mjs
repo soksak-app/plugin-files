@@ -1,6 +1,6 @@
 // Checks the import maps and the files of the view pages of plugin.json (each section page) against the packed file list of
 // `npm pack --dry-run --json`. A page resolves its imports at its own origin, so each mapped core name must name a core target
-// (sok://core/), and each relative import must be a file of the package.
+// (soksak://core/), and each relative import must be a file of the package.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,7 +9,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const CORE_ROOT = "sok://core/";
+const CORE_ROOT = "soksak://core/";
 const manifest = JSON.parse(readFileSync(path.join(root, "plugin.json"), "utf8"));
 const PAGES = manifest.sections.map((section) => section.composition.page);
 
@@ -87,11 +87,11 @@ test("every file of each view page closure exists and is in the package", () => 
 // The plugin API names are built from parts, so this file does not contain the SDK name.
 const PLUGIN_API = "@soksak/" + "plugin-api";
 const VIEW_IMPORTS = {
-  "soksak": "sok://core/modules/soksak/dist/index.js",
-  [PLUGIN_API]: `sok://core/modules/${PLUGIN_API}/index.js`,
-  [`${PLUGIN_API}/view`]: `sok://core/modules/${PLUGIN_API}/view.js`,
-  [`${PLUGIN_API}/screen-hash`]: `sok://core/modules/${PLUGIN_API}/screen-hash.js`,
-  "@soksak/shared/": "sok://core/shared/",
+  "soksak": "soksak://core/modules/soksak/dist/index.js",
+  [PLUGIN_API]: `soksak://core/modules/${PLUGIN_API}/index.js`,
+  [`${PLUGIN_API}/view`]: `soksak://core/modules/${PLUGIN_API}/view.js`,
+  [`${PLUGIN_API}/screen-hash`]: `soksak://core/modules/${PLUGIN_API}/screen-hash.js`,
+  "@soksak/shared/": "soksak://core/shared/",
 };
 
 test("each view page begins with its doctype and holds no import map, because the host inserts the view import map", () => {
