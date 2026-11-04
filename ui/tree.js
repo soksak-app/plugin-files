@@ -5,6 +5,7 @@
 import { createBinder, createExpose } from "@soksak/plugin-api";
 import { createViewBridge } from "@soksak/plugin-api/view";
 import { FileTree, themeToTreeStyles } from "./vendor/trees.js";
+import { loadDiagnostics } from "./diagnostics.js";
 import { createEmitter } from "./events.js";
 import { expansionRequests, openablePath, PLACEHOLDER, pathDiff, treeOf, treePaths } from "./tree-model.js";
 
@@ -469,4 +470,18 @@ if (project === null) {
   await sidecar.on(session, onMessage);
   await sidecar.onFailure(session, onFailure);
   await refreshTree().catch((error) => showError("files tree", error));
+}
+
+// In a diagnostic build the view serves the section-view entries of its diagnostic module. Its head title shows the text of its status.
+const attachDiagnostics = await loadDiagnostics(start);
+if (attachDiagnostics !== null) {
+  await attachDiagnostics({
+    declaration: start.diagnostics,
+    status: "files.tree.view.ready",
+    registerStatus: (read, subscribe) => expose.status("files.tree.view.ready", read, subscribe),
+    commands: bridge.commands,
+    view: window,
+    content: title,
+    emitEvent,
+  });
 }

@@ -21,6 +21,7 @@ const MODELS = {
     { file: "binder.mjs", names: ["createBinder"] },
   ],
   "@soksak/plugin-api/view": [{ file: "view.mjs", names: ["createViewBridge"] }],
+  "@soksak/plugin-api/diagnostic-view-frames": [{ file: "view-frames.mjs", names: ["observeViewDocumentFrames"] }],
   "./vendor/trees.js": [{ file: "trees.mjs", names: ["FileTree", "themeToTreeStyles"] }],
 };
 

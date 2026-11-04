@@ -14,6 +14,7 @@
     "soksak": "^0.0.34"
   },
   "files": [
+    "diagnostics.json",
     "events.json",
     "plugin.json",
     "ui"

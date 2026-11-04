@@ -112,3 +112,19 @@ test("the closure of each view page imports only names of the view import map, a
     assert.ok(names.includes(`${PLUGIN_API}/view`), `${page} does not import the view bridge`);
   }
 });
+
+// The diagnostic module of diagnostics.json loads only in a diagnostic build, whose view import map adds the diagnostic view-frames
+// entry (core docs/spec/plugins.md#diagnostic-declarations). Its closure imports no other name, and each of its files is packed.
+const DIAGNOSTIC_IMPORTS = [...Object.keys(VIEW_IMPORTS), `${PLUGIN_API}/diagnostic-view-frames`];
+
+test("the closure of the diagnostic module imports only names of the diagnostic import map, and each of its files is packed", () => {
+  const diagnostics = JSON.parse(readText("diagnostics.json"));
+  const { files, names } = closureOf(diagnostics.module);
+  for (const name of names) {
+    const allowed = DIAGNOSTIC_IMPORTS.some((key) => (key.endsWith("/") ? name.startsWith(key) : name === key));
+    assert.ok(allowed, `${name} is imported by the closure of ${diagnostics.module} but is not in the diagnostic import map`);
+  }
+  assert.ok(names.includes(`${PLUGIN_API}/diagnostic-view-frames`), `${diagnostics.module} does not import the frame observer`);
+  const packed = packedFiles();
+  for (const file of ["diagnostics.json", ...files]) assert.ok(packed.has(file), `${file} is not in the package`);
+});

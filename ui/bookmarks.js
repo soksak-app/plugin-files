@@ -2,6 +2,8 @@
 // key bookmarks and removes a path through the declared command files.bookmarks.remove. The file tree view adds a path to the same key.
 import { createBinder, createExpose } from "@soksak/plugin-api";
 import { createViewBridge } from "@soksak/plugin-api/view";
+import { loadDiagnostics } from "./diagnostics.js";
+import { createEmitter } from "./events.js";
 
 const KEY = "bookmarks";
 const EMPTY_TEXT = "북마크 없음";
@@ -172,4 +174,20 @@ else {
     if (key === KEY) load();
   });
   await load();
+}
+
+// In a diagnostic build the view serves the section-view entries of its diagnostic module. Its message line shows the text of its
+// status.
+const attachDiagnostics = await loadDiagnostics(start);
+if (attachDiagnostics !== null) {
+  const emitEvent = createEmitter(bridge.runtime, "files");
+  await attachDiagnostics({
+    declaration: start.diagnostics,
+    status: "files.bookmarks.view.ready",
+    registerStatus: (read, subscribe) => expose.status("files.bookmarks.view.ready", read, subscribe),
+    commands: bridge.commands,
+    view: window,
+    content: message,
+    emitEvent,
+  });
 }

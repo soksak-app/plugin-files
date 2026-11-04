@@ -40,3 +40,28 @@ draws now: the elements with `data-item-path` in the open shadow root of the tre
 so the page marks each row when that root changes (a subtree mutation). Each bookmark row carries `files.bookmarks.item`, and its remove
 button carries `files.bookmarks.remove`. Both names declare `many` and have one provider each, which returns the rows drawn now, so a
 removed row is not provided.
+
+## Diagnostic entries
+
+`diagnostics.json` declares the section-view entries of the view benchmark of core (core `docs/spec/plugin-processes.md#section-views`)
+with the module `ui/section-diagnostics.js`, and `files` of `package.json` lists both. A view reads the declaration from `diagnostics` of
+its start values: start values without the member are an error, a `null` declaration loads nothing, and otherwise the view imports the
+module that the declaration names and serves the entries on its own surface once its first content is drawn.
+
+- `<section id>.view.ready` is the status `{ready, content, language}` of each view, and a view registers only its own under the name
+  written at its registration. The schema of `files.tree.view.ready` declares `content` as an enum of `test-project` and `language` as an
+  enum of `en-US`; that text is what the head title of the tree view shows in the project folder of the same name. The schema of
+  `files.bookmarks.view.ready` declares `content` as an enum of `북마크 없음` and `language` as an enum of `ko-KR`; that text is what the
+  message line of the bookmarks view shows in a project without bookmarks. That is the state in which the view benchmark opens a section,
+  and the entries change nothing that a view shows. Each schema of `diagnostics.json` uses only the schema subset of core, so a fixed
+  value is an enum of one entry. The module reads both values from the declaration of the start values, and a declaration without an
+  enum of one string is an error that names the status and the field. `ready` is true only while the element is in the document, not hidden, and shows the text, so another text turns it `false`,
+  and an error that replaces the text on the message line turns it `false` for the watchers of the status.
+- `files.view.history` answers `{length}`, the length of the session history of the view document.
+- `files.view.frames {action}` with `start` reads the theme colors `--card`, `--bg`, `--edge`, `--rule` and `--focus` of the root, each
+  as `#rrggbb` (another value is an error that names the token), and takes as `markerColor` the first of magenta, cyan, yellow, green,
+  red and blue that differs from each of them by more than 4 in at least one channel. It starts `observeViewDocumentFrames` on the view
+  document, writes each frame as `plugin.files.view.content_frame`, paints the root with `markerColor` through an adopted style sheet of
+  important declarations of `background-color` and `--card`, and answers `{enabled: true, sourceClock, markerColor}`, where `sourceClock`
+  is `{documentTimeOriginMs, sourceNowMs, sourceResolutionMs: 1}` of the document clock. `stop` stops the observer, removes the sheet and
+  answers `{enabled: false}`. A second `start`, a `stop` without a `start` and another action are errors.

@@ -36,3 +36,26 @@ Header button은 dom 이름을 가진다. 새로 고침 button은 `files.tree.re
 container의 열린 shadow root에서 `data-item-path`를 가진 요소를 돌려준다. Library는 행 요소에 대한 hook이 없으므로, page는 그 root가
 바뀔 때(subtree mutation) 각 행을 표시한다. 북마크 행마다 `files.bookmarks.item`을 가지며, 그 삭제 button은 `files.bookmarks.remove`를
 가진다. 두 이름 모두 `many`를 선언하고 provider를 하나씩 가지며, 그 provider는 지금 그려진 행을 돌려준다. 그래서 제거된 행은 제공되지 않는다.
+
+## 진단 entry
+
+`diagnostics.json`은 core view benchmark의 section-view entry(core `docs/spec/plugin-processes.md#section-views`)를 module
+`ui/section-diagnostics.js`와 함께 선언하고, `package.json`의 `files`가 둘을 나열한다. View는 시작 값의 `diagnostics`에서 선언을 읽는다.
+그 member가 없는 시작 값은 오류이고, `null` 선언은 아무것도 불러오지 않으며, 그 밖에는 view가 선언이 가리키는 module을 import하고 첫
+내용을 그린 뒤 자기 surface에서 entry를 제공한다.
+
+- `<section id>.view.ready`는 각 view의 status `{ready, content, language}`이고, view는 등록하는 자리에 이름을 그대로 써서 자기 status만
+  등록한다. `files.tree.view.ready`의 schema는 `content`를 enum `test-project`로, `language`를 enum `en-US`로 선언한다. 이 텍스트는 같은
+  이름의 project 폴더에서 tree view의 head 제목이 보이는 문구다. `files.bookmarks.view.ready`의 schema는 `content`를 enum `북마크 없음`으로,
+  `language`를 enum `ko-KR`로 선언한다. 이 텍스트는 bookmark 없는 project에서 bookmarks view의 message 줄이 보이는 문구다. View benchmark가
+  section을 여는 상태가 이것이며, entry는 view가 보이는 것을 바꾸지 않는다. `diagnostics.json`의 각 schema는 core의 schema subset만 쓰므로
+  고정 값은 항목 하나짜리 enum이다. Module은 두 값을 시작 값의 선언에서 읽고, 문자열 하나짜리 enum이 아닌 선언은 그 status와 field를
+  가리키는 오류다. `ready`는 요소가 document 안에 있고 숨겨지지 않았으며 텍스트를 보이는 동안에만 true다. 그래서 다른 텍스트는 `false`를 보고하고,
+  message 줄의 텍스트를 대신하는 오류는 status의 watcher에게 `false`를 알린다.
+- `files.view.history`는 view document의 session history 길이인 `{length}`로 답한다.
+- `files.view.frames {action}`의 `start`는 root의 theme 색 `--card`, `--bg`, `--edge`, `--rule`, `--focus`를 각각 `#rrggbb`로 읽고(다른
+  값은 그 token을 가리키는 오류다), magenta, cyan, yellow, green, red, blue 가운데 각 색과 적어도 한 channel에서 4보다 크게 다른 첫 색을
+  `markerColor`로 삼는다. View document에서 `observeViewDocumentFrames`를 시작하고, 각 frame을 `plugin.files.view.content_frame`으로
+  쓰며, `background-color`와 `--card`의 important 선언을 담은 adopted style sheet로 root를 `markerColor`로 칠하고,
+  `{enabled: true, sourceClock, markerColor}`로 답한다. `sourceClock`은 document 시계의 `{documentTimeOriginMs, sourceNowMs, sourceResolutionMs: 1}`이다.
+  `stop`은 observer를 멈추고 sheet를 지우며 `{enabled: false}`로 답한다. 두 번째 `start`, `start` 없는 `stop`, 다른 action은 오류다.

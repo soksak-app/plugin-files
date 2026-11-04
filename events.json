@@ -109,6 +109,60 @@
         ]
       },
       "description": "A reply of the files sidecar to a request of an earlier document of the surface, which the reloaded view does not wait for."
+    },
+    "plugin.files.view.content_frame": {
+      "layer": "plugin",
+      "class": "frame",
+      "level": "trace",
+      "fields": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0
+          },
+          "documentTimeOriginMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "firstResizeAtMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "resizeAtMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "resizeCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "frameTimeMs": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sequence",
+          "width",
+          "height",
+          "documentTimeOriginMs",
+          "firstResizeAtMs",
+          "resizeAtMs",
+          "resizeCount",
+          "frameTimeMs"
+        ]
+      },
+      "description": "The size of the root of a section view document at the animation frame after its resize, while files.view.frames is started: the first and latest resize times, their count and the frame time, in the clock of the view document. It records a size, not a presentation on the display."
     }
   }
 }

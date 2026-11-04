@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P96: tree와 bookmarks section view가 `files.view.frames`, `files.view.history`와 각자의 ready status를 제공하고, `diagnostics.json`이 이를 module `ui/section-diagnostics.js`와 함께 선언하므로 core의 view benchmark가 두 section을 잰다. `files.tree.view.ready`는 head 제목의 text `test-project`를, `files.bookmarks.view.ready`는 message 줄의 text `북마크 없음`을 core schema subset의 문자열 하나짜리 enum으로 선언하며 이는 benchmark 상태의 text다. 각 status는 view가 그 text를 보이는 동안에만 ready이고, entry는 view가 보이는 것을 바꾸지 않는다. Red: entry 전에 test 26개 가운데 21개가 실패했고, status가 `files.view.ready`일 때 41개 가운데 25개가 실패했으며, `required`와 `const`는 schema subset test와 core의 공개 validator에서 실패했고, 만든 status 이름은 core의 exposure check에서 실패했으며, 조건 `project === null` 아래 fresh 상태 test가 `ready: false`로 실패했다. Green: `make test`와 `make check`가 통과한다.
 - F432-files: `engines.soksak`은 `^0.0.34`이고, version은 0.0.20이다. Red: core version test가 `^0.0.33`에서 실패했다. Green: 통과한다.
 - P93: tree와 bookmarks section이 web view 기본 serif 대신 sidebar의 글자를 보이고, bookmarks 행과 메시지가 tree 제목의 gutter에서 시작한다.
 - P92: file tree의 요청 id는 document를 나타내므로, surface의 이전 document 요청에 대한 응답은 오류 대신 `plugin.files.tree.reply.earlier`로 기록된다. Red: `the reply of an earlier document reported an error`가 실패했다. Green: `test/tree-view.test.mjs`가 통과한다.

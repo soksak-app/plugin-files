@@ -29,6 +29,12 @@ class FakeElement {
     this.type = "";
     this.innerHTML = "";
   }
+  // An element is connected when its parents reach the root of its document, as Node.isConnected.
+  get isConnected() {
+    let node = this;
+    while (node.parent) node = node.parent;
+    return node.tagName === "HTML";
+  }
   // An element that already has a parent moves to this one, as in the DOM.
   append(...nodes) {
     for (const node of nodes) {
@@ -139,6 +145,8 @@ export function installViewWindow({ start, plugin = "files", runtime }) {
   globalThis.location = { host: plugin, href: `soksak://${plugin}/ui/page.html` };
   globalThis.window = globalThis;
   globalThis.sokSurface = start;
+  // A view document starts with one entry of its session history.
+  globalThis.history = { length: 1 };
   globalThis.sokView = {
     page: "page-1",
     timeOrigin: 0,
