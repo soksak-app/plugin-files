@@ -15,11 +15,11 @@ const start = window.sokSurface;
  */
 const STYLE = `
 .files-bookmarks{list-style:none;margin:0;padding:0}
-.files-bookmarks__row{display:flex;align-items:center;gap:8px;min-height:24px}
+.files-bookmarks__row{display:flex;align-items:center;gap:8px;min-height:24px;padding:0 11.5px}
 .files-bookmarks__path{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .files-bookmarks__remove{flex:0 0 auto;padding:0 2px;border:0;background:none;color:var(--muted);font:inherit;cursor:pointer}
 .files-bookmarks__remove:hover{color:var(--fg)}
-.files-bookmarks__message{color:var(--muted)}
+.files-bookmarks__message{padding:0 11.5px;color:var(--muted)}
 `;
 
 // The bridge reports its lost calls and snapshots here. A count or a skipped call is not an error; each other report is shown.

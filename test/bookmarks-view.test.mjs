@@ -46,6 +46,23 @@ async function startBookmarks({ store = { bookmarks: [] }, dataFault = null }) {
 
 const rowsOf = (root) => findAll(root, (element) => element.className === "files-bookmarks__row");
 
+// A web view shows its default serif text of 16px unless the page states the text of the sidebar.
+for (const page of ["tree.html", "bookmarks.html"]) {
+  test(`${page} states the text of the sidebar on its body`, { timeout: 1000 }, () => {
+    const text = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "ui", page), "utf8");
+    assert.match(text, /body \{[^}]*font: 12px\/1\.4 var\(--font\)/, `${page} states no font on its body`);
+    assert.match(text, /body \{[^}]*color: var\(--fg\)/, `${page} states no text color on its body`);
+  });
+}
+
+test("the rows and the message of the bookmarks view start at the gutter of the tree title", async () => {
+  await startBookmarks({});
+  const rules = globalThis.document.adoptedStyleSheets.map((sheet) => sheet.text).join("");
+  for (const name of ["row", "message"]) {
+    assert.match(rules, new RegExp(`\\.files-bookmarks__${name}\\{[^}]*padding:0 11\\.5px`), `the ${name} has no gutter`);
+  }
+});
+
 test("the bookmarks view reads the stored bookmarks of the project and draws one row for each", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
   const reads = view.host.posted.filter((message) => message.command === "runtime.data.get");
