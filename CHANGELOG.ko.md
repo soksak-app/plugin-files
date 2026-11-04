@@ -2,6 +2,8 @@
 
 [English](CHANGELOG.md)
 
+- P100: changelog가 기록 없이 체크리스트에서 빠진 P14의 폐기를 기록한다.
+- 체크리스트 항목 `P14` 폐기: 체크리스트 항목은 프로젝트 작업을 담는데, 이 항목은 record 규칙의 적용을 담았다.
 - P99: pack closure test는 publish된 core의 view import map을 `soksak://core/`에서 기대한다. package는 import map을 싣지 않으므로 바뀌지 않는다. Red: publish된 항목과 이전 core root로 test가 실패했다. Green: 통과한다.
 - P98: plugin API case 사본은 publish된 core 0.0.34의 contract 파일이고, release가 싣는 `contract-copies.json`이 각 사본을 SHA-256과 함께 적으며, test가 선언과 사본을 비교한다. core가 제거한 declared UI snapshot의 사본과 model은 없어졌고, view bridge model은 `soksak://` page를 요구한다. Red: 이전 사본에서 test가 실패했다. Green: 통과한다.
 - P97: core 호환성 문서는 package가 선언한 범위 `^0.0.34`를 적고, test가 두 문서를 `engines.soksak`과 비교한다. Red: test가 `^0.0.34`에 대한 `^0.0.24`로 실패했다. Green: 통과한다.
