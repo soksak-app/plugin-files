@@ -151,7 +151,7 @@ const binder = createBinder((name, params) => bridge.runtime.command(name, param
 });
 const COMMANDS = ["files.refresh", "files.select", "files.open", "files.open.failed", "files.tree.toggle", "files.bookmarks.add"];
 
-// The exposure of the page: the declared status files.tree and the dom names of the header buttons. The requests of the surface
+// The exposure of the page: the declared status files.tree and the element names of the header buttons. The requests of the surface
 // arrive as the host event exposure-request and are answered through exposureReply (core docs/spec/native-surfaces.md#view-surfaces).
 const expose = createExpose({
   register: (kind, name) => bridge.exposure.register(kind, name),
@@ -439,9 +439,9 @@ await Promise.all([
     statusListeners.add(listener);
     return () => statusListeners.delete(listener);
   }),
-  expose.dom("files.tree.refresh", refresh),
-  expose.dom("files.tree.row", treeRows),
-  expose.dom("files.bookmarks.add", star),
+  expose.element("files.tree.refresh", refresh),
+  expose.element("files.tree.row", treeRows),
+  expose.element("files.bookmarks.add", star),
   bridge.commands.register("files.refresh", handlers["files.refresh"]),
   bridge.commands.register("files.select", handlers["files.select"]),
   bridge.commands.register("files.tree.toggle", handlers["files.tree.toggle"]),

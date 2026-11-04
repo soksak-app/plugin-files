@@ -4,6 +4,7 @@
 
 - P100: The changelog records the retirement of P14, which left the checklist without a record.
 - Retired checklist entry `P14`: a checklist entry holds project work, and this entry held the application of a record rule.
+- P94: The plugin declares its exposed elements in `exposes.element` and registers them through `expose.element`, as core F502-13 renames the exposure kind `dom` to `element`; `engines.soksak` is `^0.0.35`, the core release of F502-13. Red: 7 of 148 tests failed on element entries, and the core version test failed on `^0.0.34`. Green: the tests that the change touches pass.
 - P99: The pack closure test expects the view import map of the published core at `soksak://core/`; the package carries no import map, so it does not change. Red: the test failed with the published entries against the earlier core root. Green: it passes.
 - P98: The plugin API case copies are the contract files of the published core 0.0.34, and `contract-copies.json`, which the release carries, names each copy with its SHA-256; a test compares the declaration with the copies. The copies and the model of the declared UI snapshot, which core removed, are gone, and the view bridge model requires a `soksak://` page. Red: the test failed on the earlier copies. Green: it passes.
 - P97: The core compatibility document states `^0.0.34`, the range that the package declares, and a test compares both documents with `engines.soksak`. Red: the test failed with `^0.0.24` against `^0.0.34`. Green: it passes.

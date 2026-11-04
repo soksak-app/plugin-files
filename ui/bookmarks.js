@@ -49,7 +49,7 @@ const binder = createBinder((name, params) => bridge.runtime.command(name, param
   },
 });
 
-// The exposure of the page: the declared status files.bookmarks and the dom names of the items and their remove buttons. The
+// The exposure of the page: the declared status files.bookmarks and the element names of the items and their remove buttons. The
 // requests of the surface arrive as the host event exposure-request and are answered through exposureReply.
 const expose = createExpose({
   register: (kind, name) => bridge.exposure.register(kind, name),
@@ -162,8 +162,8 @@ await Promise.all([
     return () => statusListeners.delete(listener);
   }),
   // The providers read the rows as they are drawn now, so a removed row is not kept by the page.
-  expose.dom("files.bookmarks.item", () => [...rowsByPath.values()].map((drawnRow) => drawnRow.row)),
-  expose.dom("files.bookmarks.remove", () => [...rowsByPath.values()].map((drawnRow) => drawnRow.remove)),
+  expose.element("files.bookmarks.item", () => [...rowsByPath.values()].map((drawnRow) => drawnRow.row)),
+  expose.element("files.bookmarks.remove", () => [...rowsByPath.values()].map((drawnRow) => drawnRow.remove)),
   bridge.commands.register("files.bookmarks.remove", remove),
 ]);
 if (project === null) showMessage(NO_PROJECT_TEXT);

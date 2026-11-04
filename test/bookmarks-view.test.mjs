@@ -141,20 +141,20 @@ test("the bookmarks status sends the changed list as a changed event when a remo
 test("the bookmark items and remove buttons are one provider each, which reads the rows drawn now", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
   const { created } = await import("../build/test/sdk-models/expose.mjs");
-  const doms = created.at(-1).doms;
-  const registered = registeredEntries(view.host).filter((entry) => entry.kind === "dom").map((entry) => entry.name);
+  const elements = created.at(-1).elements;
+  const registered = registeredEntries(view.host).filter((entry) => entry.kind === "element").map((entry) => entry.name);
   assert.equal(registered.filter((name) => name === "files.bookmarks.item").length, 1, "the item name is registered once");
   assert.equal(registered.filter((name) => name === "files.bookmarks.remove").length, 1, "the remove name is registered once");
-  assert.equal(doms.get("files.bookmarks.item").length, 1, "one provider serves the item name");
-  assert.equal(doms.get("files.bookmarks.remove").length, 1, "one provider serves the remove name");
-  const items = () => doms.get("files.bookmarks.item")[0]();
+  assert.equal(elements.get("files.bookmarks.item").length, 1, "one provider serves the item name");
+  assert.equal(elements.get("files.bookmarks.remove").length, 1, "one provider serves the remove name");
+  const items = () => elements.get("files.bookmarks.item")[0]();
   assert.deepEqual(items().map((row) => row.dataset.expose), ["files.bookmarks.item", "files.bookmarks.item"]);
   const [remove] = findAll(globalThis.document.body, (element) => element.dataset.params === JSON.stringify({ path: "src/main.go" }));
   assert.equal(remove.dataset.expose, "files.bookmarks.remove", "the remove button of the first row carries its name");
   remove.click();
   await settle();
   assert.equal(items().length, 1, "the removed row is not provided");
-  assert.deepEqual(doms.get("files.bookmarks.remove")[0]().map((button) => button.dataset.params), [JSON.stringify({ path: "readme.md" })]);
-  assert.equal(doms.get("files.bookmarks.item").length, 1, "a removal registers no provider");
+  assert.deepEqual(elements.get("files.bookmarks.remove")[0]().map((button) => button.dataset.params), [JSON.stringify({ path: "readme.md" })]);
+  assert.equal(elements.get("files.bookmarks.item").length, 1, "a removal registers no provider");
   assert.deepEqual(view.host.errors, []);
 });

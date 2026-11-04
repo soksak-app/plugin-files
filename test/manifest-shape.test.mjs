@@ -38,17 +38,17 @@ test("each section page loads its view module", () => {
   }
 });
 
-// The views expose their visible state: the statuses of the tree and the bookmarks, and the dom names of their buttons and items.
-test("the plugin declares the statuses of the views and the dom names of their elements", () => {
+// The views expose their visible state: the statuses of the tree and the bookmarks, and the element names of their buttons and items.
+test("the plugin declares the statuses of the views and the element names of their elements", () => {
   assert.deepEqual(manifest.exposes.status.map((entry) => entry.name), ["files.tree", "files.bookmarks"]);
-  assert.deepEqual(manifest.exposes.dom.map((entry) => entry.name), [
+  assert.deepEqual(manifest.exposes.element.map((entry) => entry.name), [
     "files.tree.refresh",
     "files.tree.row",
     "files.bookmarks.add",
     "files.bookmarks.item",
     "files.bookmarks.remove",
   ]);
-  assert.deepEqual(manifest.exposes.dom.filter((entry) => entry.many).map((entry) => entry.name), ["files.tree.row", "files.bookmarks.item", "files.bookmarks.remove"]);
+  assert.deepEqual(manifest.exposes.element.filter((entry) => entry.many).map((entry) => entry.name), ["files.tree.row", "files.bookmarks.item", "files.bookmarks.remove"]);
 });
 
 test("the section modules of the earlier sidebar form are removed", () => {

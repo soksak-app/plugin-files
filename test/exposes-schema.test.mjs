@@ -15,7 +15,7 @@ const SCHEMA_TYPES = ["string", "number", "integer", "boolean", "object", "array
 const ENTRY_FIELDS = {
   status: ["name", "description", "schema"],
   commands: ["name", "description", "params", "result", "timeout"],
-  dom: ["name", "description", "many"],
+  element: ["name", "description", "many"],
 };
 
 function schemaViolations(where, schema) {

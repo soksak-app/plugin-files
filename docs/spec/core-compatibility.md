@@ -2,6 +2,8 @@
 
 [한국어](core-compatibility.ko.md)
 
-The files package declares `engines.soksak: "^0.0.34"`, which admits core release `0.0.34` under the core version-range rules and
-excludes earlier versions and later unverified versions. Core `0.0.34` accepts its `plugin.json`, whose `sections` take the section view
-form of core `docs/spec/plugins.md#sections`, a `composition` and a `height`.
+The files package declares `engines.soksak: "^0.0.35"`, which admits core release `0.0.35`, the release of core F502-13
+(F502-13-1), under the core version-range rules and excludes earlier versions and later unverified versions. Its `plugin.json` declares
+its exposed elements in `exposes.element`: core `0.0.34` and earlier accept only the exposes kinds `status`, `commands` and `dom`, so
+they refuse `element`, and core `0.0.35` refuses `exposes.dom`. Its `sections` take the section view form of core
+`docs/spec/plugins.md#sections`, a `composition` and a `height`. The package release waits for the publication of core `0.0.35` (P95).

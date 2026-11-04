@@ -1,10 +1,10 @@
 // A consumer-side model of createExpose of the plugin API, for the replay of test/fixtures/contract/expose.json.
 // It covers the status registration and its request methods (status.get, status.watch, status.unwatch), the changed calls of
-// a status watch (port.changed), the dom registration (expose.dom with an element, which marks it with its name, or with a
-// provider function, which the page marks itself; the dom requests dom.act and dom.rect are not modeled) and the dispose,
+// a status watch (port.changed), the element registration (expose.element with an element, which marks it with its name, or
+// with a provider function, which the page marks itself; the element requests element.act and element.rect are not modeled) and the dispose,
 // which the plugin host page calls. The conformance test lists the cases of the fixture that the model does not cover.
 const CODE_UNKNOWN_STATUS = 1001;
-// Each created exposure, with the providers of each dom name: created.at(-1).doms.get(name) lists the provider functions.
+// Each created exposure, with the providers of each element name: created.at(-1).elements.get(name) lists the provider functions.
 export const created = [];
 const CODE_METHOD_NOT_FOUND = -32601;
 
@@ -16,11 +16,11 @@ export function createExpose(port, load) {
   // The values of a watched status leave the model only through port.changed, which the SDK requires.
   if (typeof port.changed !== "function") throw new TypeError("createExpose requires the port changed function");
   const statuses = new Map();
-  // The providers of the dom names registered by the page. A name is registered with the port once, and a name that is not
+  // The providers of the element names registered by the page. A name is registered with the port once, and a name that is not
   // declared many accepts one provider, as the SDK does.
-  const doms = new Map();
+  const elements = new Map();
   let disposed = false;
-  created.push({ doms });
+  created.push({ elements });
 
   // A value of a watched status is sent when its JSON text differs from the last sent text, with the next version (as the SDK).
   const update = (entry, value) => {
@@ -83,15 +83,15 @@ export function createExpose(port, load) {
   }
 
   /**
-   * Registers a dom name. An element is marked with the name and provides itself; a function returns the current elements and
+   * Registers an element name. An element is marked with the name and provides itself; a function returns the current elements and
    * marks none, so the page marks each element it draws.
    */
-  async function dom(name, target) {
+  async function element(name, target) {
     if (disposed) throw new Error("exposure is disposed");
     const declarations = await load();
-    const declared = (declarations.dom ?? []).find((entry) => entry.name === name);
-    if (!declared) throw new Error(`dom ${name} is not declared`);
-    if (!declared.many && doms.has(name)) throw new Error(`dom ${name} is already registered`);
+    const declared = (declarations.element ?? []).find((entry) => entry.name === name);
+    if (!declared) throw new Error(`element ${name} is not declared`);
+    if (!declared.many && elements.has(name)) throw new Error(`element ${name} is already registered`);
     let provide;
     if (typeof target === "function") {
       provide = target;
@@ -99,11 +99,11 @@ export function createExpose(port, load) {
       target.dataset.expose = name;
       provide = () => [target];
     } else {
-      throw new TypeError(`dom ${name} takes an element or a function that returns the current elements`);
+      throw new TypeError(`element ${name} takes an element or a function that returns the current elements`);
     }
-    const first = !doms.has(name);
-    doms.set(name, [...(doms.get(name) ?? []), provide]);
-    if (first) await port.register("dom", name);
+    const first = !elements.has(name);
+    elements.set(name, [...(elements.get(name) ?? []), provide]);
+    if (first) await port.register("element", name);
   }
 
   /**
@@ -121,5 +121,5 @@ export function createExpose(port, load) {
     await port.unregister?.();
   }
 
-  return { status, dom, dispose };
+  return { status, element, dispose };
 }

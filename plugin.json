@@ -200,7 +200,7 @@
         }
       }
     ],
-    "dom": [
+    "element": [
       {
         "name": "files.tree.refresh",
         "description": "The refresh button of the file tree header, which lists the project folder again."

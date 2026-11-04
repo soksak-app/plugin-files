@@ -221,22 +221,22 @@ test("the message row of the tree status shows the text of a failed listing", as
   assert.deepEqual(replyOf(view.host, id), { result: { rows: [], message: text } });
 });
 
-test("the refresh and star buttons carry their declared dom names", async () => {
+test("the refresh and star buttons carry their declared element names", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const named = (name) => findAll(globalThis.document.body, (element) => element.dataset.expose === name);
   assert.equal(named("files.tree.refresh").length, 1, "the refresh button carries files.tree.refresh");
   assert.equal(named("files.bookmarks.add").length, 1, "the star button carries files.bookmarks.add");
   const registered = registeredEntries(view.host);
-  assert.ok(registered.some((entry) => entry.kind === "dom" && entry.name === "files.tree.refresh"));
-  assert.ok(registered.some((entry) => entry.kind === "dom" && entry.name === "files.bookmarks.add"));
+  assert.ok(registered.some((entry) => entry.kind === "element" && entry.name === "files.tree.refresh"));
+  assert.ok(registered.some((entry) => entry.kind === "element" && entry.name === "files.bookmarks.add"));
 });
 
 test("the tree rows are one provider that reads the rows the library draws, and each drawn row carries files.tree.row", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const { created } = await import("../build/test/sdk-models/expose.mjs");
-  const registered = registeredEntries(view.host).filter((entry) => entry.kind === "dom" && entry.name === "files.tree.row");
+  const registered = registeredEntries(view.host).filter((entry) => entry.kind === "element" && entry.name === "files.tree.row");
   assert.equal(registered.length, 1, "files.tree.row is registered once");
-  const providers = created.at(-1).doms.get("files.tree.row");
+  const providers = created.at(-1).elements.get("files.tree.row");
   assert.equal(providers?.length, 1, "one provider serves the name");
   const rows = providers[0]();
   assert.deepEqual(rows.map((row) => row.dataset.itemPath), ["src/", "src/main.go", "readme.md"]);
@@ -246,7 +246,7 @@ test("the tree rows are one provider that reads the rows the library draws, and 
 test("each drawn row runs files.select with its path, and a click on it selects once", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const { created } = await import("../build/test/sdk-models/expose.mjs");
-  const rows = created.at(-1).doms.get("files.tree.row")[0]();
+  const rows = created.at(-1).elements.get("files.tree.row")[0]();
   assert.deepEqual(rows.map((row) => [row.dataset.command, JSON.parse(row.dataset.params)]),
     [["files.select", { path: "src" }], ["files.select", { path: "src/main.go" }], ["files.select", { path: "readme.md" }]]);
   rows.at(-1).click();
@@ -260,7 +260,7 @@ test("each drawn row runs files.select with its path, and a click on it selects 
 test("a row that the library draws later is marked, and a row it removes is not provided", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const { created } = await import("../build/test/sdk-models/expose.mjs");
-  const rows = () => created.at(-1).doms.get("files.tree.row")[0]();
+  const rows = () => created.at(-1).elements.get("files.tree.row")[0]();
   view.tree.batch([{ type: "add", path: "notes.txt" }]);
   await settle();
   const added = rows().find((row) => row.dataset.itemPath === "notes.txt");
@@ -269,5 +269,5 @@ test("a row that the library draws later is marked, and a row it removes is not 
   view.tree.batch([{ type: "remove", path: "readme.md" }]);
   await settle();
   assert.deepEqual(rows().map((row) => row.dataset.itemPath).includes("readme.md"), false);
-  assert.equal(created.at(-1).doms.get("files.tree.row").length, 1, "the changes register no provider");
+  assert.equal(created.at(-1).elements.get("files.tree.row").length, 1, "the changes register no provider");
 });
