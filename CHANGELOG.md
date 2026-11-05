@@ -35,6 +35,8 @@
 
 ## Unreleased
 
+- F466-files: The repository pins the kit release that reports a citation of a local build log or a temporary log.
+- F467-files: The repository pins `@soksak/kit`.
 - F463-files: The repository uses the checks kit and its one executable `soksak-check`.
 - F462-files: `engines.soksak` is `^0.0.35`, and the version is 0.0.21. Red: the core version test failed on `^0.0.34`. Green: it passes.
 - F367-files: `engines.soksak` is `^0.0.29`, and the version is 0.0.15. Red: the core version test failed on `^0.0.28`. Green: it passes.
