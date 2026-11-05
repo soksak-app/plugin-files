@@ -75,6 +75,11 @@ async function startTree({ sidecar, store = { bookmarks: [] } }) {
         queueMicrotask(() => view.deliver({ event: "sidecar.message", data: { id: params.id, body: { id: params.body.id, ...reply } } }));
         return null;
       }
+      if (command === "runtime.data.replace") {
+        if (JSON.stringify(store[params.key]) !== JSON.stringify(params.base)) return false;
+        store[params.key] = structuredClone(params.value);
+        return true;
+      }
       if (command === "runtime.data.get") return structuredClone(store[params.key]);
       if (command === "runtime.data.set") {
         store[params.key] = structuredClone(params.value);
@@ -161,6 +166,24 @@ test("the star button adds the selected file to the stored bookmarks", async () 
   await settle();
   assert.deepEqual(view.store.bookmarks, ["readme.md"]);
   assert.deepEqual(view.host.errors, []);
+});
+
+test("two adds at the same moment keep both paths", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  view.host.deliver({ id: "add-1", command: "files.bookmarks.add", params: { path: "a.txt" } });
+  view.host.deliver({ id: "add-2", command: "files.bookmarks.add", params: { path: "b.txt" } });
+  await settle();
+  assert.deepEqual([...view.store.bookmarks].sort(), ["a.txt", "b.txt"]);
+  assert.deepEqual(view.host.errors, []);
+});
+
+test("adding a stored path writes nothing", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  view.store.bookmarks = ["a.txt"];
+  view.host.deliver({ id: "add-1", command: "files.bookmarks.add", params: { path: "a.txt" } });
+  await settle();
+  assert.deepEqual(view.store.bookmarks, ["a.txt"]);
+  assert.deepEqual(view.host.posted.filter((message) => message.command === "runtime.data.replace"), []);
 });
 
 test("the tree status reports each visible row with its path, kind, depth, expansion and selection", async () => {

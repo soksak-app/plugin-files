@@ -23,7 +23,7 @@ Each user action is a declared command of the view: `files.refresh`, `files.sele
 ## Bookmarks view
 
 The view reads the project data key `bookmarks` (a list of paths) with `runtime.data.get` and removes a path with the command
-`files.bookmarks.remove`, which writes the list through `runtime.data.set`. The view subscribes with `runtime.data.on` before its first read,
+`files.bookmarks.remove`, which changes the list through `runtime.data.change`, as `files.bookmarks.add` of the tree view does, so a change of the other view between the read and the write is kept. The view subscribes with `runtime.data.on` before its first read,
 and it re-reads the list when a change event names the key `bookmarks`; a change of another key reads nothing. A stored value that is not a
 list of paths is an error, and the list is not drawn from it.
 

@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P103: Two changes of the bookmarks at the same moment keep both, also between the tree view and the bookmarks view.
 - P102: A double click on a file row opens that file even when the reply to the selection of its first press has not come.
 - P100: The changelog records the retirement of P14, which left the checklist without a record.
 - Retired checklist entry `P14`: a checklist entry holds project work, and this entry held the application of a record rule.
