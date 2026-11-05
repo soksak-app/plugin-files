@@ -11,11 +11,6 @@ const exists = (path) => existsSync(new URL(`../${path}`, import.meta.url));
 const manifest = JSON.parse(read("plugin.json"));
 const pkg = JSON.parse(read("package.json"));
 
-test("the plugin requires the current files sidecar process identity release", () => {
-  assert.equal(manifest.dependencies["@soksak/sidecar-files"], ">=0.0.9");
-  assert.equal(pkg.version, "0.0.21");
-});
-
 test("plugin.json declares the two sections as views of their pages, with the tree filling the sidebar", () => {
   assert.deepEqual(manifest.sections, [
     { id: "files.tree", name: "파일 트리", composition: { kind: "view", page: "ui/tree.html" }, height: "fill" },

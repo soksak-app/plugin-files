@@ -1,5 +1,7 @@
 # 기능
 
+- [o] F476-files — P2, core F476과 연결: test는 선언된 version을 되풀이하지 않는다. 입력: test가 자기가 선언한 version과 범위의 assertion을 가져, 동작 변경 없이 release마다 바뀌었다. 결과: 이를 지웠고 `make test`가 통과한다.
+- [o] F474-files — P0, core F474와 연결: plugin이 `engines.soksak` `^0.0.36`를 선언해 core release 0.0.36이 설치하고, version은 0.0.22이다. Red: `test/core-version.test.mjs`가 `^0.0.35`에서 실패했다. Green: 통과한다. 결과: release run이 v0.0.22을 게시했고 registry가 이를 올리며, 게시된 core 0.0.36의 `sok plugin install`이 이를 선택한다.
 - [o] F472-files — P2, core F472와 연결: 저장소의 명령 이름이 하는 일을 말하고, `make check`가 `sok-check commands`를 실행한다. 결과: `make test`가 통과한다.
 - [~] P103 — P0: 같은 순간의 북마크 변경 둘이 모두 남는다. 입력: `files.bookmarks.add`와 `files.bookmarks.remove`가 목록을 `runtime.data.get`으로 읽고 `runtime.data.set`으로 쓰므로, 두 호출 사이에 온 추가나 삭제를 잃고도 둘 다 `null`을 답했다. 기대: 두 명령은 core가 더하는 SDK의 `runtime.data.change`로 목록을 바꾸고, tree view와 bookmarks view 사이에서도 각 변경이 남는다. 남은 일: `engines.soksak`가 `runtime.data.replace`를 제공하는 core release를 가리켜야 한다. 그 core release를 기다린다.
 - [o] P102 — P0: 파일 행의 double click은 그 파일을 연다. 입력: tree는 선택된 파일을 열었고 첫 press의 선택은 sidecar 응답 뒤에야 생기므로, 응답 전에 온 두 번째 press는 아무것도 열지 않았다. 기대: double click은 응답 상태와 상관없이 자기 행의 파일을 연다. 폴더와 행 밖은 아무것도 열지 않는다. Enter는 선택된 행을 연다.
