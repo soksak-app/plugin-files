@@ -26,6 +26,7 @@
 
 ## Unreleased
 
+- F468-files: The repository runs `soksak-check docs` and `soksak-check events` of the kit with `event-sources.json`.
 - F466-files: The repository pins the kit release that reports a citation of a local build log or a temporary log.
 - F467-files: The repository pins `@soksak/kit`.
 - F463-files: The repository uses the checks kit and its one executable `soksak-check`.
