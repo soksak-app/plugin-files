@@ -34,6 +34,7 @@
 
 ## 미배포
 
+- F462-files: `engines.soksak`은 `^0.0.35`이고, version은 0.0.21이다. Red: core version test가 `^0.0.34`에서 실패했다. Green: 통과한다.
 - F367-files: `engines.soksak`은 `^0.0.29`이고, version은 0.0.15다. Red: core version test가 `^0.0.28`에서 실패했다. Green: 통과한다.
 - F364-files: `engines.soksak`은 `^0.0.28`이고, version은 0.0.14다. Red: core version test가 `^0.0.27`에서 실패했다. Green: 통과한다.
 - F360-files: `engines.soksak`는 `^0.0.27`이므로 core 0.0.27이 plugin을 설치하며, version은 0.0.13다. Red: `the files package requires only core 0.0.27`가 `^0.0.26`에서 실패했다. Green: 통과한다.
