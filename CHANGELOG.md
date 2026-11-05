@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- F479-files: The release run published v0.0.23, and the registry lists it.
 - F479-files: `engines.soksak` is `^0.0.37`, and the version is 0.0.23.
 - F476-files: The tests repeat no declared version.
 - F474-files: The release run published v0.0.22, and the registry lists it.
