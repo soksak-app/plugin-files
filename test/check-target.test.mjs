@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const make = (...args) => execFileSync("make", args, { cwd: root, encoding: "utf8" });
-const KIT_TOOLS = ["soksak-check events", "soksak-check docs"];
+const KIT_TOOLS = ["sok-check events", "sok-check docs"];
 
 test("test runs plugin tests only", () => {
   const output = make("-n", "test");
@@ -27,7 +27,7 @@ test("check runs the kit checks without running plugin tests", () => {
 
 test("pack runs check before pnpm pack", () => {
   const output = make("-n", "pack", "OUT=/tmp/files-check-package");
-  const check = output.indexOf("soksak-check events");
+  const check = output.indexOf("sok-check events");
   const pack = output.indexOf("pnpm pack --pack-destination /tmp/files-check-package");
   assert.ok(check >= 0, "pack omitted the check prerequisites");
   assert.ok(pack > check, "pack ran before check");

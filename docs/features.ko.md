@@ -1,5 +1,6 @@
 # 기능
 
+- [o] F472-files — P2, core F472와 연결: 저장소의 명령 이름이 하는 일을 말하고, `make check`가 `sok-check commands`를 실행한다. 결과: `make test`가 통과한다.
 - [~] P103 — P0: 같은 순간의 북마크 변경 둘이 모두 남는다. 입력: `files.bookmarks.add`와 `files.bookmarks.remove`가 목록을 `runtime.data.get`으로 읽고 `runtime.data.set`으로 쓰므로, 두 호출 사이에 온 추가나 삭제를 잃고도 둘 다 `null`을 답했다. 기대: 두 명령은 core가 더하는 SDK의 `runtime.data.change`로 목록을 바꾸고, tree view와 bookmarks view 사이에서도 각 변경이 남는다. 남은 일: `engines.soksak`가 `runtime.data.replace`를 제공하는 core release를 가리켜야 한다. 그 core release를 기다린다.
 - [o] P102 — P0: 파일 행의 double click은 그 파일을 연다. 입력: tree는 선택된 파일을 열었고 첫 press의 선택은 sidecar 응답 뒤에야 생기므로, 응답 전에 온 두 번째 press는 아무것도 열지 않았다. 기대: double click은 응답 상태와 상관없이 자기 행의 파일을 연다. 폴더와 행 밖은 아무것도 열지 않는다. Enter는 선택된 행을 연다.
 - [ ] P101 — P1, records kit KR14, KR15와 연결: push check와 CI가 kit의 체크리스트 이력 검사를 실행한다. 입력: `package.json`이 pin한 kit 0.0.6에는 `soksak-records --range`가 없어, 이 repository의 어떤 검사도 체크리스트를 이전 text와 비교하지 않는다. 기대: KR14와 KR15를 담은 kit release 뒤에 `package.json`이 그 release를 pin하고, `make push-check`가 push 범위에 `soksak-records --range`를 실행하고, CI가 event의 범위에 이를 실행한다.
