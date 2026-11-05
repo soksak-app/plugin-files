@@ -89,7 +89,7 @@ async function startTree({ sidecar, store = { bookmarks: [] } }) {
   await settle();
   const { trees } = await import("../build/test/sdk-models/trees.mjs");
   assert.equal(trees.length, before + 1, "the page created one tree");
-  return { host, sent, store, tree: trees.at(-1), sendsOf: (operation) => sent.filter((body) => body.operation === operation) };
+  return { host, sent, opened: () => host.posted.filter((message) => message.command === "core.file.open").map((message) => message.params.path), store, tree: trees.at(-1), sendsOf: (operation) => sent.filter((body) => body.operation === operation) };
 }
 
 test("the tree view asks the sidecar for the project root and draws its rows", async () => {
@@ -255,6 +255,28 @@ test("each drawn row runs files.select with its path, and a click on it selects 
   rows.at(-1).click();
   await settle();
   assert.deepEqual(view.sendsOf("select").map(({ path }) => path), ["readme.md"], "a click on the selected row sends nothing");
+});
+
+test("a double click opens the file of its row without waiting for the reply of the select", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const { created } = await import("../build/test/sdk-models/expose.mjs");
+  const rows = created.at(-1).elements.get("files.tree.row")[0]();
+  const readme = rows.at(-1);
+  readme.click();
+  assert.equal(view.sendsOf("select").length, 0, "the reply of the select has not come");
+  view.tree.rendered.dispatchEvent(new CustomEvent("dblclick", { path: [{ dataset: {} }, readme, view.tree.rendered] }));
+  await settle();
+  assert.deepEqual(view.opened(), ["readme.md"]);
+});
+
+test("a double click on a folder and a double click off the rows open nothing", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  const { created } = await import("../build/test/sdk-models/expose.mjs");
+  const rows = created.at(-1).elements.get("files.tree.row")[0]();
+  view.tree.rendered.dispatchEvent(new CustomEvent("dblclick", { path: [rows[0], view.tree.rendered] }));
+  view.tree.rendered.dispatchEvent(new CustomEvent("dblclick", { path: [view.tree.rendered] }));
+  await settle();
+  assert.deepEqual(view.opened(), []);
 });
 
 test("a row that the library draws later is marked, and a row it removes is not provided", async () => {

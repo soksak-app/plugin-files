@@ -9,6 +9,10 @@ class FakeEvent {
     this.detail = init.detail;
     this.key = init.key;
     this.target = null;
+    this.path = init.path ?? [];
+  }
+  composedPath() {
+    return this.path;
   }
 }
 

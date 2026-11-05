@@ -453,14 +453,19 @@ binder.bind(star, "files.bookmarks.add", () => ({ path: selection ?? "" }), { fa
 binder.bind(refresh, "files.refresh", {}, { failed: (error) => showError("files tree", error) });
 // The library notifies each change it makes, so a user's expansion reaches the sidecar as the command of the folder.
 tree.subscribe(onLibraryChange);
-// A file opens on a double click or Enter on the selected row.
-const openSelection = () => {
-  const path = openablePath(rows, selection);
+const openFile = (candidate) => {
+  const path = openablePath(rows, candidate);
   if (path !== null) binder.run("files.open", { path }).catch((error) => showError("files tree", error));
 };
-holder.addEventListener("dblclick", openSelection);
+// A double click opens the file of its own row: the selection of its first press exists only after the reply of the sidecar,
+// and the second press can come before that reply.
+holder.addEventListener("dblclick", (event) => {
+  const row = event.composedPath().find((item) => item.dataset?.itemPath !== undefined);
+  if (row !== undefined) openFile(selectedPath(row.dataset.itemPath));
+});
+// Enter opens the selected row.
 holder.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") openSelection();
+  if (event.key === "Enter") openFile(selection);
 });
 
 if (project === null) {

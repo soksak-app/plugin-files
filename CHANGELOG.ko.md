@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P102: 파일 행의 double click은 첫 press의 선택 응답이 아직 오지 않아도 그 파일을 연다.
 - P100: changelog가 기록 없이 체크리스트에서 빠진 P14의 폐기를 기록한다.
 - 체크리스트 항목 `P14` 폐기: 체크리스트 항목은 프로젝트 작업을 담는데, 이 항목은 record 규칙의 적용을 담았다.
 - P94: core F502-13이 exposure 종류 `dom`을 `element`로 바꾸므로, plugin은 노출하는 element를 `exposes.element`에 선언하고 `expose.element`로 등록한다. `engines.soksak`은 F502-13의 core release인 `^0.0.35`다. Red: element entry에서 test 148개 중 7개가 실패했고, core version test가 `^0.0.34`에서 실패했다. Green: 변경이 닿는 test가 통과한다.

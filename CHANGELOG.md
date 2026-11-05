@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P102: A double click on a file row opens that file even when the reply to the selection of its first press has not come.
 - P100: The changelog records the retirement of P14, which left the checklist without a record.
 - Retired checklist entry `P14`: a checklist entry holds project work, and this entry held the application of a record rule.
 - P94: The plugin declares its exposed elements in `exposes.element` and registers them through `expose.element`, as core F502-13 renames the exposure kind `dom` to `element`; `engines.soksak` is `^0.0.35`, the core release of F502-13. Red: 7 of 148 tests failed on element entries, and the core version test failed on `^0.0.34`. Green: the tests that the change touches pass.
