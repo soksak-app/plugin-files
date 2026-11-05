@@ -1,5 +1,5 @@
 // The bookmarks section view at the consumer boundary: the page runs over a fake view window and reads and writes the declared
-// project data key bookmarks through runtime.data.get and runtime.data.set. A remove press is relayed to the page's command.
+// project data key bookmarks through runtime.data.get and runtime.data.change. A remove press is relayed to the page's command.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -12,6 +12,9 @@ const SURFACE = "left/files.bookmarks";
 // The exposes of the plugin manifest are the declarations that the host passes to the page as its start values.
 const DECLARATIONS = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "plugin.json"), "utf8")).exposes;
 let caseNumber = 0;
+
+// The value that another view writes after the next read of the key, or null.
+let afterRead = null;
 
 async function startBookmarks({ store = { bookmarks: [] }, dataFault = null }) {
   const start = {
@@ -29,11 +32,22 @@ async function startBookmarks({ store = { bookmarks: [] }, dataFault = null }) {
       const { command, params } = message;
       if (command === "runtime.data.get") {
         if (dataFault !== null) throw new Error(dataFault);
-        return structuredClone(store[params.key]);
+        const read = structuredClone(store[params.key]);
+        // Another view writes the key after this read, once, before the page writes.
+        if (afterRead !== null) {
+          store[params.key] = afterRead;
+          afterRead = null;
+        }
+        return read;
       }
       if (command === "runtime.data.set") {
         store[params.key] = structuredClone(params.value);
         return null;
+      }
+      if (command === "runtime.data.replace") {
+        if (JSON.stringify(store[params.key]) !== JSON.stringify(params.base)) return false;
+        store[params.key] = structuredClone(params.value);
+        return true;
       }
       return null;
     },
@@ -83,6 +97,18 @@ test("the remove button writes the key without the removed path", async () => {
   await settle();
   assert.deepEqual(view.store.bookmarks, ["readme.md"]);
   assert.deepEqual(rowsOf(globalThis.document.body).length, 1);
+  assert.deepEqual(view.host.errors, []);
+});
+
+test("a remove keeps the path that another view added after its read", async () => {
+  const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
+  const [remove] = findAll(globalThis.document.body, (element) => element.dataset.command === "files.bookmarks.remove");
+  assert.ok(remove, "the remove button of the first row names its path");
+  afterRead = ["src/main.go", "readme.md", "added.txt"];
+  remove.click();
+  await settle();
+  assert.deepEqual(view.store.bookmarks, ["readme.md", "added.txt"]);
+  assert.deepEqual(rowsOf(globalThis.document.body).length, 2);
   assert.deepEqual(view.host.errors, []);
 });
 

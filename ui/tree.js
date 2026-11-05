@@ -426,10 +426,10 @@ const handlers = {
   },
   "files.bookmarks.add": async ({ path } = {}) => {
     if (typeof path !== "string" || path === "") throw new TypeError("files.bookmarks.add requires a path");
-    const stored = await bridge.runtime.data.get("bookmarks");
-    if (!Array.isArray(stored) || stored.some((item) => typeof item !== "string")) throw new TypeError("the stored bookmarks are not a list of paths");
-    if (stored.includes(path)) return null;
-    await bridge.runtime.data.set("bookmarks", [...stored, path]);
+    await bridge.runtime.data.change("bookmarks", (stored) => {
+      if (!Array.isArray(stored) || stored.some((item) => typeof item !== "string")) throw new TypeError("the stored bookmarks are not a list of paths");
+      return stored.includes(path) ? undefined : [...stored, path];
+    });
     return null;
   },
 };

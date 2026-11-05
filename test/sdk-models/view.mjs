@@ -122,6 +122,17 @@ export function createViewBridge({ handler }) {
         if (typeof key !== "string" || key === "") return Promise.reject(new TypeError("runtime.data.set requires a non-empty key"));
         return request("runtime.data.set", { key, value });
       },
+      // change(key, next) stores what next makes of the value it receives; another write between the read and the write starts it
+      // over from a new read, and next returning undefined writes nothing.
+      change: async (key, next) => {
+        if (typeof key !== "string" || key === "") throw new TypeError("runtime.data.change requires a non-empty key");
+        for (;;) {
+          const base = await request("runtime.data.get", { key });
+          const value = next(structuredClone(base));
+          if (value === undefined) return base;
+          if (await request("runtime.data.replace", { key, base, value })) return value;
+        }
+      },
     },
     project(listener) {
       if (typeof listener !== "function") throw new TypeError("runtime.project requires a listener");

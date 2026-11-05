@@ -128,13 +128,14 @@ function draw(paths) {
 }
 
 /** The stored list of paths. A stored value of another form throws, and the list is not drawn from it. */
-async function read() {
-  const stored = await bridge.runtime.data.get(KEY);
+function checked(stored) {
   if (!Array.isArray(stored) || stored.some((item) => typeof item !== "string")) {
     throw new Error("the stored bookmarks are not a list of paths");
   }
   return stored;
 }
+
+const read = async () => checked(await bridge.runtime.data.get(KEY));
 
 async function load() {
   try {
@@ -148,11 +149,10 @@ async function load() {
 /** Removes a path from the stored list and draws the list that the store accepted. */
 async function remove({ path } = {}) {
   if (typeof path !== "string" || path === "") throw new TypeError("files.bookmarks.remove requires a path");
-  const stored = await read();
-  if (!stored.includes(path)) throw new Error(`${path} is not bookmarked`);
-  const next = stored.filter((item) => item !== path);
-  await bridge.runtime.data.set(KEY, next);
-  draw(next);
+  draw(await bridge.runtime.data.change(KEY, (stored) => {
+    if (!checked(stored).includes(path)) throw new Error(`${path} is not bookmarked`);
+    return stored.filter((item) => item !== path);
+  }));
   return null;
 }
 
