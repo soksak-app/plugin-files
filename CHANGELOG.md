@@ -26,6 +26,7 @@
 
 ## Unreleased
 
+- F462-files: `engines.soksak` is `^0.0.35`, and the version is 0.0.21. Red: the core version test failed on `^0.0.34`. Green: it passes.
 - F367-files: `engines.soksak` is `^0.0.29`, and the version is 0.0.15. Red: the core version test failed on `^0.0.28`. Green: it passes.
 - F364-files: `engines.soksak` is `^0.0.28`, and the version is 0.0.14. Red: the core version test failed on `^0.0.27`. Green: it passes.
 - F360-files: `engines.soksak` is `^0.0.27`, so core 0.0.27 installs the plugin, and the version is 0.0.13. Red: `the files package requires only core 0.0.27` failed on `^0.0.26`. Green: it passes.
