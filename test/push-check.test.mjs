@@ -10,5 +10,5 @@ test("make push-check runs only the commit message check of the pushed range (F2
   const target = /^push-check:([^\n]*)\n((?:\t[^\n]*\n)+)/m.exec(makefile);
   assert.ok(target, "the Makefile has no push-check target");
   assert.equal(target[1].trim(), "", `push-check depends on ${target[1].trim()}`);
-  assert.deepEqual(target[2].trim().split("\n").map((line) => line.trim()), ['pnpm exec soksak-commits "$(or $(RANGE),origin/main..HEAD)"']);
+  assert.deepEqual(target[2].trim().split("\n").map((line) => line.trim()), ['pnpm exec soksak-check commits "$(or $(RANGE),origin/main..HEAD)"']);
 });

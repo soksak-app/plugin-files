@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const make = (...args) => execFileSync("make", args, { cwd: root, encoding: "utf8" });
-const KIT_TOOLS = ["soksak-events", "soksak-records"];
+const KIT_TOOLS = ["soksak-check census", "soksak-check records"];
 
 test("test runs plugin tests only", () => {
   const output = make("-n", "test");
@@ -21,13 +21,13 @@ test("check runs the kit checks without running plugin tests", () => {
   for (const command of KIT_TOOLS) {
     assert.ok(output.includes(command), "check omits " + command);
   }
-  assert.ok(output.includes("--census census.json --catalog events.json"));
+  assert.ok(output.includes("--config census.json --catalog events.json"));
   assert.equal(output.includes("pnpm test"), false);
 });
 
 test("pack runs check before pnpm pack", () => {
   const output = make("-n", "pack", "OUT=/tmp/files-check-package");
-  const check = output.indexOf("soksak-events");
+  const check = output.indexOf("soksak-check census");
   const pack = output.indexOf("pnpm pack --pack-destination /tmp/files-check-package");
   assert.ok(check >= 0, "pack omitted the check prerequisites");
   assert.ok(pack > check, "pack ran before check");
