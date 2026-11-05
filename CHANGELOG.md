@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- F474-files: `engines.soksak` is `^0.0.36`, and the version is 0.0.22. Red: the core version test failed on `^0.0.35`. Green: it passes.
 - F432-files: `engines.soksak` is `^0.0.34`, and the version is 0.0.20. Red: the core version test failed on `^0.0.33`. Green: it passes.
 - P93: The tree and bookmarks sections show the text of the sidebar instead of the default serif text of a web view, and the bookmarks rows and message start at the gutter of the tree title.
 - P92: A request id of the file tree names its document, so a reply to a request of an earlier document of the surface is recorded as `plugin.files.tree.reply.earlier` instead of an error. Red: `the reply of an earlier document reported an error` failed. Green: `test/tree-view.test.mjs` passes.
