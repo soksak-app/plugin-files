@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- F474-files: The release run published v0.0.22, and the registry lists it.
 - F474-files: `engines.soksak` is `^0.0.36`, and the version is 0.0.22. Red: the core version test failed on `^0.0.35`. Green: it passes.
 - F432-files: `engines.soksak` is `^0.0.34`, and the version is 0.0.20. Red: the core version test failed on `^0.0.33`. Green: it passes.
 - P93: The tree and bookmarks sections show the text of the sidebar instead of the default serif text of a web view, and the bookmarks rows and message start at the gutter of the tree title.

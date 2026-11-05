@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- F474-files: release run이 v0.0.22을 게시했고 registry가 이를 올린다.
 - F474-files: `engines.soksak`은 `^0.0.36`이고, version은 0.0.22이다. Red: core version test가 `^0.0.35`에서 실패했다. Green: 통과한다.
 - F432-files: `engines.soksak`은 `^0.0.34`이고, version은 0.0.20이다. Red: core version test가 `^0.0.33`에서 실패했다. Green: 통과한다.
 - P93: tree와 bookmarks section이 web view 기본 serif 대신 sidebar의 글자를 보이고, bookmarks 행과 메시지가 tree 제목의 gutter에서 시작한다.
