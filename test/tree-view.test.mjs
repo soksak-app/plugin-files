@@ -177,6 +177,18 @@ test("two adds at the same moment keep both paths", async () => {
   assert.deepEqual(view.host.errors, []);
 });
 
+test("a change that other writers keep overtaking shows its failure on the error line of the view", async () => {
+  const view = await startTree({ sidecar: filesSidecar(INITIAL) });
+  let writes = 0;
+  Object.defineProperty(view.store, "bookmarks", { get: () => [`written by another view ${writes += 1}`], set: () => {} });
+  view.tree.options.onSelectionChange(["readme.md"]);
+  await settle();
+  const [star] = findAll(globalThis.document.body, (element) => element.dataset.command === "files.bookmarks.add");
+  star.click();
+  for (let turn = 0; turn < 10 && view.host.errors.length === 0; turn += 1) await settle();
+  assert.deepEqual(view.host.errors.map((error) => error.text), ["runtime.data.change bookmarks: other writers changed the value 64 times"]);
+});
+
 test("adding a stored path writes nothing", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.store.bookmarks = ["a.txt"];

@@ -123,15 +123,20 @@ export function createViewBridge({ handler }) {
         return request("runtime.data.set", { key, value });
       },
       // change(key, next) stores what next makes of the value it receives; another write between the read and the write starts it
-      // over from a new read, and next returning undefined writes nothing.
+      // over from a new read, next returning undefined writes nothing, and a read that no writer changed or 64 reads fail it.
       change: async (key, next) => {
         if (typeof key !== "string" || key === "") throw new TypeError("runtime.data.change requires a non-empty key");
-        for (;;) {
+        let before;
+        for (let reads = 0; reads < 64; reads += 1) {
           const base = await request("runtime.data.get", { key });
+          const read = JSON.stringify(base);
+          if (read === before) throw new Error(`runtime.data.change ${key}: the store refused the value that it answered`);
+          before = read;
           const value = next(structuredClone(base));
           if (value === undefined) return base;
           if (await request("runtime.data.replace", { key, base, value })) return value;
         }
+        throw new Error(`runtime.data.change ${key}: other writers changed the value 64 times`);
       },
     },
     project(listener) {
