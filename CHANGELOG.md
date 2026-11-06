@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P94: `engines.soksak` is `^0.0.40`, the core release of F502-13, because core 0.0.35 to 0.0.39 were released without it and refuse `exposes.element`. Red: the version test failed on `^0.0.39`. Green: it passes.
 - P105: The copy of `expose.json` and its digest are the file of core main, whose `element.rect` answers the role of the element. Red: the digest test failed on the earlier digest. Green: it passes.
 - P101: The push check and CI run the checklist history check of the kit: `package.json` pins kit 0.0.14, which holds KR14 and KR15, `make check-push` runs `sok-check docs --range` on the pushed range, and CI runs `make check-push` on the range of its event. Red: the tests of the push check failed on the Makefile and `ci.yml` before the change. Green: they pass.
 - P104: The core compatibility documents state `^0.0.39`, the range that `package.json` declares.
