@@ -11,6 +11,7 @@
 - P98: plugin API case 사본은 publish된 core 0.0.34의 contract 파일이고, release가 싣는 `contract-copies.json`이 각 사본을 SHA-256과 함께 적으며, test가 선언과 사본을 비교한다. core가 제거한 declared UI snapshot의 사본과 model은 없어졌고, view bridge model은 `soksak://` page를 요구한다. Red: 이전 사본에서 test가 실패했다. Green: 통과한다.
 - P97: core 호환성 문서는 package가 선언한 범위 `^0.0.34`를 적고, test가 두 문서를 `engines.soksak`과 비교한다. Red: test가 `^0.0.34`에 대한 `^0.0.24`로 실패했다. Green: 통과한다.
 - P96: tree와 bookmarks section view가 `files.view.frames`, `files.view.history`와 각자의 ready status를 제공하고, `diagnostics.json`이 이를 module `ui/section-diagnostics.js`와 함께 선언하므로 core의 view benchmark가 두 section을 잰다. `files.tree.view.ready`는 head 제목의 text `test-project`를, `files.bookmarks.view.ready`는 message 줄의 text `북마크 없음`을 core schema subset의 문자열 하나짜리 enum으로 선언하며 이는 benchmark 상태의 text다. 각 status는 view가 그 text를 보이는 동안에만 ready이고, entry는 view가 보이는 것을 바꾸지 않는다. Red: entry 전에 test 26개 가운데 21개가 실패했고, status가 `files.view.ready`일 때 41개 가운데 25개가 실패했으며, `required`와 `const`는 schema subset test와 core의 공개 validator에서 실패했고, 만든 status 이름은 core의 exposure check에서 실패했으며, 조건 `project === null` 아래 fresh 상태 test가 `ready: false`로 실패했다. Green: `make test`와 `make check`가 통과한다.
+- F494-files: `engines.soksak`은 `^0.0.38`이고, version은 0.0.24이다.
 - F479-files: release run이 v0.0.23을 게시했고 registry가 이를 올린다.
 - F479-files: `engines.soksak`은 `^0.0.37`이고, version은 0.0.23이다.
 - F476-files: test가 선언된 version을 되풀이하지 않는다.
