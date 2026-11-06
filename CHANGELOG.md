@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- F497-files: `engines.soksak` is `^0.0.39`, and the version is 0.0.25.
 - F494-files: `engines.soksak` is `^0.0.38`, and the version is 0.0.24.
 - F479-files: The release run published v0.0.23, and the registry lists it.
 - F479-files: `engines.soksak` is `^0.0.37`, and the version is 0.0.23.
