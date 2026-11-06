@@ -12,8 +12,8 @@ importers:
         specifier: 1.0.0-beta.4
         version: 1.0.0-beta.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@soksak/kit':
-        specifier: https://github.com/soksak-app/kit/releases/download/v0.0.13/soksak-kit-0.0.13.tgz
-        version: https://github.com/soksak-app/kit/releases/download/v0.0.13/soksak-kit-0.0.13.tgz
+        specifier: https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz
+        version: https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
@@ -182,9 +182,9 @@ packages:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
 
-  '@soksak/kit@https://github.com/soksak-app/kit/releases/download/v0.0.13/soksak-kit-0.0.13.tgz':
-    resolution: {integrity: sha512-nBzwE16HUz3Ft7zz1RNaaQgsXbV+HjHrcJMu5s0cwVlPQrqOh891AHKREytzl7/BZhI0xqWZ41oA/wJyEfdEfw==, tarball: https://github.com/soksak-app/kit/releases/download/v0.0.13/soksak-kit-0.0.13.tgz}
-    version: 0.0.13
+  '@soksak/kit@https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz':
+    resolution: {integrity: sha512-xeTLFb6TopYTwfs7U9iZjlbxYN4sa9lhfBVGaXgtNGyhhNNJ7y0wvLegOnhTXZeHTbpW8m02g4RZo0OLoqKSZA==, tarball: https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz}
+    version: 0.0.14
     hasBin: true
 
   ajv@8.20.0:
@@ -319,7 +319,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@soksak/kit@https://github.com/soksak-app/kit/releases/download/v0.0.13/soksak-kit-0.0.13.tgz':
+  '@soksak/kit@https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz':
     dependencies:
       ajv: 8.20.0
       smol-toml: 1.9.1

@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P101: push check와 CI가 kit의 체크리스트 이력 검사를 실행한다. `package.json`이 KR14와 KR15를 담은 kit 0.0.14를 pin하고, `make check-push`가 push 범위에 `sok-check docs --range`를 실행하며, CI가 event의 범위에 `make check-push`를 실행한다. Red: 변경 전 Makefile과 `ci.yml`에서 push check test가 실패했다. Green: 통과한다.
 - P104: core 호환 문서가 `package.json`이 선언한 범위 `^0.0.39`을 적는다.
 - P103: 같은 순간의 북마크 변경 둘이 tree view와 bookmarks view 사이에서도 모두 남는다.
 - P102: 파일 행의 double click은 첫 press의 선택 응답이 아직 오지 않아도 그 파일을 연다.
