@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P104: core 호환 문서가 `package.json`이 선언한 범위 `^0.0.39`을 적는다.
 - P103: 같은 순간의 북마크 변경 둘이 tree view와 bookmarks view 사이에서도 모두 남는다.
 - P102: 파일 행의 double click은 첫 press의 선택 응답이 아직 오지 않아도 그 파일을 연다.
 - P100: changelog가 기록 없이 체크리스트에서 빠진 P14의 폐기를 기록한다.
