@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P105: `expose.json` 사본과 digest는 `element.rect`가 element의 role을 답하는 core main의 파일이다. Red: 이전 digest에서 digest test가 실패했다. Green: 통과한다.
 - P101: push check와 CI가 kit의 체크리스트 이력 검사를 실행한다. `package.json`이 KR14와 KR15를 담은 kit 0.0.14를 pin하고, `make check-push`가 push 범위에 `sok-check docs --range`를 실행하며, CI가 event의 범위에 `make check-push`를 실행한다. Red: 변경 전 Makefile과 `ci.yml`에서 push check test가 실패했다. Green: 통과한다.
 - P104: core 호환 문서가 `package.json`이 선언한 범위 `^0.0.39`을 적는다.
 - P103: 같은 순간의 북마크 변경 둘이 tree view와 bookmarks view 사이에서도 모두 남는다.

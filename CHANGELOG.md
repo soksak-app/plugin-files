@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P105: The copy of `expose.json` and its digest are the file of core main, whose `element.rect` answers the role of the element. Red: the digest test failed on the earlier digest. Green: it passes.
 - P101: The push check and CI run the checklist history check of the kit: `package.json` pins kit 0.0.14, which holds KR14 and KR15, `make check-push` runs `sok-check docs --range` on the pushed range, and CI runs `make check-push` on the range of its event. Red: the tests of the push check failed on the Makefile and `ci.yml` before the change. Green: they pass.
 - P104: The core compatibility documents state `^0.0.39`, the range that `package.json` declares.
 - P103: Two changes of the bookmarks at the same moment keep both, also between the tree view and the bookmarks view.
