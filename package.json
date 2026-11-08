@@ -27,6 +27,7 @@
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
     "@soksak/kit": "https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz",
+    "@soksak/window-check": "https://github.com/soksak-app/core/releases/download/v0.0.40/soksak-window-check-0.0.40.tgz",
     "esbuild": "0.28.2"
   }
 }

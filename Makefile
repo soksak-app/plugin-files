@@ -1,5 +1,5 @@
 # files plugin repository 의 test, check 와 pack(docs/features.md). pack 은 pnpm pack 으로 release 를 쓴다.
-.PHONY: install test check pack check-push install-hooks
+.PHONY: install test test-app check pack check-push install-hooks
 
 # test 는 이 plugin 의 테스트만 실행한다. SDK 도구와 SDK import 를 쓰지 않는다.
 # The installation stage (core docs/spec/plugins.md#repositories): it installs the locked dependencies; the tests, checks and packs consume them without installing.
@@ -8,6 +8,12 @@ install:
 
 test:
 	pnpm test
+
+# test-app 은 설치된 @soksak/window-check 의 core release 로 공개된 core 앱을 대상으로 이 plugin 의 window check(e2e/)를 실행한다
+# (core docs/spec/plugins.md#window-checks-of-a-plugin). scripts/test-app.mjs 가 그 release 의 앱 zip 을 build/app-cache/ 에 두고,
+# 이 plugin 을 pack 한 release 로 각 앱에 설치한 뒤 check 를 실행한다.
+test-app:
+	node scripts/test-app.mjs
 
 # check 는 package.json 이 pin 한 kit release 의 검사를 실행한다. sok-check events 는 소스에서 빠진 record 를 세고 emit 지점을
 # events.json 과 대조하며(event-sources.json 이 선언 파일이다), sok-check docs 는 record 를 검사한다. application 은 release 를

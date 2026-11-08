@@ -1,0 +1,11 @@
+{
+  "name": "@sok-check/file-probe",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Window check fixture of the files plugin that opens txt files.",
+  "license": "MIT",
+  "repository": "git+https://github.com/soksak-app/plugin-files.git",
+  "engines": { "soksak": "*" },
+  "files": ["plugin.json", "ui"]
+}

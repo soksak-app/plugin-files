@@ -1,0 +1,18 @@
+{
+  "id": "fileprobe",
+  "name": "File probe",
+  "description": "Window check fixture of the files plugin: a tab view that opens txt files and reports the path it opened.",
+  "surface": {
+    "composition": { "kind": "view", "page": "ui/page.html" },
+    "params": { "type": "object", "properties": { "path": { "type": "string" } } },
+    "opens": { "extensions": ["txt"] }
+  },
+  "mark": "F",
+  "icon": "<rect x=\"3\" y=\"3\" width=\"10\" height=\"10\" rx=\"2\"/>",
+  "exposes": {
+    "status": [{ "name": "fileprobe.document", "description": "The path of the file that the tab shows, null for a tab without a file.",
+      "schema": { "type": "object", "properties": { "path": { "type": ["string", "null"] } }, "required": ["path"] } }],
+    "commands": [],
+    "element": []
+  }
+}
