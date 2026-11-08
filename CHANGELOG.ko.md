@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P107: ready status `files.tree.view.ready`와 `files.bookmarks.view.ready`는 section view의 core contract인 `{ready, content}`이고, 더 이상 인식 언어를 선언하거나 답하지 않는다.
 - P106: core 호환성 문서가 `^0.0.40`은 core 0.0.40부터 그 뒤의 모든 0.0 release를 허용한다고 적고, test가 이를 요구한다. Red: 이전 문장에서 test가 실패했다. Green: 통과한다.
 - P94: core 0.0.35부터 0.0.39까지는 F502-13 없이 release되어 `exposes.element`를 거부하므로, `engines.soksak`은 F502-13의 core release인 `^0.0.40`이다. Red: version test가 `^0.0.39`에서 실패했다. Green: 통과한다.
 - P105: `expose.json` 사본과 digest는 `element.rect`가 element의 role을 답하는 core main의 파일이다. Red: 이전 digest에서 digest test가 실패했다. Green: 통과한다.

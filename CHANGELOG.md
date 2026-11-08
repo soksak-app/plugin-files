@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P107: The ready statuses `files.tree.view.ready` and `files.bookmarks.view.ready` are `{ready, content}`, the core contract of a section view, and no longer declare or answer the recognition language.
 - P106: The core compatibility documents state that `^0.0.40` admits core 0.0.40 and every later 0.0 release, and a test requires it. Red: the test failed on the earlier statement. Green: it passes.
 - P94: `engines.soksak` is `^0.0.40`, the core release of F502-13, because core 0.0.35 to 0.0.39 were released without it and refuse `exposes.element`. Red: the version test failed on `^0.0.39`. Green: it passes.
 - P105: The copy of `expose.json` and its digest are the file of core main, whose `element.rect` answers the role of the element. Red: the digest test failed on the earlier digest. Green: it passes.

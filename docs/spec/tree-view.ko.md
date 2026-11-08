@@ -44,12 +44,12 @@ container의 열린 shadow root에서 `data-item-path`를 가진 요소를 돌�
 그 member가 없는 시작 값은 오류이고, `null` 선언은 아무것도 불러오지 않으며, 그 밖에는 view가 선언이 가리키는 module을 import하고 첫
 내용을 그린 뒤 자기 surface에서 entry를 제공한다.
 
-- `<section id>.view.ready`는 각 view의 status `{ready, content, language}`이고, view는 등록하는 자리에 이름을 그대로 써서 자기 status만
-  등록한다. `files.tree.view.ready`의 schema는 `content`를 enum `test-project`로, `language`를 enum `en-US`로 선언한다. 이 텍스트는 같은
-  이름의 project 폴더에서 tree view의 head 제목이 보이는 문구다. `files.bookmarks.view.ready`의 schema는 `content`를 enum `북마크 없음`으로,
-  `language`를 enum `ko-KR`로 선언한다. 이 텍스트는 bookmark 없는 project에서 bookmarks view의 message 줄이 보이는 문구다. View benchmark가
+- `<section id>.view.ready`는 각 view의 status `{ready, content}`이고, view는 등록하는 자리에 이름을 그대로 써서 자기 status만
+  등록한다. `files.tree.view.ready`의 schema는 `content`를 enum `test-project`로 선언한다. 이 텍스트는 같은
+  이름의 project 폴더에서 tree view의 head 제목이 보이는 문구다. `files.bookmarks.view.ready`의 schema는 `content`를 enum `북마크 없음`으로
+  선언한다. 이 텍스트는 bookmark 없는 project에서 bookmarks view의 message 줄이 보이는 문구다. View benchmark가
   section을 여는 상태가 이것이며, entry는 view가 보이는 것을 바꾸지 않는다. `diagnostics.json`의 각 schema는 core의 schema subset만 쓰므로
-  고정 값은 항목 하나짜리 enum이다. Module은 두 값을 시작 값의 선언에서 읽고, 문자열 하나짜리 enum이 아닌 선언은 그 status와 field를
+  고정 값은 항목 하나짜리 enum이다. Module은 그 값을 시작 값의 선언에서 읽고, 문자열 하나짜리 enum이 아닌 선언은 그 status와 field `content`를
   가리키는 오류다. `ready`는 요소가 document 안에 있고 숨겨지지 않았으며 텍스트를 보이는 동안에만 true다. 그래서 다른 텍스트는 `false`를 보고하고,
   message 줄의 텍스트를 대신하는 오류는 status의 watcher에게 `false`를 알린다.
 - `files.view.history`는 view document의 session history 길이인 `{length}`로 답한다.

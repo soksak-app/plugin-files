@@ -4,7 +4,7 @@
     "status": [
       {
         "name": "files.tree.view.ready",
-        "description": "Whether the section view shows the folder name of the benchmark project in its head title, that text, and its recognition language.",
+        "description": "Whether the section view shows the folder name of the benchmark project in its head title, and that text.",
         "schema": {
           "type": "object",
           "properties": {
@@ -16,19 +16,13 @@
               "enum": [
                 "test-project"
               ]
-            },
-            "language": {
-              "type": "string",
-              "enum": [
-                "en-US"
-              ]
             }
           }
         }
       },
       {
         "name": "files.bookmarks.view.ready",
-        "description": "Whether the section view shows the empty text on its message line, that text, and its recognition language.",
+        "description": "Whether the section view shows the empty text on its message line, and that text.",
         "schema": {
           "type": "object",
           "properties": {
@@ -39,12 +33,6 @@
               "type": "string",
               "enum": [
                 "북마크 없음"
-              ]
-            },
-            "language": {
-              "type": "string",
-              "enum": [
-                "ko-KR"
               ]
             }
           }

@@ -48,14 +48,14 @@ with the module `ui/section-diagnostics.js`, and `files` of `package.json` lists
 its start values: start values without the member are an error, a `null` declaration loads nothing, and otherwise the view imports the
 module that the declaration names and serves the entries on its own surface once its first content is drawn.
 
-- `<section id>.view.ready` is the status `{ready, content, language}` of each view, and a view registers only its own under the name
-  written at its registration. The schema of `files.tree.view.ready` declares `content` as an enum of `test-project` and `language` as an
-  enum of `en-US`; that text is what the head title of the tree view shows in the project folder of the same name. The schema of
-  `files.bookmarks.view.ready` declares `content` as an enum of `북마크 없음` and `language` as an enum of `ko-KR`; that text is what the
+- `<section id>.view.ready` is the status `{ready, content}` of each view, and a view registers only its own under the name
+  written at its registration. The schema of `files.tree.view.ready` declares `content` as an enum of `test-project`;
+  that text is what the head title of the tree view shows in the project folder of the same name. The schema of
+  `files.bookmarks.view.ready` declares `content` as an enum of `북마크 없음`; that text is what the
   message line of the bookmarks view shows in a project without bookmarks. That is the state in which the view benchmark opens a section,
   and the entries change nothing that a view shows. Each schema of `diagnostics.json` uses only the schema subset of core, so a fixed
-  value is an enum of one entry. The module reads both values from the declaration of the start values, and a declaration without an
-  enum of one string is an error that names the status and the field. `ready` is true only while the element is in the document, not hidden, and shows the text, so another text turns it `false`,
+  value is an enum of one entry. The module reads that value from the declaration of the start values, and a declaration without an
+  enum of one string is an error that names the status and the field `content`. `ready` is true only while the element is in the document, not hidden, and shows the text, so another text turns it `false`,
   and an error that replaces the text on the message line turns it `false` for the watchers of the status.
 - `files.view.history` answers `{length}`, the length of the session history of the view document.
 - `files.view.frames {action}` with `start` reads the theme colors `--card`, `--bg`, `--edge`, `--rule` and `--focus` of the root, each

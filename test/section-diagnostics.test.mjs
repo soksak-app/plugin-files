@@ -32,7 +32,6 @@ const hexOf = (rgb) => `#${rgb.map((channel) => channel.toString(16).padStart(2,
 const readyName = (section) => `${section}.view.ready`;
 const readyEntry = (section, diagnostics = readDiagnostics()) => diagnostics.exposes.status.find((entry) => entry.name === readyName(section));
 const contentOf = (section) => readyEntry(section).schema.properties.content.enum[0];
-const languageOf = (section) => readyEntry(section).schema.properties.language.enum[0];
 
 /** The declarations of a diagnostic build: the exposes of plugin.json with the exposes of diagnostics.json added. */
 function diagnosticDeclarations() {
@@ -43,15 +42,14 @@ function diagnosticDeclarations() {
   return merged;
 }
 
-// Each section: its page, its surface, the class of the element that shows its text, the text and its language, and the states of
-// the view in which that element shows something else.
+// Each section: its page, its surface, the class of the element that shows its text, that text, and the states of the view
+// in which that element shows something else.
 const SECTIONS = {
   "files.tree": {
     module: "tree.js",
     surface: "spc-1/card-4:left/files.tree",
     element: "files-tree__title",
     content: "test-project",
-    language: "en-US",
     others: { "another project folder": { project: PROJECT, entries: [ROW] }, "no project": { project: null } },
   },
   "files.bookmarks": {
@@ -59,7 +57,6 @@ const SECTIONS = {
     surface: "spc-1/card-4:left/files.bookmarks",
     element: "files-bookmarks__message",
     content: "북마크 없음",
-    language: "ko-KR",
     others: { "a stored bookmark": { bookmarks: ["readme.md"] }, "no project": { project: null } },
   },
 };
@@ -138,12 +135,11 @@ test("diagnostics.json declares the section-view entries with its module, and th
   for (const file of ["diagnostics.json", diagnostics.module]) assert.ok(packed.has(file), `${file} is not in the package`);
 });
 
-for (const [section, { content, language }] of Object.entries(SECTIONS)) {
-  test(`${readyName(section)} declares content and language each as an enum of one string`, () => {
+for (const [section, { content }] of Object.entries(SECTIONS)) {
+  test(`${readyName(section)} declares content as an enum of one string`, () => {
     assert.deepEqual(readyEntry(section).schema.properties, {
       ready: { type: "boolean" },
       content: { type: "string", enum: [content] },
-      language: { type: "string", enum: [language] },
     });
   });
 }
@@ -185,7 +181,7 @@ for (const section of Object.keys(SECTIONS)) {
     assert.equal(view.failure, null);
     assert.equal(elementOf(section).textContent, contentOf(section));
     assert.equal(elementOf(section).hidden, false);
-    assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: contentOf(section), language: languageOf(section) } });
+    assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: contentOf(section) } });
     assert.deepEqual(view.host.errors, []);
   });
 
@@ -201,7 +197,7 @@ for (const section of Object.keys(SECTIONS)) {
       assert.equal(view.failure, null);
       const element = elementOf(section);
       assert.equal(!element.hidden && element.textContent === contentOf(section), false, `${section} shows the text with ${state}`);
-      assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section), language: languageOf(section) } });
+      assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
       assert.deepEqual(view.host.errors, []);
     });
   }
@@ -209,36 +205,33 @@ for (const section of Object.keys(SECTIONS)) {
   test(`${section} is not ready while its element keeps the text but is hidden`, async () => {
     const view = await startSection(section);
     elementOf(section).hidden = true;
-    assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section), language: languageOf(section) } });
+    assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
   });
 
   test(`${section} is not ready while its element keeps the text but is out of the document`, async () => {
     const view = await startSection(section);
     elementOf(section).remove();
-    assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section), language: languageOf(section) } });
+    assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
   });
 
-  test(`${section} reads the text and the language of its status from the declaration of its start values`, async () => {
+  test(`${section} reads the text of its status from the declaration of its start values`, async () => {
     const diagnostics = readDiagnostics();
     const { properties } = readyEntry(section, diagnostics).schema;
     properties.content.enum = ["another text"];
-    properties.language.enum = ["fr-FR"];
     const view = await startSection(section, { diagnostics });
     assert.equal(view.failure, null);
-    assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: "another text", language: "fr-FR" } });
+    assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: "another text" } });
     elementOf(section).textContent = "another text";
-    assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: "another text", language: "fr-FR" } });
+    assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: "another text" } });
   });
 
-  for (const field of ["content", "language"]) {
-    for (const [state, values] of Object.entries({ "no enum": undefined, "an empty enum": [], "an enum of two strings": ["one", "two"], "an enum of a number": [1] })) {
-      test(`${section} refuses a declaration of its status with ${state} for ${field}`, async () => {
-        const diagnostics = readDiagnostics();
-        readyEntry(section, diagnostics).schema.properties[field].enum = values;
-        const view = await startSection(section, { diagnostics });
-        assert.equal(view.failure?.message, `the diagnostic declaration of the files section views gives ${readyName(section)} no ${field} enum of one string`);
-      });
-    }
+  for (const [state, values] of Object.entries({ "no enum": undefined, "an empty enum": [], "an enum of two strings": ["one", "two"], "an enum of a number": [1] })) {
+    test(`${section} refuses a declaration of its status with ${state} for content`, async () => {
+      const diagnostics = readDiagnostics();
+      readyEntry(section, diagnostics).schema.properties.content.enum = values;
+      const view = await startSection(section, { diagnostics });
+      assert.equal(view.failure?.message, `the diagnostic declaration of the files section views gives ${readyName(section)} no content enum of one string`);
+    });
   }
 
   test(`${section} refuses a declaration without its status`, async () => {

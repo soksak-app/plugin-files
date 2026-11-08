@@ -5,7 +5,7 @@
 //                               and answers {enabled: true, sourceClock, markerColor}; stop ends both and answers {enabled: false}
 //   files.view.history          answers {length}, the number of entries of the session history of the view document
 //   files.tree.view.ready, files.bookmarks.view.ready
-//                               the status {ready, content, language} of the view: ready while the view shows the declared content
+//                               the status {ready, content} of the view: ready while the view shows the declared content
 import { observeViewDocumentFrames } from "@soksak/plugin-api/diagnostic-view-frames";
 
 const FRAME_EVENT = "view.content_frame";
@@ -48,7 +48,7 @@ const hexOf = (rgb) => `#${rgb.map((channel) => channel.toString(16).padStart(2,
 /**
  * Serves the section-view entries of one section view.
  *
- *   declaration     the diagnostic declaration of the start values, which declares content and language of the status
+ *   declaration     the diagnostic declaration of the start values, which declares the content of the status
  *   status          the name of the ready status of the view
  *   registerStatus  registers that status on the exposure of the page, with its read and its subscribe
  *   commands        the command registration of the view bridge
@@ -58,7 +58,6 @@ const hexOf = (rgb) => `#${rgb.map((channel) => channel.toString(16).padStart(2,
  */
 export async function attach({ declaration, status, registerStatus, commands, view, content, emitEvent }) {
   const text = declaredText(declaration, status, "content");
-  const language = declaredText(declaration, status, "language");
   const document = view.document;
   const root = document.documentElement;
   // The observation of the frames and the paint of the root while files.view.frames is started, or null.
@@ -106,7 +105,6 @@ export async function attach({ declaration, status, registerStatus, commands, vi
   const ready = () => ({
     ready: content.isConnected && !content.hidden && content.textContent === text,
     content: text,
-    language,
   });
 
   await Promise.all([
