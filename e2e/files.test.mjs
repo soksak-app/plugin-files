@@ -9,7 +9,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { APPS, open } from "@soksak/window-check/app.mjs";
-import { cardSidebar, fresh, START_PLUGIN } from "./start.mjs";
+import { cardSidebar, fresh, START_PROBE } from "./start.mjs";
+
+/** The fixture plugin that opens the txt files of the checks (e2e/fixtures/file-probe). */
+const OPEN_PLUGIN = "fileprobe";
 
 const FILES_SECTIONS = ["files.tree", "files.bookmarks"];
 
@@ -107,7 +110,7 @@ for (const app of Object.values(APPS)) {
       "the double click opened no tab");
     const opened = grid.cards.flatMap((card) => card.tabs ?? []).filter((tab) => !before.has(tab.id));
     assert.equal(opened.length, 1, `the double click opened ${opened.length} tabs: ${JSON.stringify(opened)}`);
-    assert.equal(opened[0].plugin, START_PLUGIN, `the double click opened a tab of ${opened[0].plugin}`);
+    assert.equal(opened[0].plugin, OPEN_PLUGIN, `the double click opened a tab of ${opened[0].plugin}`);
     await s.until("fileprobe.document", (value) => value.path === path, `the opened tab does not show ${path}`, { surface: opened[0].id });
     assert.equal((await s.get("host.window")).active, active, `the double click changed whether ${app.name} is active`);
   });
@@ -125,7 +128,7 @@ for (const app of Object.values(APPS)) {
     for (const path of paths) writeFileSync(join(project.root, path), `${path}\n`);
     s.cleanup(() => rmSync(join(project.root, folder), { recursive: true, force: true }));
     // The tree of the left sidebar and the tree of a card sidebar are two views of the same project that add bookmarks.
-    const sidebar = await cardSidebar(s, { sections: ["files.tree"] });
+    const [sidebar] = await cardSidebar(s, { plugin: START_PROBE, sections: ["files.tree"] });
     const space = project.activeSpaceId;
     const trees = [`${space}/left/files.tree`, `${space}/${sidebar}/files.tree`];
     const bookmarks = `${space}/left/files.bookmarks`;

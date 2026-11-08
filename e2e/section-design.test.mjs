@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { APPS, open } from "@soksak/window-check/app.mjs";
-import { cardSidebar, fresh } from "./start.mjs";
+import { cardSidebar, fresh, START_PROBE } from "./start.mjs";
 
 const OUTPUT = new URL("../build/section-design/", import.meta.url).pathname;
 
@@ -26,8 +26,8 @@ for (const app of Object.values(APPS))
     s.cleanup(() => rmSync(folder, { recursive: true, force: true }));
     for (const name of ["alpha.txt", "beta.md", "gamma.json"]) writeFileSync(join(folder, name), "text\n");
     // The environment of the application links the set set-install (tree, bookmarks) to the left sidebar; a card sidebar shows the same
-    // sections beside it.
-    const sidebar = await cardSidebar(s, { sections: ["files.tree", "files.bookmarks"] });
+    // sections beside it on a card of the start probe.
+    const [sidebar] = await cardSidebar(s, { plugin: START_PROBE, sections: ["files.tree", "files.bookmarks"] });
     await shown(s, "left", ["files.tree", "files.bookmarks"]);
     await shown(s, sidebar, ["files.tree", "files.bookmarks"]);
     mkdirSync(OUTPUT, { recursive: true });
