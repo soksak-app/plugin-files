@@ -12,7 +12,7 @@ const OUTPUT = new URL("../build/section-design/", import.meta.url).pathname;
 async function shown(s, sidebar, sections) {
   await s.until("core.sidebars", (bars) => {
     const bar = bars.find((item) => item.sidebar === sidebar);
-    return bar && sections.every((id) => bar.sections.find((item) => item.id === id)?.mounted)
+    return bar !== undefined && sections.every((id) => bar.sections.find((item) => item.id === id)?.mounted)
       && bar.sections.every((item) => item.error === null);
   }, `${sidebar} did not mount ${sections.join(", ")}`);
 }
@@ -21,7 +21,7 @@ for (const app of Object.values(APPS))
   test(`${app.name}: stills of the files sections in each mode`, { timeout: 120000 }, async (t) => {
     const s = await open(t, app);
     await fresh(s);
-    const project = await s.until("core.project", (value) => value?.root, "the fixture project was not shown");
+    const project = await s.until("core.project", (value) => value !== null, "the fixture project was not shown");
     const folder = mkdtempSync(join(project.root, "design-"));
     s.cleanup(() => rmSync(folder, { recursive: true, force: true }));
     for (const name of ["alpha.txt", "beta.md", "gamma.json"]) writeFileSync(join(folder, name), "text\n");
