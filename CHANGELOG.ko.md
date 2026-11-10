@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P109: manifest test 가 core 0.0.40 처럼 command entry 의 `timeout` 을 거부하고, view test 가 정해진 턴 수 대신 자기가 확인하는 것을 끝내는 occurrence 를 기다린다. event loop 의 끝까지 열린 대기는 test 를 실패시키고, 어떤 test 도 시간 한도를 두지 않는다. Red: `timeout` 을 적은 subset copy 에서 거부 test 가 실패했다. Green: 통과한다.
 - P107: ready status `files.tree.view.ready`와 `files.bookmarks.view.ready`는 section view의 core contract인 `{ready, content}`이고, 더 이상 인식 언어를 선언하거나 답하지 않는다.
 - P106: core 호환성 문서가 `^0.0.40`은 core 0.0.40부터 그 뒤의 모든 0.0 release를 허용한다고 적고, test가 이를 요구한다. Red: 이전 문장에서 test가 실패했다. Green: 통과한다.
 - P94: core 0.0.35부터 0.0.39까지는 F502-13 없이 release되어 `exposes.element`를 거부하므로, `engines.soksak`은 F502-13의 core release인 `^0.0.40`이다. Red: version test가 `^0.0.39`에서 실패했다. Green: 통과한다.

@@ -6,6 +6,6 @@ export const SCHEMA_KEYWORDS = ["type", "properties", "items", "enum"];
 export const SCHEMA_TYPES = ["string", "number", "integer", "boolean", "object", "array", "null"];
 export const ENTRY_FIELDS = {
   status: ["name", "description", "schema"],
-  commands: ["name", "description", "params", "result", "timeout"],
+  commands: ["name", "description", "params", "result"],
   element: ["name", "description", "many"],
 };
