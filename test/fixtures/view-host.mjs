@@ -2,6 +2,9 @@
 // channel of window.sokSurface, window.sokView and the sok-view handler, and the host side of the calls. A call of the page
 // to a runtime name is answered by the test's runtime function. A call to a plugin command is relayed as the host relays it
 // (a command request to the page, whose reply goes back to the caller). The fake does not model layout or styles.
+// Each message that the page posts is recorded as an occurrence (test/fixtures/occurrences.mjs), and a test waits for the message
+// that ends the handling that it asserts (docs/spec/calls.md, tests).
+import { createOccurrences } from "./occurrences.mjs";
 
 class FakeEvent {
   constructor(type, init = {}) {
@@ -15,6 +18,9 @@ class FakeEvent {
     return this.path;
   }
 }
+
+// A change of the children of a fake element is an occurrence of the window: installFakeDom sets the function that records it.
+let domChanged = () => {};
 
 class FakeElement {
   constructor(tagName, ownerDocument) {
@@ -46,14 +52,17 @@ class FakeElement {
       node.parent = this;
       this.children.push(node);
     }
+    domChanged();
   }
   appendChild(node) {
     this.append(node);
     return node;
   }
   remove() {
-    if (this.parent) this.parent.children = this.parent.children.filter((child) => child !== this);
+    const parent = this.parent;
+    if (parent) parent.children = parent.children.filter((child) => child !== this);
     this.parent = null;
+    if (parent) domChanged();
   }
   addEventListener(type, listener) {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
@@ -79,8 +88,9 @@ export function findAll(root, predicate) {
   return found;
 }
 
-/** Installs the DOM globals of a view page and returns the document. */
-export function installFakeDom() {
+/** Installs the DOM globals of a view page and returns the document. changed() records each change of the children of an element. */
+export function installFakeDom(changed = () => {}) {
+  domChanged = changed;
   // Each MutationObserver of the page is kept with its target, so a fake DOM change of a target notifies its observers.
   globalThis.mutationObservers = [];
   const document = {
@@ -116,34 +126,40 @@ export function installFakeDom() {
   return document;
 }
 
-/** Waits until the pending promise callbacks of the page have run. */
-export async function settle() {
-  for (let i = 0; i < 40; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 /**
  * Starts a view page in the fake window. start is window.sokSurface. runtime(message) answers a call to a runtime name with its
  * result or throws its error; sidecar is not called here, because the runtime function answers runtime.sidecar.send itself.
- * Returns the posted calls, the errors and log records of the page, and deliver(message), which stands for window.sokView.attach.
+ * Returns the posted calls, the errors and log records of the page, the replies of the page to the command requests that reached
+ * it, deliver(message), which stands for window.sokView.attach, and until(holds, what), which resolves in the turn of the first
+ * occurrence after which holds() is true: a posted message or a change of the children of an element.
  */
 export function installViewWindow({ start, plugin = "files", runtime }) {
-  installFakeDom();
-  const posted = [];
+  const { until, list, occurred } = createOccurrences();
+  installFakeDom(occurred);
+  const posted = list();
   const relays = new Map();
-  const errors = [];
-  const logs = [];
+  const errors = list();
+  const logs = list();
+  const replies = list();
+  // The command of each request that the host delivered to the page, by its id, so a reply of the page names its command.
+  const requested = new Map();
   let deliver = null;
   let relayId = 90000;
   const host = {
     posted,
     errors,
     logs,
-    deliver: (message) => deliver(message),
+    replies,
+    until,
+    deliver: (message) => {
+      if (message.command !== undefined && message.id !== undefined) requested.set(message.id, message.command);
+      deliver(message);
+    },
     // Relays a command request to the page as the host does, and resolves with the page's reply.
     relay: (command, params) => new Promise((resolve) => {
       const id = ++relayId;
       relays.set(id, resolve);
-      queueMicrotask(() => deliver({ id, command, params }));
+      queueMicrotask(() => host.deliver({ id, command, params }));
     }),
   };
   globalThis.location = { host: plugin, href: `soksak://${plugin}/ui/page.html` };
@@ -162,6 +178,7 @@ export function installViewWindow({ start, plugin = "files", runtime }) {
     messageHandlers: {
       "sok-view": {
         postMessage(message) {
+          if (message.reply !== undefined) replies.push({ command: requested.get(message.reply), ...message });
           posted.push(message);
           if (message.reply !== undefined) {
             const resolve = relays.get(message.reply);
@@ -221,4 +238,19 @@ export function replyOf(host, id) {
 /** The exposure entries that the page registered, as {kind, name} in registration order. */
 export function registeredEntries(host) {
   return host.posted.filter((message) => message.command === "runtime.native.call" && message.params?.name === "registered").map((message) => message.params.payload);
+}
+
+/** Resolves when the page has replied to count requests of the command: the reply is the last message of the handling of a command. */
+export function replied(host, command, count = 1) {
+  return host.until(() => host.replies.filter((reply) => reply.command === command).length >= count, `${count} replies of ${command}`);
+}
+
+/** Resolves when the page has answered the exposure request id. */
+export function answered(host, id) {
+  return host.until(() => replyOf(host, id) !== undefined, `the reply of exposure request ${id}`);
+}
+
+/** Resolves when the page has written count error records. */
+export function errored(host, count = 1) {
+  return host.until(() => host.errors.length >= count, `${count} error records`);
 }

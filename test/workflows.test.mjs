@@ -44,7 +44,7 @@ const RELEASE_TEXT = readFileSync(path.join(ROOT, ".github", "workflows", "relea
 const PLUGIN_API = "@soksak/" + "plugin-api";
 const PACKAGE = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
 
-test("the release starts on a push to main and runs ci.yml and the release gate", { timeout: 1000 }, () => {
+test("the release starts on a push to main and runs ci.yml and the release gate", () => {
   assert.match(RELEASE_TEXT, /^on:\n {2}push:\n {4}branches: \[main\]\n/m, "release.yml must start on a push to main");
   assert.doesNotMatch(RELEASE_TEXT, /^\s*tags:/m, "release.yml must not start on a pushed tag");
   assert.match(RELEASE_TEXT, /^\s*uses: \.\/\.github\/workflows\/ci\.yml$/m, "release.yml must run ci.yml as its checks");
@@ -55,7 +55,7 @@ test("the release starts on a push to main and runs ci.yml and the release gate"
   assert.match(RELEASE_TEXT, /git ls-remote --tags origin "refs\/tags\/v\$VERSION"/, "the release must require the tag to be absent");
 });
 
-test("the release writes the pnpm pack file of the plugin and downloads no core release", { timeout: 1000 }, () => {
+test("the release writes the pnpm pack file of the plugin and downloads no core release", () => {
   assert.match(RELEASE_TEXT, /^\s*run: make pack OUT=dist$/m, "release.yml must run make pack OUT=dist");
   for (const [pattern, what] of [[/gh release download/, "a release download"], [/CORE_RELEASE|CORE_HOST/, "a core release variable"],
     [/SOK=/, "a sok path"], [/go build|cargo build/, "a build of sok"]]) {
@@ -63,22 +63,22 @@ test("the release writes the pnpm pack file of the plugin and downloads no core 
   }
 });
 
-test("make pack writes the release with pnpm pack into the folder that OUT names", { timeout: 5000 }, () => {
-  const result = spawnSync("make", ["-n", "pack", "OUT=/releases"], { cwd: ROOT, encoding: "utf8", timeout: 4000 });
+test("make pack writes the release with pnpm pack into the folder that OUT names", () => {
+  const result = spawnSync("make", ["-n", "pack", "OUT=/releases"], { cwd: ROOT, encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   const commands = result.stdout.trim().split("\n");
   assert.equal(commands.at(-1), "pnpm pack --pack-destination /releases", `make pack runs ${JSON.stringify(commands)}`);
   assert.doesNotMatch(readFileSync(path.join(ROOT, "Makefile"), "utf8"), /\bSOK\b|PACK_FLAGS/, "the Makefile must not name a sok");
 });
 
-test("no workflow checks out another repository", { timeout: 1000 }, () => {
+test("no workflow checks out another repository", () => {
   const folder = path.join(ROOT, ".github", "workflows");
   for (const file of readdirSync(folder).filter((name) => name.endsWith(".yml"))) {
     assert.doesNotMatch(readFileSync(path.join(folder, file), "utf8"), /^\s*repository:/m, `${file} checks out another repository`);
   }
 });
 
-test("the checks come from the kit releases, and no check reads the plugin API of core", { timeout: 1000 }, () => {
+test("the checks come from the kit releases, and no check reads the plugin API of core", () => {
   assert.equal(PACKAGE.devDependencies[PLUGIN_API], undefined, "package.json must not pin the plugin API of core");
   for (const file of ["Makefile", ".githooks/commit-msg", ".githooks/pre-commit"]) {
     assert.doesNotMatch(readFileSync(path.join(ROOT, file), "utf8"), /CORE_PLUGIN_API_DIR|soksak-exposure|soksak-engines|node_modules\/@soksak|check-manifest|check-test-cases/,

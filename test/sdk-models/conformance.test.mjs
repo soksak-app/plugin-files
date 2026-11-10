@@ -7,9 +7,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createExpose } from "./expose.mjs";
 import { createViewBridge } from "./view.mjs";
+import { createOccurrences } from "../fixtures/occurrences.mjs";
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`../fixtures/contract/${name}.json`, import.meta.url), "utf8")).cases;
-const settle = async () => { for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0)); };
+// Each step waits for the records that its case expects: the occurrences of the lists below. A step that expects no record of a
+// list waits for none of it, and its awaited call is the event that ends its handling (docs/spec/calls.md, tests).
+const counts = (lists, expected) => () => Object.entries(lists).every(([key, [list, before]]) => list.length - before >= (expected[key]?.length ?? 0));
 const errorText = (error) => (error instanceof Error ? error.message : String(error?.message ?? error));
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -51,9 +54,10 @@ test("every excluded case is a case of a copied file, and each file replays the 
 
 test("expose cases replay against the exposure model", async () => {
   for (const testCase of replayable("expose")) {
-    const registered = [];
-    const replies = [];
-    const changed = [];
+    const { until, list } = createOccurrences();
+    const registered = list();
+    const replies = list();
+    const changed = list();
     const subscribers = new Set();
     let handle = null;
     let value = testCase.initial;
@@ -87,7 +91,7 @@ test("expose cases replay against the exposure model", async () => {
       } catch (failure) {
         throws = errorText(failure);
       }
-      await settle();
+      await until(counts({ registered: [registered, before.registered], replies: [replies, before.replies], changed: [changed, before.changed] }, step.output), `the records of ${label}`);
       const output = {
         registered: registered.slice(before.registered),
         replies: replies.slice(before.replies),
@@ -104,8 +108,9 @@ test("expose cases replay against the exposure model", async () => {
 test("view native cases replay against the view bridge model", async () => {
   for (const testCase of replayable("view-native")) {
     viewWindow();
-    const posted = [];
-    const delivered = [];
+    const { until, list } = createOccurrences();
+    const posted = list();
+    const delivered = list();
     const removers = new Map();
     const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) } });
     const answer = (reply) => bridge.deliver({ sok: 1, id: posted.at(-1).id, ...reply });
@@ -141,7 +146,7 @@ test("view native cases replay against the view bridge model", async () => {
       } catch (failure) {
         throws = errorText(failure);
       }
-      await settle();
+      await until(counts({ posted: [posted, before], delivered: [delivered, deliveredBefore] }, step.output), `the records of ${label}`);
       const output = { posted: posted.slice(before), delivered: delivered.slice(deliveredBefore), result, throws };
       assert.deepEqual(output, step.output, label);
     }
@@ -153,7 +158,8 @@ test("view command cases replay against the command model", async () => {
     context: (params, context) => context };
   for (const testCase of replayable("view-commands")) {
     viewWindow();
-    const posted = [];
+    const { until, list } = createOccurrences();
+    const posted = list();
     const bridge = createViewBridge({ handler: { postMessage: (message) => posted.push(clone(message)) } });
     for (const [index, step] of testCase.steps.entries()) {
       const label = `${testCase.id}#${index}`;
@@ -172,7 +178,7 @@ test("view command cases replay against the command model", async () => {
       } catch (failure) {
         throws = errorText(failure);
       }
-      await settle();
+      await until(counts({ posted: [posted, before] }, step.output), `the records of ${label}`);
       const output = { posted: posted.slice(before), result, throws };
       assert.deepEqual(output, step.output, label);
     }
@@ -229,7 +235,7 @@ test("view bridge cases replay against the view bridge model", async () => {
       } catch (failure) {
         output = { throws: errorText(failure) };
       }
-      await settle();
+      // Each output of a view bridge step is read in the turn of its step or from its awaited call.
       if (step.output === undefined) continue;
       assert.deepEqual(clone(output), step.output, label);
       assert.ok(posted.length >= before, label);

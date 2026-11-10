@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { changedOf, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
+import { answered, changedOf, findAll, installViewWindow, registeredEntries, replied, replyOf, sendExposureRequest } from "./fixtures/view-host.mjs";
 
 const PROJECT = { id: "project-1", root: "/project" };
 const SURFACE = "left/files.bookmarks";
@@ -53,8 +53,8 @@ async function startBookmarks({ store = { bookmarks: [] }, dataFault = null }) {
     },
   });
   caseNumber += 1;
+  // The module awaits its start, so the start of the view ends when the import resolves.
   await import(`../build/test/ui/bookmarks.js?case=${caseNumber}`);
-  await settle();
   return { host, store };
 }
 
@@ -62,7 +62,7 @@ const rowsOf = (root) => findAll(root, (element) => element.className === "files
 
 // A web view shows its default serif text of 16px unless the page states the text of the sidebar.
 for (const page of ["tree.html", "bookmarks.html"]) {
-  test(`${page} states the text of the sidebar on its body`, { timeout: 1000 }, () => {
+  test(`${page} states the text of the sidebar on its body`, () => {
     const text = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "ui", page), "utf8");
     assert.match(text, /body \{[^}]*font: 12px\/1\.4 var\(--font\)/, `${page} states no font on its body`);
     assert.match(text, /body \{[^}]*color: var\(--fg\)/, `${page} states no text color on its body`);
@@ -94,7 +94,7 @@ test("the remove button writes the key without the removed path", async () => {
   const [remove] = findAll(globalThis.document.body, (element) => element.dataset.command === "files.bookmarks.remove" && element.dataset.params === JSON.stringify({ path: "src/main.go" }));
   assert.ok(remove, "the remove button of the first row names its path");
   remove.click();
-  await settle();
+  await replied(view.host, "files.bookmarks.remove");
   assert.deepEqual(view.store.bookmarks, ["readme.md"]);
   assert.deepEqual(rowsOf(globalThis.document.body).length, 1);
   assert.deepEqual(view.host.errors, []);
@@ -106,7 +106,7 @@ test("a remove keeps the path that another view added after its read", async () 
   assert.ok(remove, "the remove button of the first row names its path");
   afterRead = ["src/main.go", "readme.md", "added.txt"];
   remove.click();
-  await settle();
+  await replied(view.host, "files.bookmarks.remove");
   assert.deepEqual(view.store.bookmarks, ["readme.md", "added.txt"]);
   assert.deepEqual(rowsOf(globalThis.document.body).length, 2);
   assert.deepEqual(view.host.errors, []);
@@ -123,7 +123,8 @@ test("the bookmarks view re-reads the bookmarks when the project data of the key
   assert.deepEqual(view.host.posted.filter((message) => message.command === "runtime.data.on").length, 1);
   view.store.bookmarks = ["src/main.go", "readme.md"];
   view.host.deliver({ event: "data", data: { key: "bookmarks" } });
-  await settle();
+  // The page reads the key again and draws it; the second read of the key is answered before the rows are drawn.
+  await view.host.until(() => rowsOf(globalThis.document.body).length === 2, "the drawn row of the stored bookmark");
   assert.equal(rowsOf(globalThis.document.body).length, 2, "a bookmark that another view stored is drawn");
   assert.deepEqual(view.host.errors, []);
 });
@@ -131,8 +132,8 @@ test("the bookmarks view re-reads the bookmarks when the project data of the key
 test("a change of another project data key does not re-read the bookmarks", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go"] } });
   const readsBefore = view.host.posted.filter((message) => message.command === "runtime.data.get").length;
+  // The listener of the page handles the change of another key in the turn of its event and reads nothing.
   view.host.deliver({ event: "data", data: { key: "other" } });
-  await settle();
   const readsAfter = view.host.posted.filter((message) => message.command === "runtime.data.get").length;
   assert.equal(readsAfter, readsBefore);
 });
@@ -140,7 +141,7 @@ test("a change of another project data key does not re-read the bookmarks", asyn
 test("the bookmarks status reports the bookmark paths in stored order", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
   const id = sendExposureRequest(view.host, SURFACE, "status.get", { name: "files.bookmarks" });
-  await settle();
+  await answered(view.host, id);
   assert.deepEqual(replyOf(view.host, id), { result: ["src/main.go", "readme.md"] });
   assert.ok(registeredEntries(view.host).some((entry) => entry.kind === "status" && entry.name === "files.bookmarks"));
 });
@@ -148,7 +149,7 @@ test("the bookmarks status reports the bookmark paths in stored order", async ()
 test("the bookmarks status sends its current value as a changed event with version 1 when a watch starts", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
   const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.bookmarks" });
-  await settle();
+  await answered(view.host, watch);
   assert.deepEqual(replyOf(view.host, watch), { result: null });
   assert.deepEqual(changedOf(view.host, "files.bookmarks"), [{ name: "files.bookmarks", value: ["src/main.go", "readme.md"], version: 1 }]);
 });
@@ -156,11 +157,11 @@ test("the bookmarks status sends its current value as a changed event with versi
 test("the bookmarks status sends the changed list as a changed event when a remove changes it", async () => {
   const view = await startBookmarks({ store: { bookmarks: ["src/main.go", "readme.md"] } });
   const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.bookmarks" });
-  await settle();
+  await answered(view.host, watch);
   assert.deepEqual(replyOf(view.host, watch), { result: null });
   const [remove] = findAll(globalThis.document.body, (element) => element.dataset.params === JSON.stringify({ path: "src/main.go" }));
   remove.click();
-  await settle();
+  await replied(view.host, "files.bookmarks.remove");
   assert.deepEqual(changedOf(view.host, "files.bookmarks").at(-1), { name: "files.bookmarks", value: ["readme.md"], version: 2 });
 });
 
@@ -178,7 +179,7 @@ test("the bookmark items and remove buttons are one provider each, which reads t
   const [remove] = findAll(globalThis.document.body, (element) => element.dataset.params === JSON.stringify({ path: "src/main.go" }));
   assert.equal(remove.dataset.expose, "files.bookmarks.remove", "the remove button of the first row carries its name");
   remove.click();
-  await settle();
+  await replied(view.host, "files.bookmarks.remove");
   assert.equal(items().length, 1, "the removed row is not provided");
   assert.deepEqual(elements.get("files.bookmarks.remove")[0]().map((button) => button.dataset.params), [JSON.stringify({ path: "readme.md" })]);
   assert.equal(elements.get("files.bookmarks.item").length, 1, "a removal registers no provider");
