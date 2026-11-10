@@ -91,7 +91,7 @@ test("expose cases replay against the exposure model", async () => {
       } catch (failure) {
         throws = errorText(failure);
       }
-      await until(counts({ registered: [registered, before.registered], replies: [replies, before.replies], changed: [changed, before.changed] }, step.output), `the records of ${label}`);
+      await until(counts({ registered: [registered, before.registered], replies: [replies, before.replies], changed: [changed, before.changed] }, step.output));
       const output = {
         registered: registered.slice(before.registered),
         replies: replies.slice(before.replies),
@@ -146,7 +146,7 @@ test("view native cases replay against the view bridge model", async () => {
       } catch (failure) {
         throws = errorText(failure);
       }
-      await until(counts({ posted: [posted, before], delivered: [delivered, deliveredBefore] }, step.output), `the records of ${label}`);
+      await until(counts({ posted: [posted, before], delivered: [delivered, deliveredBefore] }, step.output));
       const output = { posted: posted.slice(before), delivered: delivered.slice(deliveredBefore), result, throws };
       assert.deepEqual(output, step.output, label);
     }
@@ -178,7 +178,7 @@ test("view command cases replay against the command model", async () => {
       } catch (failure) {
         throws = errorText(failure);
       }
-      await until(counts({ posted: [posted, before] }, step.output), `the records of ${label}`);
+      await until(counts({ posted: [posted, before] }, step.output));
       const output = { posted: posted.slice(before), result, throws };
       assert.deepEqual(output, step.output, label);
     }

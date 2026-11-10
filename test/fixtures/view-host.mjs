@@ -130,7 +130,7 @@ export function installFakeDom(changed = () => {}) {
  * Starts a view page in the fake window. start is window.sokSurface. runtime(message) answers a call to a runtime name with its
  * result or throws its error; sidecar is not called here, because the runtime function answers runtime.sidecar.send itself.
  * Returns the posted calls, the errors and log records of the page, the replies of the page to the command requests that reached
- * it, deliver(message), which stands for window.sokView.attach, and until(holds, what), which resolves in the turn of the first
+ * it, deliver(message), which stands for window.sokView.attach, and until(holds), which resolves in the turn of the first
  * occurrence after which holds() is true: a posted message or a change of the children of an element.
  */
 export function installViewWindow({ start, plugin = "files", runtime }) {
@@ -242,15 +242,15 @@ export function registeredEntries(host) {
 
 /** Resolves when the page has replied to count requests of the command: the reply is the last message of the handling of a command. */
 export function replied(host, command, count = 1) {
-  return host.until(() => host.replies.filter((reply) => reply.command === command).length >= count, `${count} replies of ${command}`);
+  return host.until(() => host.replies.filter((reply) => reply.command === command).length >= count);
 }
 
 /** Resolves when the page has answered the exposure request id. */
 export function answered(host, id) {
-  return host.until(() => replyOf(host, id) !== undefined, `the reply of exposure request ${id}`);
+  return host.until(() => replyOf(host, id) !== undefined);
 }
 
 /** Resolves when the page has written count error records. */
 export function errored(host, count = 1) {
-  return host.until(() => host.errors.length >= count, `${count} error records`);
+  return host.until(() => host.errors.length >= count);
 }

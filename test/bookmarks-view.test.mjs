@@ -124,7 +124,7 @@ test("the bookmarks view re-reads the bookmarks when the project data of the key
   view.store.bookmarks = ["src/main.go", "readme.md"];
   view.host.deliver({ event: "data", data: { key: "bookmarks" } });
   // The page reads the key again and draws it; the second read of the key is answered before the rows are drawn.
-  await view.host.until(() => rowsOf(globalThis.document.body).length === 2, "the drawn row of the stored bookmark");
+  await view.host.until(() => rowsOf(globalThis.document.body).length === 2);
   assert.equal(rowsOf(globalThis.document.body).length, 2, "a bookmark that another view stored is drawn");
   assert.deepEqual(view.host.errors, []);
 });

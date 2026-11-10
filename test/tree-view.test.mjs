@@ -133,7 +133,7 @@ test("a reply to a request of an earlier document of the surface is not an error
   const reply = (id) => view.host.deliver({ event: "sidecar.message", data: { id: SURFACE, body: { id, tree: INITIAL } } });
   reply("files-earlier-document-1");
   // The page records the reply of an earlier document as its debug event, which ends its handling.
-  await view.host.until(() => view.host.logs.some((record) => record.event === "tree.reply.earlier"), "the record tree.reply.earlier");
+  await view.host.until(() => view.host.logs.some((record) => record.event === "tree.reply.earlier"));
   assert.deepEqual(view.host.errors, [], "the reply of an earlier document reported an error");
   const [{ id }] = view.sendsOf("snapshot");
   reply(`${id}0`);
