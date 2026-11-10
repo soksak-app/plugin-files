@@ -275,7 +275,7 @@ for (const section of Object.keys(SECTIONS)) {
     assert.match(paintRules(), new RegExp(`:root\\{[^}]*--card:${hex} !important`), "the card color is not the marker color");
     observed[0].frame({ sequence: 0, width: 200, height: 100, documentTimeOriginMs: performance.timeOrigin, firstResizeAtMs: 1,
       resizeAtMs: 1, resizeCount: 1, frameTimeMs: 2 });
-    await view.host.until(() => view.host.logs.some((record) => record.event === "view.content_frame"), "the record view.content_frame");
+    await view.host.until(() => view.host.logs.some((record) => record.event === "view.content_frame"));
     // The emitter of the plugin writes the event without the plugin prefix (ui/events.js).
     const frames = view.host.logs.filter((record) => record.event === "view.content_frame");
     assert.deepEqual(frames.map((record) => record.level), ["trace"], `the frame was written as ${JSON.stringify(view.host.logs)}`);
@@ -373,7 +373,7 @@ test("files.bookmarks.view.ready turns false for its watchers when an error repl
   const observers = globalThis.mutationObservers.filter((observer) => observer.target === message);
   assert.equal(observers.length, 1, "no observer watches the element that shows the text");
   for (const observer of observers) observer.callback([]);
-  await view.host.until(() => changedOf(view.host, name).length === 2, `the second change of ${name}`);
+  await view.host.until(() => changedOf(view.host, name).length === 2);
   assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true, false]);
 });
 
@@ -388,7 +388,7 @@ test("files.tree.view.ready turns false for its watchers when the head title sho
   const observers = globalThis.mutationObservers.filter((observer) => observer.target === title);
   assert.equal(observers.length, 1, "no observer watches the element that shows the text");
   for (const observer of observers) observer.callback([]);
-  await view.host.until(() => changedOf(view.host, name).length === 2, `the second change of ${name}`);
+  await view.host.until(() => changedOf(view.host, name).length === 2);
   assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true, false]);
 });
 

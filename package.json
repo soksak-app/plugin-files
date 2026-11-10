@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "build": "node scripts/build-vendor.mjs",
-    "test": "node scripts/build-test.mjs && node --test test/"
+    "test": "node scripts/build-test.mjs && node --test --test-timeout=120000 test/"
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
