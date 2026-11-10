@@ -14,7 +14,7 @@ const source = ui.map((name) => readFileSync(path.join(root, "ui", name), "utf8"
 
 const kinds = [["commands", "commands.register"]];
 for (const [key, method] of kinds) {
-  test(`every declared ${key} entry is registered with a literal name`, { timeout: 10000 }, () => {
+  test(`every declared ${key} entry is registered with a literal name`, () => {
     const missing = (manifest.exposes?.[key] ?? [])
       .map((entry) => entry.name)
       .filter((name) => !source.includes(`${method}("${name}"`));

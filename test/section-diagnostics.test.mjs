@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { changedOf, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
+import { answered, changedOf, errored, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest } from "./fixtures/view-host.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const readJson = (file) => JSON.parse(readFileSync(path.join(root, file), "utf8"));
@@ -102,12 +102,12 @@ async function startSection(section, { theme = THEME, withDiagnostics = true, di
   globalThis.cancelAnimationFrame = () => {};
   caseNumber += 1;
   let failure = null;
+  // The module awaits its start, so the start of the view ends when the import resolves or rejects.
   try {
     await import(`../build/test/ui/${module}?case=${caseNumber}`);
   } catch (error) {
     failure = error;
   }
-  await settle();
   return { host, surface, failure };
 }
 
@@ -118,7 +118,7 @@ const run = async (view, command, params) => {
 const observations = async () => (await import("../build/test/sdk-models/view-frames.mjs")).observations;
 const readyStatus = async (view, section) => {
   const id = sendExposureRequest(view.host, view.surface, "status.get", { name: readyName(section) });
-  await settle();
+  await answered(view.host, id);
   return replyOf(view.host, id);
 };
 const paintRules = () => globalThis.document.adoptedStyleSheets.map((sheet) => sheet.text).join("");
@@ -275,7 +275,7 @@ for (const section of Object.keys(SECTIONS)) {
     assert.match(paintRules(), new RegExp(`:root\\{[^}]*--card:${hex} !important`), "the card color is not the marker color");
     observed[0].frame({ sequence: 0, width: 200, height: 100, documentTimeOriginMs: performance.timeOrigin, firstResizeAtMs: 1,
       resizeAtMs: 1, resizeCount: 1, frameTimeMs: 2 });
-    await settle();
+    await view.host.until(() => view.host.logs.some((record) => record.event === "view.content_frame"), "the record view.content_frame");
     // The emitter of the plugin writes the event without the plugin prefix (ui/events.js).
     const frames = view.host.logs.filter((record) => record.event === "view.content_frame");
     assert.deepEqual(frames.map((record) => record.level), ["trace"], `the frame was written as ${JSON.stringify(view.host.logs)}`);
@@ -363,17 +363,17 @@ test("files.bookmarks.view.ready turns false for its watchers when an error repl
   const view = await startSection("files.bookmarks");
   const message = elementOf("files.bookmarks");
   const watch = sendExposureRequest(view.host, view.surface, "status.watch", { name });
-  await settle();
+  await answered(view.host, watch);
   assert.deepEqual(replyOf(view.host, watch), { result: null });
   assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true]);
   const refused = sendExposureRequest(view.host, "left/other", "status.get", { name });
-  await settle();
+  await errored(view.host);
   assert.equal(message.textContent, `exposure request ${refused} names surface left/other, not ${view.surface}`);
   // The fake DOM notifies no observer by itself, so the test delivers the mutation of the message line.
   const observers = globalThis.mutationObservers.filter((observer) => observer.target === message);
   assert.equal(observers.length, 1, "no observer watches the element that shows the text");
   for (const observer of observers) observer.callback([]);
-  await settle();
+  await view.host.until(() => changedOf(view.host, name).length === 2, `the second change of ${name}`);
   assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true, false]);
 });
 
@@ -381,14 +381,14 @@ test("files.tree.view.ready turns false for its watchers when the head title sho
   const name = readyName("files.tree");
   const view = await startSection("files.tree");
   const title = elementOf("files.tree");
-  sendExposureRequest(view.host, view.surface, "status.watch", { name });
-  await settle();
+  const watch = sendExposureRequest(view.host, view.surface, "status.watch", { name });
+  await answered(view.host, watch);
   assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true]);
   title.textContent = "another text";
   const observers = globalThis.mutationObservers.filter((observer) => observer.target === title);
   assert.equal(observers.length, 1, "no observer watches the element that shows the text");
   for (const observer of observers) observer.callback([]);
-  await settle();
+  await view.host.until(() => changedOf(view.host, name).length === 2, `the second change of ${name}`);
   assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true, false]);
 });
 

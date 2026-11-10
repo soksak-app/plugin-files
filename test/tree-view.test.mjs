@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { changedOf, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest, settle } from "./fixtures/view-host.mjs";
+import { answered, changedOf, errored, findAll, installViewWindow, registeredEntries, replied, replyOf, sendExposureRequest } from "./fixtures/view-host.mjs";
 
 const SIDECAR = "@soksak/sidecar-files";
 const SURFACE = "left/files.tree";
@@ -90,8 +90,8 @@ async function startTree({ sidecar, store = { bookmarks: [] } }) {
   });
   const before = (await import("../build/test/sdk-models/trees.mjs")).trees.length;
   caseNumber += 1;
+  // The module awaits its start, so the start of the view ends when the import resolves.
   await import(`../build/test/ui/tree.js?case=${caseNumber}`);
-  await settle();
   const { trees } = await import("../build/test/sdk-models/trees.mjs");
   assert.equal(trees.length, before + 1, "the page created one tree");
   return { host, sent, opened: () => host.posted.filter((message) => message.command === "core.file.open").map((message) => message.params.path), store, tree: trees.at(-1), sendsOf: (operation) => sent.filter((body) => body.operation === operation) };
@@ -111,11 +111,11 @@ test("the tree view asks the sidecar for the project root and draws its rows", a
 test("collapsing and expanding a folder sends collapse and expand with the generation and the path", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.tree.getItem("src").collapse();
-  await settle();
+  await replied(view.host, "files.tree.toggle");
   assert.deepEqual(view.sendsOf("collapse").map(({ generation, path }) => ({ generation, path })), [{ generation: 1, path: "src" }]);
   assert.equal(view.tree.getItem("src").isExpanded(), false, "the library shows the folder as the sidecar reply states it");
   view.tree.getItem("src").expand();
-  await settle();
+  await replied(view.host, "files.tree.toggle", 2);
   assert.deepEqual(view.sendsOf("expand").map(({ generation, path }) => ({ generation, path })), [{ generation: 2, path: "src" }]);
   assert.equal(view.tree.getItem("src").isExpanded(), true);
 });
@@ -123,7 +123,7 @@ test("collapsing and expanding a folder sends collapse and expand with the gener
 test("selecting a file sends select with the generation and the path, and the reply marks the row", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.tree.options.onSelectionChange(["readme.md"]);
-  await settle();
+  await replied(view.host, "files.select");
   assert.deepEqual(view.sendsOf("select").map(({ generation, path }) => ({ generation, path })), [{ generation: 1, path: "readme.md" }]);
   assert.equal(view.tree.getItem("readme.md").isSelected(), true);
 });
@@ -132,11 +132,12 @@ test("a reply to a request of an earlier document of the surface is not an error
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const reply = (id) => view.host.deliver({ event: "sidecar.message", data: { id: SURFACE, body: { id, tree: INITIAL } } });
   reply("files-earlier-document-1");
-  await settle();
+  // The page records the reply of an earlier document as its debug event, which ends its handling.
+  await view.host.until(() => view.host.logs.some((record) => record.event === "tree.reply.earlier"), "the record tree.reply.earlier");
   assert.deepEqual(view.host.errors, [], "the reply of an earlier document reported an error");
   const [{ id }] = view.sendsOf("snapshot");
   reply(`${id}0`);
-  await settle();
+  await errored(view.host);
   assert.deepEqual(view.host.errors.map((error) => error.text), [`files sidecar replied to unknown request ${id}0`]);
 });
 
@@ -151,19 +152,19 @@ test("a failed snapshot is reported to the error line of the view with its text"
 test("a sidecar failure of the session is reported to the error line of the view", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.host.deliver({ event: "sidecar.failure", data: { id: SURFACE, reason: "restart limit" } });
-  await settle();
+  await errored(view.host);
   assert.deepEqual(view.host.errors.map((error) => error.text), ["restart limit"]);
 });
 
 test("the star button adds the selected file to the stored bookmarks", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.tree.options.onSelectionChange(["readme.md"]);
-  await settle();
+  await replied(view.host, "files.select");
   const [star] = findAll(globalThis.document.body, (element) => element.dataset.command === "files.bookmarks.add");
   assert.ok(star, "the star button is bound to files.bookmarks.add");
   assert.equal(star.disabled, false, "the star button is enabled for a selected file");
   star.click();
-  await settle();
+  await replied(view.host, "files.bookmarks.add");
   assert.deepEqual(view.store.bookmarks, ["readme.md"]);
   assert.deepEqual(view.host.errors, []);
 });
@@ -172,7 +173,7 @@ test("two adds at the same moment keep both paths", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.host.deliver({ id: "add-1", command: "files.bookmarks.add", params: { path: "a.txt" } });
   view.host.deliver({ id: "add-2", command: "files.bookmarks.add", params: { path: "b.txt" } });
-  await settle();
+  await replied(view.host, "files.bookmarks.add", 2);
   assert.deepEqual([...view.store.bookmarks].sort(), ["a.txt", "b.txt"]);
   assert.deepEqual(view.host.errors, []);
 });
@@ -182,10 +183,10 @@ test("a change that other writers keep overtaking shows its failure on the error
   let writes = 0;
   Object.defineProperty(view.store, "bookmarks", { get: () => [`written by another view ${writes += 1}`], set: () => {} });
   view.tree.options.onSelectionChange(["readme.md"]);
-  await settle();
+  await replied(view.host, "files.select");
   const [star] = findAll(globalThis.document.body, (element) => element.dataset.command === "files.bookmarks.add");
   star.click();
-  for (let turn = 0; turn < 10 && view.host.errors.length === 0; turn += 1) await settle();
+  await errored(view.host);
   assert.deepEqual(view.host.errors.map((error) => error.text), ["runtime.data.change bookmarks: other writers changed the value 64 times"]);
 });
 
@@ -193,7 +194,7 @@ test("adding a stored path writes nothing", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   view.store.bookmarks = ["a.txt"];
   view.host.deliver({ id: "add-1", command: "files.bookmarks.add", params: { path: "a.txt" } });
-  await settle();
+  await replied(view.host, "files.bookmarks.add");
   assert.deepEqual(view.store.bookmarks, ["a.txt"]);
   assert.deepEqual(view.host.posted.filter((message) => message.command === "runtime.data.replace"), []);
 });
@@ -201,7 +202,7 @@ test("adding a stored path writes nothing", async () => {
 test("the tree status reports each visible row with its path, kind, depth, expansion and selection", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const id = sendExposureRequest(view.host, SURFACE, "status.get", { name: "files.tree" });
-  await settle();
+  await answered(view.host, id);
   assert.deepEqual(replyOf(view.host, id), {
     result: {
       rows: [
@@ -218,7 +219,7 @@ test("the tree status reports each visible row with its path, kind, depth, expan
 test("the tree status sends its current value as a changed event with version 1 when a watch starts", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.tree" });
-  await settle();
+  await answered(view.host, watch);
   assert.deepEqual(replyOf(view.host, watch), { result: null });
   assert.deepEqual(changedOf(view.host, "files.tree"), [
     {
@@ -239,10 +240,10 @@ test("the tree status sends its current value as a changed event with version 1 
 test("the tree status sends each changed selection as a changed event with the next version", async () => {
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const watch = sendExposureRequest(view.host, SURFACE, "status.watch", { name: "files.tree" });
-  await settle();
+  await answered(view.host, watch);
   assert.deepEqual(replyOf(view.host, watch), { result: null });
   view.tree.options.onSelectionChange(["readme.md"]);
-  await settle();
+  await replied(view.host, "files.select");
   const sent = changedOf(view.host, "files.tree");
   assert.deepEqual(sent.map((payload) => payload.version), [1, 2]);
   assert.equal(sent[1].value.rows.find((row) => row.path === "readme.md").selected, true);
@@ -252,7 +253,7 @@ test("the message row of the tree status shows the text of a failed listing", as
   const text = "cannot list expanded directory src: permission denied";
   const view = await startTree({ sidecar: filesSidecar(INITIAL, { failSnapshot: text }) });
   const id = sendExposureRequest(view.host, SURFACE, "status.get", { name: "files.tree" });
-  await settle();
+  await answered(view.host, id);
   assert.deepEqual(replyOf(view.host, id), { result: { rows: [], message: text } });
 });
 
@@ -284,11 +285,13 @@ test("each drawn row runs files.select with its path, and a click on it selects 
   const rows = created.at(-1).elements.get("files.tree.row")[0]();
   assert.deepEqual(rows.map((row) => [row.dataset.command, JSON.parse(row.dataset.params)]),
     [["files.select", { path: "src" }], ["files.select", { path: "src/main.go" }], ["files.select", { path: "readme.md" }]]);
+  // A click runs files.select from the selection notice of the library and from the delegated root, and the page answers both.
   rows.at(-1).click();
-  await settle();
+  await replied(view.host, "files.select", 2);
   assert.deepEqual(view.sendsOf("select").map(({ path }) => path), ["readme.md"], "one click sends one select");
+  // A click on the selected row runs files.select from the delegated root only.
   rows.at(-1).click();
-  await settle();
+  await replied(view.host, "files.select", 3);
   assert.deepEqual(view.sendsOf("select").map(({ path }) => path), ["readme.md"], "a click on the selected row sends nothing");
 });
 
@@ -300,7 +303,7 @@ test("a double click opens the file of its row without waiting for the reply of 
   readme.click();
   assert.equal(view.sendsOf("select").length, 0, "the reply of the select has not come");
   view.tree.rendered.dispatchEvent(new CustomEvent("dblclick", { path: [{ dataset: {} }, readme, view.tree.rendered] }));
-  await settle();
+  await replied(view.host, "files.open");
   assert.deepEqual(view.opened(), ["readme.md"]);
 });
 
@@ -310,7 +313,7 @@ test("a double click on a folder and a double click off the rows open nothing", 
   const rows = created.at(-1).elements.get("files.tree.row")[0]();
   view.tree.rendered.dispatchEvent(new CustomEvent("dblclick", { path: [rows[0], view.tree.rendered] }));
   view.tree.rendered.dispatchEvent(new CustomEvent("dblclick", { path: [view.tree.rendered] }));
-  await settle();
+  // A double click that names no file ends in the turn of its event: it runs no command.
   assert.deepEqual(view.opened(), []);
 });
 
@@ -318,13 +321,12 @@ test("a row that the library draws later is marked, and a row it removes is not 
   const view = await startTree({ sidecar: filesSidecar(INITIAL) });
   const { created } = await import("../build/test/sdk-models/expose.mjs");
   const rows = () => created.at(-1).elements.get("files.tree.row")[0]();
+  // The library notifies the change of its rows to the observers of its root in the turn of the change, and the page marks them then.
   view.tree.batch([{ type: "add", path: "notes.txt" }]);
-  await settle();
   const added = rows().find((row) => row.dataset.itemPath === "notes.txt");
   assert.ok(added, "the provider reads the row that the library drew");
   assert.equal(added.dataset.expose, "files.tree.row", "the page marks the row that the library drew");
   view.tree.batch([{ type: "remove", path: "readme.md" }]);
-  await settle();
   assert.deepEqual(rows().map((row) => row.dataset.itemPath).includes("readme.md"), false);
   assert.equal(created.at(-1).elements.get("files.tree.row").length, 1, "the changes register no provider");
 });
