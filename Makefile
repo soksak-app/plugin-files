@@ -10,10 +10,10 @@ test:
 	pnpm test
 
 # test-app 은 설치된 @soksak/window-check 의 core release 로 공개된 core 앱을 대상으로 이 plugin 의 window check(e2e/)를 실행한다
-# (core docs/spec/plugins.md#window-checks-of-a-plugin). 그 bin soksak-test-app 이 그 release 의 앱 zip 을 build/app-cache/ 에 두고,
+# (core docs/spec/plugins.md#window-checks-of-a-plugin). 그 bin sok-test-app 이 그 release 의 앱 zip 을 build/app-cache/ 에 두고,
 # make pack 이 쓰는 이 저장소의 release, package 의 start probe, e2e/fixtures 의 fixture plugin 을 각 앱에 설치한 뒤 check 를 실행한다.
 test-app:
-	pnpm exec soksak-test-app
+	pnpm exec sok-test-app
 
 # check 는 package.json 이 pin 한 kit release 의 검사를 실행한다. sok-check events 는 소스에서 빠진 record 를 세고 emit 지점을
 # events.json 과 대조하며(event-sources.json 이 선언 파일이다), sok-check docs 는 record 를 검사한다. application 은 release 를
