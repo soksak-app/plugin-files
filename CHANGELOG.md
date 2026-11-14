@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P95: The version is 0.0.26, which releases P94 with `engines.soksak` `^0.0.40`.
 - P110: A wait ends only by its occurrence, and the limit of the test runner, `--test-timeout=120000` in the test script, fails a test whose occurrence does not come with its name; the occurrences helper no longer rejects the open waits at `beforeExit`. A probe of two waits that never come in one file failed both tests at the limit with their names.
 - P109: The manifest test refuses a `timeout` of a command entry as core 0.0.40 does, and the view tests wait for the occurrences that end what they assert instead of counts of turns; a wait still open at the end of the event loop fails its test, and no test sets a time limit. Red: the refusal test failed on the copy of the subset that listed `timeout`. Green: it passes.
 - P107: The ready statuses `files.tree.view.ready` and `files.bookmarks.view.ready` are `{ready, content}`, the core contract of a section view, and no longer declare or answer the recognition language.

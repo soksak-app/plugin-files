@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P95: version은 0.0.26이며, `engines.soksak` `^0.0.40`과 함께 P94를 release한다.
 - P110: 대기는 그 occurrence 로만 끝나고, test script 의 runner 한도 `--test-timeout=120000` 이 occurrence 가 오지 않는 test 를 이름과 함께 실패시킨다. occurrences helper 는 더 이상 `beforeExit` 에서 열린 대기를 reject 하지 않는다. 한 file 에 오지 않는 대기 둘을 둔 probe 에서 두 test 가 모두 한도에서 이름과 함께 실패했다.
 - P109: manifest test 가 core 0.0.40 처럼 command entry 의 `timeout` 을 거부하고, view test 가 정해진 턴 수 대신 자기가 확인하는 것을 끝내는 occurrence 를 기다린다. event loop 의 끝까지 열린 대기는 test 를 실패시키고, 어떤 test 도 시간 한도를 두지 않는다. Red: `timeout` 을 적은 subset copy 에서 거부 test 가 실패했다. Green: 통과한다.
 - P107: ready status `files.tree.view.ready`와 `files.bookmarks.view.ready`는 section view의 core contract인 `{ready, content}`이고, 더 이상 인식 언어를 선언하거나 답하지 않는다.
