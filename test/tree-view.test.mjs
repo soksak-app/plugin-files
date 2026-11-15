@@ -1,11 +1,12 @@
-// The file tree section view at the consumer boundary: the real page module ui/tree.js runs in a view of the SDK test host, with the real
+// The file tree section view at the consumer boundary: the real page module ui/tree.js runs in a view of this repository's view host
+// (test/fixtures/host.mjs), with the real
 // tree library (ui/vendor/trees.js) drawing its rows. The files sidecar is the files sidecar fixture of test/fixtures/files-sidecar.mjs, which answers the
 // operations of the declared wire contract. The test plays the user's presses on the rows and the header buttons, and it reads the state
 // of the view through the exposure requests that the host forwards to the page.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { openView } from "@soksak/plugin-api/testing";
+import { openSurfaceView } from "./fixtures/host.mjs";
 import { filesSidecar, SIDECAR } from "./fixtures/files-sidecar.mjs";
 
 const SURFACE = "left/files.tree";
@@ -24,28 +25,17 @@ const INITIAL = {
 const ROW_PATHS = ["src/", "src/main.go", "readme.md"];
 
 /**
- * Opens the tree view in the host of the test and loads its page module. The plugin commands of the view run through the page's own
- * registrations, as the host relays them; core.file.open is a core command that the host answers with null.
+ * Opens the tree view in a view of the test host and loads its page module. The plugin commands of the view run through the page's own
+ * registrations, which the host runs for the view; core.file.open is a core command that the host answers with null.
  */
 async function openTree(t, { files = filesSidecar(INITIAL), onDataRead = undefined } = {}) {
-  let view = null;
-  const relay = (name) => (params) => view.request(name, params);
-  const commands = Object.fromEntries(plugin.exposes.commands.map(({ name }) => [name, relay(name)]));
-  view = await openView("files", {
-    host: {
-      surface: SURFACE,
-      declarations: plugin.exposes,
-      project: PROJECT,
-      sidecar: { [SIDECAR]: (body) => files.route(body) },
-      sidecars: [SIDECAR],
-      commands: { ...commands, "core.file.open": () => null },
-      native: { exposureReply: () => null },
-      data: { bookmarks: { schema: plugin.data.bookmarks.schema, default: plugin.data.bookmarks.default } },
-      onDataRead,
-    },
+  const view = openSurfaceView({
     start: { surface: SURFACE, params: null, origin: { directory: null }, project: PROJECT, declarations: plugin.exposes, diagnostics: null,
       section: { id: "files.tree", sidebar: "left", card: null } },
-    declarations: plugin.exposes,
+    sidecars: { [SIDECAR]: (body) => files.route(body) },
+    commands: { "core.file.open": () => null },
+    data: { bookmarks: plugin.data.bookmarks.default },
+    onDataRead,
   });
   t.after(() => view.close());
   files.attach(view, SURFACE);

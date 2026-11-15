@@ -1,13 +1,13 @@
-// The bookmarks section view at the consumer boundary: the real page module ui/bookmarks.js runs in a view of the SDK test host. The page
-// reads and writes the declared project data key bookmarks through runtime.data.get and runtime.data.change, and the other views of the
-// project are the writes of the test host (change.data, and onDataRead for a write between a read and its replace). A remove press is
-// relayed to the page's own command.
+// The bookmarks section view at the consumer boundary: the real page module ui/bookmarks.js runs in a view of this repository's view host
+// (test/fixtures/host.mjs). The page reads and writes the declared project data key bookmarks through runtime.data.get and
+// runtime.data.change, and the other views of the project are the writes of the test host (change.data, and onDataRead for a write
+// between a read and its replace). A remove press is relayed to the page's own command.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { openView } from "@soksak/plugin-api/testing";
+import { openSurfaceView } from "./fixtures/host.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SURFACE = "left/files.bookmarks";
@@ -16,32 +16,18 @@ const PAGE = new URL("../ui/bookmarks.js", import.meta.url);
 const plugin = JSON.parse(readFileSync(path.join(ROOT, "plugin.json"), "utf8"));
 
 /**
- * Opens the bookmarks view in the host of the test and loads its page module. `stored` is the value of the key that the host serves
+ * Opens the bookmarks view in a view of the test host and loads its page module. `stored` is the value of the key that the host serves
  * before any write (the declared default of the key); `onDataRead` runs after each read of the key by the view, and `faults` names the
- * routes that the host refuses with a message.
+ * calls that the host refuses with a message.
  */
 async function openBookmarks(t, { stored = [], onDataRead = undefined, faults = undefined } = {}) {
-  let view = null;
-  // The plugin commands run through the page's own registrations, as the host relays them.
-  const commands = Object.fromEntries(plugin.exposes.commands.map(({ name }) => [name, (params) => view.request(name, params)]));
-  view = await openView("files", {
-    host: {
-      surface: SURFACE,
-      declarations: plugin.exposes,
-      project: PROJECT,
-      commands,
-      native: { exposureReply: () => null },
-      data: {
-        bookmarks: { schema: plugin.data.bookmarks.schema, default: stored },
-        // Another key of the project: a change of it reaches the view and the page reads nothing.
-        other: { schema: {}, default: null },
-      },
-      onDataRead,
-      faults,
-    },
+  const view = openSurfaceView({
     start: { surface: SURFACE, params: null, origin: { directory: null }, project: PROJECT, declarations: plugin.exposes, diagnostics: null,
       section: { id: "files.bookmarks", sidebar: "left", card: null } },
-    declarations: plugin.exposes,
+    // Another key of the project: a change of it reaches the view and the page reads nothing.
+    data: { bookmarks: stored, other: null },
+    onDataRead,
+    faults,
   });
   t.after(() => view.close());
   await view.load(PAGE);
@@ -125,7 +111,7 @@ test("a remove keeps the path that another view added after its read", async (t)
 });
 
 test("a read that fails is reported to the error line of the view", async (t) => {
-  const view = await openBookmarks(t, { faults: { "command.runtime.data.get": "stored bookmarks are unreadable" } });
+  const view = await openBookmarks(t, { faults: { "runtime.data.get": "stored bookmarks are unreadable" } });
   assert.deepEqual(view.observed.errors, [`surface ${SURFACE} files bookmarks: stored bookmarks are unreadable`]);
   assert.deepEqual(rowPaths(view), [], "the list is not drawn from a failed read");
 });
@@ -134,6 +120,20 @@ test("a read of a stored value that is not a list of paths is reported to the er
   const view = await openBookmarks(t, { stored: "unreadable" });
   assert.deepEqual(view.observed.errors, [`surface ${SURFACE} files bookmarks: the stored bookmarks are not a list of paths`]);
   assert.deepEqual(rowPaths(view), [], "the list is not drawn from the stored value");
+});
+
+test("a read that draws an empty list after a failed read shows the empty text, and the error line is not kept", async (t) => {
+  const view = await openBookmarks(t, { stored: "unreadable" });
+  const message = view.window.document.querySelector(".files-bookmarks__message");
+  const error = `surface ${SURFACE} files bookmarks: the stored bookmarks are not a list of paths`;
+  assert.deepEqual(view.observed.errors, [error]);
+  // The stored value becomes an empty list, which the next read draws: the message line states the empty list, not the error of the earlier read.
+  view.change.data("bookmarks", []);
+  await view.settled();
+  assert.deepEqual(rowPaths(view), []);
+  assert.equal(message.textContent, "북마크 없음");
+  assert.equal(message.hidden, false);
+  assert.deepEqual(view.observed.errors, [error]);
 });
 
 test("the bookmarks view re-reads the bookmarks when the project data of the key changes", async (t) => {

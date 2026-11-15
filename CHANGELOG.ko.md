@@ -2,6 +2,8 @@
 
 [English](CHANGELOG.md)
 
+- P114-1: 성공한 읽기마다 북마크 view 의 메시지 줄을 정하므로, 같은 빈 목록을 읽을 때 이전 읽기의 오류가 줄에 남지 않는다. Red: 시험이 빈 목록 문구를 기대한 자리에서 `the stored bookmarks are not a list of paths` 로 실패했다. Green: 통과한다.
+- P114: view 시험은 plugin API 의 view test host 대신 이 저장소의 host(`test/fixtures/host.mjs` 의 `openSurfaceView`)에서 page module 을 실행한다. 이 host 는 view 계약의 sok-view wire 에 답한다. 어떤 시험도 `@soksak/plugin-api/testing` 을 import 하지 않는다. `pnpm test` 는 이전 138개에서 139개 시험이 통과한다.
 - P113: version은 0.0.27이고, P112을 `engines.soksak` `^0.0.41`로 release한다.
 - P112: 테스트는 `package.json` 이 pin 한 SDK release 의 view test host(`@soksak/plugin-api/testing` 의 `openView`)에서 실제 page module(`ui/tree.js`, `ui/bookmarks.js`, `ui/section-diagnostics.js`)을 실행하고, 실제 tree library bundle 을 쓴다. files sidecar fixture(`test/fixtures/files-sidecar.mjs`)는 선언된 wire contract 를 답하며, select 는 contract 의 select 답이 말하듯 listing 의 generation 을 유지한다. SDK model(`test/sdk-models/`), test tree build(`scripts/build-test.mjs`), 복사한 contract case(`test/fixtures/contract/`, `contract-copies.json` 과 그 test), 이전 test tree 의 view host(`test/fixtures/view-host.mjs`, `test/fixtures/occurrences.mjs`)를 없앴다. test 의 import 경계는 plugin API import 만 허용한다. `pnpm test` 는 test 137개를 실행하며 모두 통과한다. pin 은 core release 0.0.41 이고, `engines.soksak` 은 `^0.0.41` 이다.
 - P95: version은 0.0.26이며, `engines.soksak` `^0.0.40`과 함께 P94를 release한다.

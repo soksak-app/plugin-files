@@ -2,6 +2,8 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P114-1: The bookmarks view states its message line on each successful read, so an error of an earlier read does not stay on the line when a read draws the same empty list. Red: the test failed with `the stored bookmarks are not a list of paths` where the empty text was expected. Green: it passes.
+- P114: The view tests run their page modules in a view of this repository's host (`openSurfaceView` in `test/fixtures/host.mjs`), which answers the sok-view wire of the view contract, instead of the view test host of the plugin API; no test imports `@soksak/plugin-api/testing`. `pnpm test` passes 139 of 139 tests, against 138 before.
 - P113: The version is 0.0.27, which releases P112 with `engines.soksak` `^0.0.41`.
 - P112: The tests run the page modules `ui/tree.js`, `ui/bookmarks.js` and `ui/section-diagnostics.js` in views of the SDK test host (`openView` of `@soksak/plugin-api/testing`), over the SDK release that `package.json` pins, with the real tree library bundle. The files sidecar fixture (`test/fixtures/files-sidecar.mjs`) answers the declared wire contract, and a select keeps the generation of the listing as the select reply of the contract states. The SDK models (`test/sdk-models/`), the test tree build (`scripts/build-test.mjs`), the copied contract cases (`test/fixtures/contract/`, `contract-copies.json` and its test) and the view host of the earlier test tree (`test/fixtures/view-host.mjs`, `test/fixtures/occurrences.mjs`) are removed. The import boundary of the tests allows the plugin API import only. `pnpm test` runs 137 tests, and all of them pass. The pin is core release 0.0.41, and `engines.soksak` is `^0.0.41`.
 - P95: The version is 0.0.26, which releases P94 with `engines.soksak` `^0.0.40`.

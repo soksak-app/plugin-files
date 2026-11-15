@@ -1,15 +1,15 @@
 // The section-view entries of the view benchmark (core docs/spec/plugin-processes.md#section-views) at the consumer boundary.
 // diagnostics.json declares files.view.frames, files.view.history and a ready status for each section with its module; in a diagnostic
 // build the start values carry that declaration, and each section view (tree and bookmarks) serves the two commands and its own status
-// on its own surface. The real page modules run in views of the SDK test host, and the frame observer is the SDK's observer of the view
-// document (the diagnostic-view-frames entry of the plugin API), which the section module starts.
+// on its own surface. The real page modules run in views of this repository's view host (test/fixtures/host.mjs), and the frame observer
+// is the observer of the view document of the diagnostic-view-frames entry of the plugin API, which the section module starts.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { openView } from "@soksak/plugin-api/testing";
+import { openSurfaceView } from "./fixtures/host.mjs";
 import { filesSidecar, SIDECAR } from "./fixtures/files-sidecar.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,7 +69,7 @@ const elementOf = (view, section) => view.window.document.querySelector(`.${SECT
 const PAGE_OF = (module) => new URL(`../ui/${module}`, import.meta.url);
 
 /**
- * Starts the section view `section` in a view of the SDK test host, and loads its page module. By default it starts as the view benchmark
+ * Starts the section view `section` in a view of the test host, and loads its page module. By default it starts as the view benchmark
  * does: with the diagnostic declaration, in the project of the fixture `fresh` and without bookmarks. `entries` are the rows of the tree
  * and `bookmarks` the stored paths of the project. Resolves with the view and the error of the page load (null when the page loaded).
  */
@@ -86,22 +86,14 @@ async function startSection(t, section, { theme = THEME, withDiagnostics = true,
     section: { id: section, sidebar: "card-4:left", card: "card-4" },
   };
   const files = filesSidecar({ generation: 1, selected: null, entries });
-  const view = await openView("files", {
-    host: {
-      surface,
-      declarations,
-      project,
-      sidecar: { [SIDECAR]: (body) => files.route(body) },
-      sidecars: [SIDECAR],
-      native: { exposureReply: () => null },
-      data: { bookmarks: { schema: manifest.data.bookmarks.schema, default: bookmarks } },
-    },
+  // The theme tokens are set on the root by the start script of the view, before the page runs.
+  const view = openSurfaceView({
     start,
-    declarations,
+    theme: { tokens: theme },
+    sidecars: { [SIDECAR]: (body) => files.route(body) },
+    data: { bookmarks },
   });
   t.after(() => view.close());
-  // The theme tokens are inline declarations of the root, as the host sets them before the page runs.
-  for (const [name, value] of Object.entries(theme)) view.window.document.documentElement.style.setProperty(name, value);
   files.attach(view, surface);
   let failure = null;
   // The module awaits its start, so the start of the view ends when the load resolves or rejects.

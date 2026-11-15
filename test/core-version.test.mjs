@@ -13,10 +13,10 @@ test("the core compatibility documents state the engines.soksak that the package
   );
 });
 
-// The tests are verified only against core 0.0.41, the release that the plugin API devDependency pins: their view test host and
-// the surface of view records are that release's, so the package requires it (P112). Core 0.0.40 is the first release that
+// The tests are verified only against core 0.0.41, the release that the plugin API devDependency pins: the page modules import the
+// view bridge of that release and the surface of view records is that release's, so the package requires it (P112). Core 0.0.40 is the first release that
 // accepts exposes.element (P94), and the range starts at the release that the tests verify.
-test("the package requires core 0.0.41, the release whose view test host the tests verify (P112)", () => {
+test("the package requires core 0.0.41, the release whose view bridge the page modules import (P112)", () => {
   assert.equal(pkg.engines.soksak, "^0.0.41");
 });
 

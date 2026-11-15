@@ -109,22 +109,26 @@ function createRow(path) {
   return { row, remove };
 }
 
-/** Draws the paths of the list in order. A list equal to the drawn one changes nothing. */
+/**
+ * Draws the paths of the list in order. A list equal to the drawn one keeps its rows and its status value, but the message line is
+ * stated again: a successful read replaces an error of an earlier read that still shows on the line.
+ */
 function draw(paths) {
   const key = JSON.stringify(paths);
-  if (key === drawn) return;
-  drawn = key;
-  const next = new Map();
-  for (const path of paths) next.set(path, rowsByPath.get(path) ?? createRow(path));
-  for (const [path, drawnRow] of rowsByPath) if (!next.has(path)) drawnRow.row.remove();
-  rowsByPath.clear();
-  for (const [path, drawnRow] of next) {
-    rowsByPath.set(path, drawnRow);
-    list.append(drawnRow.row);
+  if (key !== drawn) {
+    drawn = key;
+    const next = new Map();
+    for (const path of paths) next.set(path, rowsByPath.get(path) ?? createRow(path));
+    for (const [path, drawnRow] of rowsByPath) if (!next.has(path)) drawnRow.row.remove();
+    rowsByPath.clear();
+    for (const [path, drawnRow] of next) {
+      rowsByPath.set(path, drawnRow);
+      list.append(drawnRow.row);
+    }
+    listed = paths;
+    notifyBookmarks();
   }
-  listed = paths;
   showMessage(paths.length === 0 ? (project === null ? NO_PROJECT_TEXT : EMPTY_TEXT) : "");
-  notifyBookmarks();
 }
 
 /** The stored list of paths. A stored value of another form throws, and the list is not drawn from it. */
