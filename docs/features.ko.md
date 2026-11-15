@@ -1,5 +1,6 @@
 # 기능
 
+- [~] P117 — P0: plugin API에 dependency를 선언하지 않는 P116를 `engines.soksak` `^0.0.41`로 release하고 registry에 올린다. 진행: main의 release run이 게시한다.
 - [o] P116 — P1: plugin은 plugin API에 대한 dependency를 선언하지 않으며, 시험은 이 저장소의 fixture로 그 interface에 답한다. Input: `package.json`이 pin 한 `@soksak/plugin-api` 0.0.41의 code를 시험이 실행했다. Expected: `@soksak/plugin-api`에 대한 dependency가 없고, 시험은 plugin API 이름을 resolve hook으로 `test/fixtures/plugin-api/`의 fixture module에 매핑하며, `engines.soksak`만이 core와의 관계다. 진행: `package.json`과 `pnpm-lock.yaml`에서 dependency를 제거했고, fixture module, hook, test script(hook의 `--import`)를 작성했으며, tree, bookmarks, section-diagnostics suite가 fixture에서 실행된다(각각 20, 15, 49개 통과). `pnpm test`는 139개 중 139개가 통과하며, 호환성 문서와 pin 시험은 plugin이 plugin API release를 명시하지 않는다고 적는다. 남은 일: 변경의 commit(lead가 수행)과 그 commit의 검사. commit 전까지 `sok-check docs`의 지적은 untracked fixture 파일뿐이다.
 
 - [o] P115 — P0: 이 저장소의 fixture로 host에 답하는 P114을 release하고 registry에 올린다. main의 release run이 v0.0.28을 게시했고, registry가 그것을 올린다(registry G115).

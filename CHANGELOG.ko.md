@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P117: version은 0.0.29이고, P116를 `engines.soksak` `^0.0.41`로 release한다.
 - P116: plugin은 plugin API에 대한 dependency를 선언하지 않는다. 시험은 page module을 시험 process의 window에서 실행하고(`test/fixtures/page.mjs`), resolve hook `test/fixtures/plugin-api/register.mjs`가 plugin API 이름을 `test/fixtures/plugin-api/`의 fixture module로 매핑한다. 이 fixture는 page의 각 call을 기록하고, 시험이 정한 답을 준다. `test/fixtures/host.mjs`는 제거한다. `pnpm test`는 이전과 같이 139개 시험 중 139개가 통과하며, tree suite, bookmarks suite, section-diagnostics suite는 각각 20, 15, 49개가 통과한다. host의 wire, host의 오류 문구, data 변경의 core 재시도 횟수를 판정하던 assertion은 page의 call을 판정하도록 바뀌었다. 제거된 assertion은 마지막 element 뒤의 index 요청(`has no element at index N`), host 오류 문구 `surface <surface> <where>: <text>`(이제 오류 call의 `where`와 `text`), `changed by other writers 64 times` 횟수다.
 - P115: version은 0.0.28이고, P114을 release한다.
 - P114-1: 성공한 읽기마다 북마크 view 의 메시지 줄을 정하므로, 같은 빈 목록을 읽을 때 이전 읽기의 오류가 줄에 남지 않는다. Red: 시험이 빈 목록 문구를 기대한 자리에서 `the stored bookmarks are not a list of paths` 로 실패했다. Green: 통과한다.
