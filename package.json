@@ -11,10 +11,9 @@
     "url": "git+https://github.com/soksak-app/plugin-files.git"
   },
   "engines": {
-    "soksak": "^0.0.40"
+    "soksak": "^0.0.41"
   },
   "files": [
-    "contract-copies.json",
     "diagnostics.json",
     "events.json",
     "plugin.json",
@@ -22,11 +21,13 @@
   ],
   "scripts": {
     "build": "node scripts/build-vendor.mjs",
-    "test": "node scripts/build-test.mjs && node --test --test-timeout=120000 test/"
+    "test": "node --test --test-timeout=120000 test/"
   },
   "devDependencies": {
     "@pierre/trees": "1.0.0-beta.4",
     "@soksak/kit": "https://github.com/soksak-app/kit/releases/download/v0.0.14/soksak-kit-0.0.14.tgz",
-    "esbuild": "0.28.2"
+    "@soksak/plugin-api": "https://github.com/soksak-app/core/releases/download/v0.0.41/soksak-plugin-api-0.0.41.tgz",
+    "esbuild": "0.28.2",
+    "jsdom": "^30.0.1"
   }
 }

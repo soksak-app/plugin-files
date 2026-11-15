@@ -1,14 +1,16 @@
 // The section-view entries of the view benchmark (core docs/spec/plugin-processes.md#section-views) at the consumer boundary.
 // diagnostics.json declares files.view.frames, files.view.history and a ready status for each section with its module; in a diagnostic
 // build the start values carry that declaration, and each section view (tree and bookmarks) serves the two commands and its own status
-// on its own surface. The frame observer is the consumer model of test/sdk-models/view-frames.mjs.
+// on its own surface. The real page modules run in views of the SDK test host, and the frame observer is the SDK's observer of the view
+// document (the diagnostic-view-frames entry of the plugin API), which the section module starts.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { answered, changedOf, errored, findAll, installViewWindow, registeredEntries, replyOf, sendExposureRequest } from "./fixtures/view-host.mjs";
+import { openView } from "@soksak/plugin-api/testing";
+import { filesSidecar, SIDECAR } from "./fixtures/files-sidecar.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const readJson = (file) => JSON.parse(readFileSync(path.join(root, file), "utf8"));
@@ -63,65 +65,87 @@ const SECTIONS = {
 // The schema subset of core (core docs/spec/exposure.md).
 const SCHEMA_FIELDS = ["type", "properties", "items", "enum"];
 const SCHEMA_TYPES = ["string", "number", "integer", "boolean", "object", "array", "null"];
-const elementOf = (section) => findAll(globalThis.document.body, (element) => element.className === SECTIONS[section].element)[0];
-let caseNumber = 0;
+const elementOf = (view, section) => view.window.document.querySelector(`.${SECTIONS[section].element}`);
+const PAGE_OF = (module) => new URL(`../ui/${module}`, import.meta.url);
 
 /**
- * Starts the section view `section` in the fake window. By default it starts as the view benchmark does: with the diagnostic
- * declaration, in the project of the fixture `fresh` and without bookmarks. `entries` are the rows of the tree and `bookmarks` the
- * stored paths of the project.
+ * Starts the section view `section` in a view of the SDK test host, and loads its page module. By default it starts as the view benchmark
+ * does: with the diagnostic declaration, in the project of the fixture `fresh` and without bookmarks. `entries` are the rows of the tree
+ * and `bookmarks` the stored paths of the project. Resolves with the view and the error of the page load (null when the page loaded).
  */
-async function startSection(section, { theme = THEME, withDiagnostics = true, diagnostics = readDiagnostics(), startValues = null, project = FRESH_PROJECT, entries = [], bookmarks = [] } = {}) {
+async function startSection(t, section, { theme = THEME, withDiagnostics = true, diagnostics = readDiagnostics(), startValues = null, project = FRESH_PROJECT, entries = [], bookmarks = [] } = {}) {
   const { module, surface } = SECTIONS[section];
+  const declarations = withDiagnostics ? diagnosticDeclarations() : manifest.exposes;
   const start = startValues ?? {
     surface,
     params: null,
     origin: { directory: null },
     project,
-    declarations: withDiagnostics ? diagnosticDeclarations() : manifest.exposes,
+    declarations,
     diagnostics: withDiagnostics ? diagnostics : null,
     section: { id: section, sidebar: "card-4:left", card: "card-4" },
   };
-  const store = { bookmarks };
-  const host = installViewWindow({
-    start,
-    runtime(message, view) {
-      const { command, params } = message;
-      if (command === "runtime.sidecar.send") {
-        const tree = { generation: 1, selected: null, entries };
-        queueMicrotask(() => view.deliver({ event: "sidecar.message", data: { id: params.id, body: { id: params.body.id, tree } } }));
-        return null;
-      }
-      if (command === "runtime.data.get") return structuredClone(store[params.key]);
-      return null;
+  const files = filesSidecar({ generation: 1, selected: null, entries });
+  const view = await openView("files", {
+    host: {
+      surface,
+      declarations,
+      project,
+      sidecar: { [SIDECAR]: (body) => files.route(body) },
+      sidecars: [SIDECAR],
+      native: { exposureReply: () => null },
+      data: { bookmarks: { schema: manifest.data.bookmarks.schema, default: bookmarks } },
     },
+    start,
+    declarations,
   });
-  globalThis.getComputedStyle = () => ({ getPropertyValue: (name) => theme[name] ?? "" });
-  globalThis.ResizeObserver = class ResizeObserver {};
-  globalThis.requestAnimationFrame = () => 1;
-  globalThis.cancelAnimationFrame = () => {};
-  caseNumber += 1;
+  t.after(() => view.close());
+  // The theme tokens are inline declarations of the root, as the host sets them before the page runs.
+  for (const [name, value] of Object.entries(theme)) view.window.document.documentElement.style.setProperty(name, value);
+  files.attach(view, surface);
   let failure = null;
-  // The module awaits its start, so the start of the view ends when the import resolves or rejects.
+  // The module awaits its start, so the start of the view ends when the load resolves or rejects.
   try {
-    await import(`../build/test/ui/${module}?case=${caseNumber}`);
+    await view.load(PAGE_OF(module));
   } catch (error) {
     failure = error;
   }
-  return { host, surface, failure };
+  return { view, surface, failure };
 }
 
-const run = async (view, command, params) => {
-  const reply = await view.host.relay(command, params);
-  return reply.error !== undefined ? { error: reply.error.message } : { result: reply.result };
-};
-const observations = async () => (await import("../build/test/sdk-models/view-frames.mjs")).observations;
+let exposureRequests = 0;
+/** One exposure request of the surface: the answer of the page is the payload of its exposureReply call, returned as {result} or {error}. */
+async function exposure(view, surface, method, params) {
+  const id = `probe-${++exposureRequests}`;
+  view.push("exposure-request", { id, surface, method, params });
+  await view.settled();
+  const reply = view.calls.findLast((call) => call.command === "runtime.native.call" && call.params.name === "exposureReply" && call.params.payload.id === id);
+  assert.ok(reply, `the page did not answer ${method} ${id}`);
+  const { id: _id, ...answer } = reply.params.payload;
+  return answer;
+}
 const readyStatus = async (view, section) => {
-  const id = sendExposureRequest(view.host, view.surface, "status.get", { name: readyName(section) });
-  await answered(view.host, id);
-  return replyOf(view.host, id);
+  const answer = await exposure(view, SECTIONS[section].surface, "status.get", { name: readyName(section) });
+  return answer.error === undefined ? { result: answer.result } : { error: answer.error.message };
 };
-const paintRules = () => globalThis.document.adoptedStyleSheets.map((sheet) => sheet.text).join("");
+// The payloads {name, value, version} of the changed calls of the page for the status name, in order.
+const changedOf = (view, name) => view.calls
+  .filter((call) => call.command === "runtime.native.call" && call.params.name === "changed" && call.params.payload.name === name)
+  .map((call) => call.params.payload);
+// The command of the page, run as the host runs a command of a view: its result, or {error} with the message of its failure.
+const run = async (view, command, params) => {
+  try {
+    return { result: await view.request(command, params) };
+  } catch (error) {
+    return { error: error.message };
+  }
+};
+// The rules of the paint of the view document: the :root rule of each adopted sheet, serialized in order.
+const paintText = (view) => view.window.document.adoptedStyleSheets.map((sheet) => [...sheet.cssRules].map((rule) => rule.cssText).join("")).join("");
+const rootRule = (view) => {
+  const rules = view.window.document.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules]).filter((rule) => rule.selectorText === ":root");
+  return rules.at(-1)?.style ?? null;
+};
 
 test("diagnostics.json declares the section-view entries with its module, and the package lists both", () => {
   const diagnostics = readDiagnostics();
@@ -176,88 +200,90 @@ test("no name of diagnostics.json is declared in plugin.json", () => {
 });
 
 for (const section of Object.keys(SECTIONS)) {
-  test(`${section} in the state of the fixture fresh shows its declared content and is ready`, async () => {
-    const view = await startSection(section);
-    assert.equal(view.failure, null);
-    assert.equal(elementOf(section).textContent, contentOf(section));
-    assert.equal(elementOf(section).hidden, false);
+  test(`${section} in the state of the fixture fresh shows its declared content and is ready`, async (t) => {
+    const { view, failure } = await startSection(t, section);
+    assert.equal(failure, null);
+    assert.equal(elementOf(view, section).textContent, contentOf(section));
+    assert.equal(elementOf(view, section).hidden, false);
     assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: contentOf(section) } });
-    assert.deepEqual(view.host.errors, []);
+    assert.deepEqual(view.observed.errors, []);
   });
 
-  test(`${section} registers its own ready status and no other`, async () => {
-    const view = await startSection(section);
-    const names = registeredEntries(view.host).filter((entry) => entry.kind === "status" && entry.name.endsWith(".view.ready")).map((entry) => entry.name);
+  test(`${section} registers its own ready status and no other`, async (t) => {
+    const { view } = await startSection(t, section);
+    const names = view.registered("status").filter((name) => name.endsWith(".view.ready"));
     assert.deepEqual(names, [readyName(section)]);
   });
 
   for (const [state, values] of Object.entries(SECTIONS[section].others)) {
-    test(`${section} is not ready with ${state}, where its element does not show the declared content`, async () => {
-      const view = await startSection(section, values);
-      assert.equal(view.failure, null);
-      const element = elementOf(section);
+    test(`${section} is not ready with ${state}, where its element does not show the declared content`, async (t) => {
+      const { view, failure } = await startSection(t, section, values);
+      assert.equal(failure, null);
+      const element = elementOf(view, section);
       assert.equal(!element.hidden && element.textContent === contentOf(section), false, `${section} shows the text with ${state}`);
       assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
-      assert.deepEqual(view.host.errors, []);
+      assert.deepEqual(view.observed.errors, []);
     });
   }
 
-  test(`${section} is not ready while its element keeps the text but is hidden`, async () => {
-    const view = await startSection(section);
-    elementOf(section).hidden = true;
+  test(`${section} is not ready while its element keeps the text but is hidden`, async (t) => {
+    const { view } = await startSection(t, section);
+    elementOf(view, section).hidden = true;
     assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
   });
 
-  test(`${section} is not ready while its element keeps the text but is out of the document`, async () => {
-    const view = await startSection(section);
-    elementOf(section).remove();
+  test(`${section} is not ready while its element keeps the text but is out of the document`, async (t) => {
+    const { view } = await startSection(t, section);
+    elementOf(view, section).remove();
     assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
   });
 
-  test(`${section} reads the text of its status from the declaration of its start values`, async () => {
+  test(`${section} reads the text of its status from the declaration of its start values`, async (t) => {
     const diagnostics = readDiagnostics();
     const { properties } = readyEntry(section, diagnostics).schema;
     properties.content.enum = ["another text"];
-    const view = await startSection(section, { diagnostics });
-    assert.equal(view.failure, null);
+    const { view, failure } = await startSection(t, section, { diagnostics });
+    assert.equal(failure, null);
     assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: "another text" } });
-    elementOf(section).textContent = "another text";
+    elementOf(view, section).textContent = "another text";
     assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: "another text" } });
   });
 
   for (const [state, values] of Object.entries({ "no enum": undefined, "an empty enum": [], "an enum of two strings": ["one", "two"], "an enum of a number": [1] })) {
-    test(`${section} refuses a declaration of its status with ${state} for content`, async () => {
+    test(`${section} refuses a declaration of its status with ${state} for content`, async (t) => {
       const diagnostics = readDiagnostics();
       readyEntry(section, diagnostics).schema.properties.content.enum = values;
-      const view = await startSection(section, { diagnostics });
-      assert.equal(view.failure?.message, `the diagnostic declaration of the files section views gives ${readyName(section)} no content enum of one string`);
+      const { failure } = await startSection(t, section, { diagnostics });
+      assert.equal(failure?.message, `the diagnostic declaration of the files section views gives ${readyName(section)} no content enum of one string`);
     });
   }
 
-  test(`${section} refuses a declaration without its status`, async () => {
+  test(`${section} refuses a declaration without its status`, async (t) => {
     const diagnostics = readDiagnostics();
     diagnostics.exposes.status = diagnostics.exposes.status.filter((entry) => entry.name !== readyName(section));
-    const view = await startSection(section, { diagnostics });
-    assert.equal(view.failure?.message, `the diagnostic declaration of the files section views gives ${readyName(section)} no content enum of one string`);
+    const { failure } = await startSection(t, section, { diagnostics });
+    assert.equal(failure?.message, `the diagnostic declaration of the files section views gives ${readyName(section)} no content enum of one string`);
   });
 
-  test(`${section} answers files.view.history with the length of its session history`, async () => {
-    const view = await startSection(section);
+  test(`${section} answers files.view.history with the length of its session history`, async (t) => {
+    const { view } = await startSection(t, section);
     assert.deepEqual(await run(view, "files.view.history", {}), { result: { length: 1 } });
-    globalThis.history.length = 3;
+    // Each entry is a fragment of the document, which the view document can push on its own origin.
+    view.window.history.pushState(null, "", "#second");
+    view.window.history.pushState(null, "", "#third");
     assert.deepEqual(await run(view, "files.view.history", {}), { result: { length: 3 } });
   });
 
-  test(`${section} starts the frame observer on its document, paints its root with the marker color and restores it on stop`, async () => {
-    const view = await startSection(section);
-    const before = (await observations()).length;
-    const rulesBefore = paintRules();
+  test(`${section} starts the frame observer on its document, paints its root with the marker color and restores it on stop`, async (t) => {
+    const { view } = await startSection(t, section);
+    const observersBefore = view.observers.length;
+    const rulesBefore = paintText(view);
     const started = await run(view, "files.view.frames", { action: "start" });
     assert.equal(started.error, undefined, started.error);
     const { enabled, sourceClock, markerColor } = started.result;
     assert.equal(enabled, true);
     assert.deepEqual(Object.keys(sourceClock).sort(), ["documentTimeOriginMs", "sourceNowMs", "sourceResolutionMs"]);
-    assert.equal(sourceClock.documentTimeOriginMs, performance.timeOrigin);
+    assert.equal(sourceClock.documentTimeOriginMs, view.window.performance.timeOrigin);
     assert.ok(Number.isFinite(sourceClock.sourceNowMs) && sourceClock.sourceNowMs >= 0);
     assert.equal(sourceClock.sourceResolutionMs, 1);
     assert.ok(Array.isArray(markerColor) && markerColor.length === 3
@@ -266,28 +292,28 @@ for (const section of Object.keys(SECTIONS)) {
       const color = rgbOf(THEME[token]);
       assert.ok(color.some((channel, index) => Math.abs(channel - markerColor[index]) > 4), `${markerColor} is the color of ${token}`);
     }
-    const observed = (await observations()).slice(before);
-    assert.equal(observed.length, 1, "the observer did not start once");
-    assert.equal(observed[0].document, globalThis.document);
-    assert.equal(observed[0].timeOriginMs, performance.timeOrigin);
+    // The start creates one observer of the frames, which the view document root is observed by after its first frame.
+    assert.equal(view.observers.length - observersBefore, 1, "the observer did not start once");
+    const observer = view.observers.at(-1);
     const hex = hexOf(markerColor);
-    assert.match(paintRules(), new RegExp(`:root\\{[^}]*background-color:${hex} !important`), "the root is not painted");
-    assert.match(paintRules(), new RegExp(`:root\\{[^}]*--card:${hex} !important`), "the card color is not the marker color");
-    observed[0].frame({ sequence: 0, width: 200, height: 100, documentTimeOriginMs: performance.timeOrigin, firstResizeAtMs: 1,
-      resizeAtMs: 1, resizeCount: 1, frameTimeMs: 2 });
-    await view.host.until(() => view.host.logs.some((record) => record.event === "view.content_frame"));
-    // The emitter of the plugin writes the event without the plugin prefix (ui/events.js).
-    const frames = view.host.logs.filter((record) => record.event === "view.content_frame");
-    assert.deepEqual(frames.map((record) => record.level), ["trace"], `the frame was written as ${JSON.stringify(view.host.logs)}`);
+    // The style serializes the marker color as rgb(), which is the same color.
+    assert.equal(rootRule(view).getPropertyValue("background-color"), `rgb(${markerColor.join(", ")})`, "the root is not painted");
+    assert.equal(rootRule(view).getPropertyPriority("background-color"), "important");
+    assert.equal(rootRule(view).getPropertyValue("--card"), hex, "the card color is not the marker color");
+    // The size of the root is read after the next animation frame of the resize: the observer delivers the resize of the root.
+    observer.notify([{ target: view.window.document.documentElement }]);
+    const frame = await view.logged("plugin.files.view.content_frame");
+    assert.equal(frame.level, "trace");
+    assert.equal(frame.fields.documentTimeOriginMs, view.window.performance.timeOrigin);
     assert.deepEqual(await run(view, "files.view.frames", { action: "stop" }), { result: { enabled: false } });
-    assert.equal(observed[0].stopped, true, "stop did not stop the observer");
-    assert.equal(paintRules(), rulesBefore, "stop did not restore the paint");
-    assert.deepEqual(view.host.errors, []);
+    assert.equal(observer.disconnected, true, "stop did not stop the observer");
+    assert.equal(paintText(view), rulesBefore, "stop did not restore the paint");
+    assert.deepEqual(view.observed.errors, []);
   });
 
-  test(`${section} chooses a marker color that no theme color is within 4 of in every channel`, async () => {
+  test(`${section} chooses a marker color that no theme color is within 4 of in every channel`, async (t) => {
     const theme = { ...THEME, "--card": "#ff00ff", "--bg": "#03fcfc", "--edge": "#fcfc03" };
-    const view = await startSection(section, { theme });
+    const { view } = await startSection(t, section, { theme });
     const { result } = await run(view, "files.view.frames", { action: "start" });
     for (const token of THEME_COLORS) {
       const color = rgbOf(theme[token]);
@@ -296,18 +322,17 @@ for (const section of Object.keys(SECTIONS)) {
     await run(view, "files.view.frames", { action: "stop" });
   });
 
-  test(`${section} refuses a start under a theme color that is not an RGB hex color, and starts no observer`, async () => {
-    const view = await startSection(section, { theme: { ...THEME, "--rule": "rgb(1, 2, 3)" } });
-    const before = (await observations()).length;
-    const rulesBefore = paintRules();
+  test(`${section} refuses a start under a theme color that is not an RGB hex color, and starts no observer`, async (t) => {
+    const { view } = await startSection(t, section, { theme: { ...THEME, "--rule": "rgb(1, 2, 3)" } });
+    const rulesBefore = paintText(view);
     assert.deepEqual(await run(view, "files.view.frames", { action: "start" }),
       { error: "files.view.frames requires the theme color --rule as #rrggbb, not \"rgb(1, 2, 3)\"" });
-    assert.equal((await observations()).length, before);
-    assert.equal(paintRules(), rulesBefore);
+    assert.equal(view.observers.some((observer) => observer.targets.includes(view.window.document.documentElement)), false);
+    assert.equal(paintText(view), rulesBefore);
   });
 
-  test(`${section} refuses a second start, a stop without a start and another action`, async () => {
-    const view = await startSection(section);
+  test(`${section} refuses a second start, a stop without a start and another action`, async (t) => {
+    const { view } = await startSection(t, section);
     assert.deepEqual(await run(view, "files.view.frames", { action: "stop" }), { error: "files.view.frames is not started" });
     assert.deepEqual(await run(view, "files.view.frames", { action: "read" }), { error: "files.view.frames action must be start or stop" });
     await run(view, "files.view.frames", { action: "start" });
@@ -315,81 +340,70 @@ for (const section of Object.keys(SECTIONS)) {
     assert.deepEqual(await run(view, "files.view.frames", { action: "stop" }), { result: { enabled: false } });
   });
 
-  test(`${section} without a diagnostic declaration serves no section-view entry and still shows the text`, async () => {
-    const before = (await observations()).length;
-    const view = await startSection(section, { withDiagnostics: false });
-    assert.equal(view.failure, null);
-    const names = registeredEntries(view.host).map((entry) => entry.name);
+  test(`${section} without a diagnostic declaration serves no section-view entry and still shows the text`, async (t) => {
+    const { view, failure } = await startSection(t, section, { withDiagnostics: false });
+    assert.equal(failure, null);
+    const names = view.registered("status").concat(view.registered("command"), view.registered("element"));
     assert.equal(names.some((name) => name.startsWith("files.view.")), false, names.join(", "));
-    assert.equal(view.host.posted.some((message) => message.command === "runtime.command.register" && message.params.name.startsWith("files.view.")), false);
-    assert.equal(elementOf(section).textContent, contentOf(section));
-    assert.equal((await observations()).length, before);
+    assert.equal(view.calls.some((call) => call.command === "runtime.command.register" && call.params.name.startsWith("files.view.")), false);
+    assert.equal(elementOf(view, section).textContent, contentOf(section));
+    assert.equal(view.observers.some((observer) => observer.targets.includes(view.window.document.documentElement)), false);
   });
 
-  test(`${section} refuses start values without the diagnostics member`, async () => {
+  test(`${section} refuses start values without the diagnostics member`, async (t) => {
     const { surface } = SECTIONS[section];
-    const view = await startSection(section, { startValues: { surface, params: null, origin: { directory: null }, project: null,
+    const { failure } = await startSection(t, section, { startValues: { surface, params: null, origin: { directory: null }, project: null,
       declarations: manifest.exposes, section: { id: section, sidebar: "card-4:left", card: "card-4" } } });
-    assert.equal(view.failure?.message,
+    assert.equal(failure?.message,
       "the start values of the files section view have no diagnostics: window.sokSurface {surface, params, origin, project, declarations, diagnostics, section} carries it");
   });
 }
 
 // The section views show no text for the benchmark: each status names a text that its view already shows.
-test("the tree view keeps the project folder in its head, and shows the text there without a project", async () => {
-  const titleOf = () => findAll(globalThis.document.body, (element) => element.className === "files-tree__title")[0];
-  const messageOf = () => findAll(globalThis.document.body, (element) => element.className === "files-tree__message")[0];
-  await startSection("files.tree", { project: PROJECT, entries: [ROW] });
-  assert.equal(titleOf().textContent, "project");
-  assert.equal(titleOf().title, PROJECT.root);
-  await startSection("files.tree", { project: null });
-  assert.equal(titleOf().textContent, NO_PROJECT_TEXT);
-  assert.equal(titleOf().title, "");
-  assert.equal(messageOf().hidden, true, "the message line shows without a project");
+test("the tree view keeps the project folder in its head, and shows the text there without a project", async (t) => {
+  const titleOf = (view) => view.window.document.querySelector(".files-tree__title");
+  const messageOf = (view) => view.window.document.querySelector(".files-tree__message");
+  const withProject = await startSection(t, "files.tree", { project: PROJECT, entries: [ROW] });
+  assert.equal(titleOf(withProject.view).textContent, "project");
+  assert.equal(titleOf(withProject.view).title, PROJECT.root);
+  const withoutProject = await startSection(t, "files.tree", { project: null });
+  assert.equal(titleOf(withoutProject.view).textContent, NO_PROJECT_TEXT);
+  assert.equal(titleOf(withoutProject.view).title, "");
+  assert.equal(messageOf(withoutProject.view).hidden, true, "the message line shows without a project");
 });
 
-test("the bookmarks view has no head line and shows the text on its message line without a project", async () => {
-  await startSection("files.bookmarks", { project: null });
-  assert.deepEqual(globalThis.document.body.children.filter((element) => element.tagName !== "SCRIPT").map((element) => element.className),
-    ["files-bookmarks", "files-bookmarks__message"]);
-  const [message] = findAll(globalThis.document.body, (element) => element.className === "files-bookmarks__message");
+test("the bookmarks view has no head line and shows the text on its message line without a project", async (t) => {
+  const { view } = await startSection(t, "files.bookmarks", { project: null });
+  assert.deepEqual([...view.window.document.body.children].map((element) => element.className), ["files-bookmarks", "files-bookmarks__message"]);
+  const message = view.window.document.querySelector(".files-bookmarks__message");
   assert.equal(message.textContent, NO_PROJECT_TEXT);
   assert.equal(message.hidden, false);
-  assert.doesNotMatch(globalThis.document.adoptedStyleSheets.map((sheet) => sheet.text).join(""), /files-bookmarks__head/);
+  const selectors = view.window.document.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules]).map((rule) => rule.selectorText);
+  assert.equal(selectors.some((selector) => selector.includes("files-bookmarks__head")), false);
 });
 
-test("files.bookmarks.view.ready turns false for its watchers when an error replaces the text of the message line", async () => {
+test("files.bookmarks.view.ready turns false for its watchers when an error replaces the text of the message line", async (t) => {
   const name = readyName("files.bookmarks");
-  const view = await startSection("files.bookmarks");
-  const message = elementOf("files.bookmarks");
-  const watch = sendExposureRequest(view.host, view.surface, "status.watch", { name });
-  await answered(view.host, watch);
-  assert.deepEqual(replyOf(view.host, watch), { result: null });
-  assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true]);
-  const refused = sendExposureRequest(view.host, "left/other", "status.get", { name });
-  await errored(view.host);
-  assert.equal(message.textContent, `exposure request ${refused} names surface left/other, not ${view.surface}`);
-  // The fake DOM notifies no observer by itself, so the test delivers the mutation of the message line.
-  const observers = globalThis.mutationObservers.filter((observer) => observer.target === message);
-  assert.equal(observers.length, 1, "no observer watches the element that shows the text");
-  for (const observer of observers) observer.callback([]);
-  await view.host.until(() => changedOf(view.host, name).length === 2);
-  assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true, false]);
+  const { view, surface } = await startSection(t, "files.bookmarks");
+  const message = elementOf(view, "files.bookmarks");
+  assert.deepEqual(await exposure(view, surface, "status.watch", { name }), { result: null });
+  assert.deepEqual(changedOf(view, name).map((change) => change.value.ready), [true]);
+  // A request of another surface is refused, and the refusal replaces the text of the message line, which the status watches.
+  view.push("exposure-request", { id: "refused-1", surface: "left/other", method: "status.get", params: { name } });
+  await view.settled();
+  assert.equal(message.textContent, `exposure request refused-1 names surface left/other, not ${surface}`);
+  assert.deepEqual(changedOf(view, name).map((change) => change.value.ready), [true, false]);
 });
 
-test("files.tree.view.ready turns false for its watchers when the head title shows another text", async () => {
+test("files.tree.view.ready turns false for its watchers when the head title shows another text", async (t) => {
   const name = readyName("files.tree");
-  const view = await startSection("files.tree");
-  const title = elementOf("files.tree");
-  const watch = sendExposureRequest(view.host, view.surface, "status.watch", { name });
-  await answered(view.host, watch);
-  assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true]);
+  const { view, surface } = await startSection(t, "files.tree");
+  const title = elementOf(view, "files.tree");
+  assert.deepEqual(await exposure(view, surface, "status.watch", { name }), { result: null });
+  assert.deepEqual(changedOf(view, name).map((change) => change.value.ready), [true]);
   title.textContent = "another text";
-  const observers = globalThis.mutationObservers.filter((observer) => observer.target === title);
-  assert.equal(observers.length, 1, "no observer watches the element that shows the text");
-  for (const observer of observers) observer.callback([]);
-  await view.host.until(() => changedOf(view.host, name).length === 2);
-  assert.deepEqual(changedOf(view.host, name).map((change) => change.value.ready), [true, false]);
+  await view.settled();
+  assert.deepEqual(changedOf(view, name).map((change) => change.value.ready), [true, false]);
 });
 
 test("the events catalog declares the content frame of a section view", () => {
