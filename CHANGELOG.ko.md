@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P115: version은 0.0.28이고, P114을 release한다.
 - P114-1: 성공한 읽기마다 북마크 view 의 메시지 줄을 정하므로, 같은 빈 목록을 읽을 때 이전 읽기의 오류가 줄에 남지 않는다. Red: 시험이 빈 목록 문구를 기대한 자리에서 `the stored bookmarks are not a list of paths` 로 실패했다. Green: 통과한다.
 - P114: view 시험은 plugin API 의 view test host 대신 이 저장소의 host(`test/fixtures/host.mjs` 의 `openSurfaceView`)에서 page module 을 실행한다. 이 host 는 view 계약의 sok-view wire 에 답한다. 어떤 시험도 `@soksak/plugin-api/testing` 을 import 하지 않는다. `pnpm test` 는 이전 138개에서 139개 시험이 통과한다.
 - P113: version은 0.0.27이고, P112을 `engines.soksak` `^0.0.41`로 release한다.

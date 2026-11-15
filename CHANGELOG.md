@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P115: The version is 0.0.28, which releases P114.
 - P114-1: The bookmarks view states its message line on each successful read, so an error of an earlier read does not stay on the line when a read draws the same empty list. Red: the test failed with `the stored bookmarks are not a list of paths` where the empty text was expected. Green: it passes.
 - P114: The view tests run their page modules in a view of this repository's host (`openSurfaceView` in `test/fixtures/host.mjs`), which answers the sok-view wire of the view contract, instead of the view test host of the plugin API; no test imports `@soksak/plugin-api/testing`. `pnpm test` passes 139 of 139 tests, against 138 before.
 - P113: The version is 0.0.27, which releases P112 with `engines.soksak` `^0.0.41`.
