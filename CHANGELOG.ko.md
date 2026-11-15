@@ -2,6 +2,7 @@
 
 [English](CHANGELOG.md)
 
+- P113: version은 0.0.27이고, P112을 `engines.soksak` `^0.0.41`로 release한다.
 - P112: 테스트는 `package.json` 이 pin 한 SDK release 의 view test host(`@soksak/plugin-api/testing` 의 `openView`)에서 실제 page module(`ui/tree.js`, `ui/bookmarks.js`, `ui/section-diagnostics.js`)을 실행하고, 실제 tree library bundle 을 쓴다. files sidecar fixture(`test/fixtures/files-sidecar.mjs`)는 선언된 wire contract 를 답하며, select 는 contract 의 select 답이 말하듯 listing 의 generation 을 유지한다. SDK model(`test/sdk-models/`), test tree build(`scripts/build-test.mjs`), 복사한 contract case(`test/fixtures/contract/`, `contract-copies.json` 과 그 test), 이전 test tree 의 view host(`test/fixtures/view-host.mjs`, `test/fixtures/occurrences.mjs`)를 없앴다. test 의 import 경계는 plugin API import 만 허용한다. `pnpm test` 는 test 137개를 실행하며 모두 통과한다. pin 은 core release 0.0.41 이고, `engines.soksak` 은 `^0.0.41` 이다.
 - P95: version은 0.0.26이며, `engines.soksak` `^0.0.40`과 함께 P94를 release한다.
 - P110: 대기는 그 occurrence 로만 끝나고, test script 의 runner 한도 `--test-timeout=120000` 이 occurrence 가 오지 않는 test 를 이름과 함께 실패시킨다. occurrences helper 는 더 이상 `beforeExit` 에서 열린 대기를 reject 하지 않는다. 한 file 에 오지 않는 대기 둘을 둔 probe 에서 두 test 가 모두 한도에서 이름과 함께 실패했다.
