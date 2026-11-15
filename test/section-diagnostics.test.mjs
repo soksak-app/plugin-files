@@ -1,15 +1,15 @@
 // The section-view entries of the view benchmark (core docs/spec/plugin-processes.md#section-views) at the consumer boundary.
 // diagnostics.json declares files.view.frames, files.view.history and a ready status for each section with its module; in a diagnostic
 // build the start values carry that declaration, and each section view (tree and bookmarks) serves the two commands and its own status
-// on its own surface. The real page modules run in views of this repository's view host (test/fixtures/host.mjs), and the frame observer
-// is the observer of the view document of the diagnostic-view-frames entry of the plugin API, which the section module starts.
+// on its own surface. The real page modules run in windows of the test process (test/fixtures/page.mjs), and the frame observer is the
+// observer of the view document of the diagnostic-view-frames entry of the plugin API (test/fixtures/plugin-api), which the section module starts.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { openSurfaceView } from "./fixtures/host.mjs";
+import { openPage } from "./fixtures/page.mjs";
 import { filesSidecar, SIDECAR } from "./fixtures/files-sidecar.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -86,23 +86,16 @@ async function startSection(t, section, { theme = THEME, withDiagnostics = true,
     section: { id: section, sidebar: "card-4:left", card: "card-4" },
   };
   const files = filesSidecar({ generation: 1, selected: null, entries });
-  // The theme tokens are set on the root by the start script of the view, before the page runs.
-  const view = openSurfaceView({
+  // The module awaits its start, so the start of the view ends when the load resolves or rejects; the page's failure is its result.
+  const view = await openPage(PAGE_OF(module), {
     start,
     theme: { tokens: theme },
-    sidecars: { [SIDECAR]: (body) => files.route(body) },
-    data: { bookmarks },
+    store: { bookmarks },
+    beforeLoad: (target) => files.attach(target, surface),
+    answers: { "runtime.sidecar.send": ({ body }) => files.route(body) },
   });
   t.after(() => view.close());
-  files.attach(view, surface);
-  let failure = null;
-  // The module awaits its start, so the start of the view ends when the load resolves or rejects.
-  try {
-    await view.load(PAGE_OF(module));
-  } catch (error) {
-    failure = error;
-  }
-  return { view, surface, failure };
+  return { view, surface, failure: view.failure };
 }
 
 let exposureRequests = 0;
@@ -111,9 +104,9 @@ async function exposure(view, surface, method, params) {
   const id = `probe-${++exposureRequests}`;
   view.push("exposure-request", { id, surface, method, params });
   await view.settled();
-  const reply = view.calls.findLast((call) => call.command === "runtime.native.call" && call.params.name === "exposureReply" && call.params.payload.id === id);
+  const reply = view.calls.findLast((call) => call.method === "exposure.reply" && call.args.id === id);
   assert.ok(reply, `the page did not answer ${method} ${id}`);
-  const { id: _id, ...answer } = reply.params.payload;
+  const { id: _id, ...answer } = reply.args;
   return answer;
 }
 const readyStatus = async (view, section) => {
@@ -122,8 +115,10 @@ const readyStatus = async (view, section) => {
 };
 // The payloads {name, value, version} of the changed calls of the page for the status name, in order.
 const changedOf = (view, name) => view.calls
-  .filter((call) => call.command === "runtime.native.call" && call.params.name === "changed" && call.params.payload.name === name)
-  .map((call) => call.params.payload);
+  .filter((call) => call.method === "exposure.changed" && call.args.name === name)
+  .map((call) => call.args);
+// The errors that the page reported through its error call, as {where, text}.
+const errorsOf = (view) => view.calls.filter((call) => call.method === "runtime.error").map((call) => call.args);
 // The command of the page, run as the host runs a command of a view: its result, or {error} with the message of its failure.
 const run = async (view, command, params) => {
   try {
@@ -198,7 +193,7 @@ for (const section of Object.keys(SECTIONS)) {
     assert.equal(elementOf(view, section).textContent, contentOf(section));
     assert.equal(elementOf(view, section).hidden, false);
     assert.deepEqual(await readyStatus(view, section), { result: { ready: true, content: contentOf(section) } });
-    assert.deepEqual(view.observed.errors, []);
+    assert.deepEqual(errorsOf(view), []);
   });
 
   test(`${section} registers its own ready status and no other`, async (t) => {
@@ -214,7 +209,7 @@ for (const section of Object.keys(SECTIONS)) {
       const element = elementOf(view, section);
       assert.equal(!element.hidden && element.textContent === contentOf(section), false, `${section} shows the text with ${state}`);
       assert.deepEqual(await readyStatus(view, section), { result: { ready: false, content: contentOf(section) } });
-      assert.deepEqual(view.observed.errors, []);
+      assert.deepEqual(errorsOf(view), []);
     });
   }
 
@@ -294,13 +289,14 @@ for (const section of Object.keys(SECTIONS)) {
     assert.equal(rootRule(view).getPropertyValue("--card"), hex, "the card color is not the marker color");
     // The size of the root is read after the next animation frame of the resize: the observer delivers the resize of the root.
     observer.notify([{ target: view.window.document.documentElement }]);
-    const frame = await view.logged("plugin.files.view.content_frame");
+    view.flushFrames();
+    const frame = await view.logged("view.content_frame");
     assert.equal(frame.level, "trace");
     assert.equal(frame.fields.documentTimeOriginMs, view.window.performance.timeOrigin);
     assert.deepEqual(await run(view, "files.view.frames", { action: "stop" }), { result: { enabled: false } });
     assert.equal(observer.disconnected, true, "stop did not stop the observer");
     assert.equal(paintText(view), rulesBefore, "stop did not restore the paint");
-    assert.deepEqual(view.observed.errors, []);
+    assert.deepEqual(errorsOf(view), []);
   });
 
   test(`${section} chooses a marker color that no theme color is within 4 of in every channel`, async (t) => {
@@ -337,7 +333,7 @@ for (const section of Object.keys(SECTIONS)) {
     assert.equal(failure, null);
     const names = view.registered("status").concat(view.registered("command"), view.registered("element"));
     assert.equal(names.some((name) => name.startsWith("files.view.")), false, names.join(", "));
-    assert.equal(view.calls.some((call) => call.command === "runtime.command.register" && call.params.name.startsWith("files.view.")), false);
+    assert.equal(view.calls.some((call) => call.method === "commands.register" && call.args.name.startsWith("files.view.")), false);
     assert.equal(elementOf(view, section).textContent, contentOf(section));
     assert.equal(view.observers.some((observer) => observer.targets.includes(view.window.document.documentElement)), false);
   });
