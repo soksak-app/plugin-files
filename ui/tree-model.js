@@ -1,7 +1,7 @@
 // The DOM-free rules of the file tree view: the rows of a files sidecar tree reply, the paths that the tree library shows for
 // the rows, the batch from one path list to the next, the expansion requests of the library, and the file that a double click opens.
 
-/** A placeholder child of a folder whose listing has no child, so that the library shows the folder as expandable. The name
+/** A placeholder child of a collapsed folder whose listing has no child, so that the library shows the folder as expandable. The name
  * cannot be a file name of the project, which the sidecar lists. */
 export const PLACEHOLDER = "​";
 
@@ -33,13 +33,13 @@ export function treeOf(tree) {
   return { generation: tree.generation, selected: tree.selected, rows };
 }
 
-/** The paths of the rows in the tree library. A folder is its own path with a trailing slash; a folder with no listed child also
- * has the placeholder child, so the library keeps it expandable. */
+/** The paths of the rows in the tree library. A folder is its own path with a trailing slash. A collapsed folder with no listed child
+ * also has the placeholder child, so the library keeps it expandable; an expanded folder with no listed child has no child row. */
 export function treePaths(rows) {
   const parents = new Set(rows.map((row) => row.path.slice(0, row.path.lastIndexOf("/"))).filter(Boolean));
   return rows.flatMap((row) => {
     if (!row.directory) return [row.path];
-    return parents.has(row.path) ? [`${row.path}/`] : [`${row.path}/`, `${row.path}/${PLACEHOLDER}`];
+    return parents.has(row.path) || row.expanded ? [`${row.path}/`] : [`${row.path}/`, `${row.path}/${PLACEHOLDER}`];
   });
 }
 

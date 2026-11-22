@@ -45,6 +45,15 @@ test("a directory is listed by its own path and gets a placeholder child only wh
   assert.deepEqual(treePaths(rows), ["src/", "src/main.go", "empty/", `empty/${PLACEHOLDER}`]);
 });
 
+test("an expanded folder with no listed child is listed by its own path and no placeholder child", () => {
+  const rows = treeOf({
+    generation: 1,
+    selected: null,
+    entries: [entry({ path: "empty", name: "empty", directory: true, depth: 0, expanded: true })],
+  }).rows;
+  assert.deepEqual(treePaths(rows), ["empty/"]);
+});
+
 test("pathDiff adds first and removes a removed directory with its subtree once", () => {
   assert.deepEqual(pathDiff(["a/", "a/x", "b"], ["a/", "a/y", "c"]), [
     { type: "add", path: "a/y" },
