@@ -2,6 +2,7 @@
 
 [한국어](CHANGELOG.ko.md)
 
+- P120: The version is 0.0.30, which releases P118.
 - P118: An expanded folder with no listed child is listed by its own path, and only a collapsed folder gets the placeholder child that keeps it expandable. Red: the test failed with `['empty/', 'empty/` + placeholder + `']` where `['empty/']` was expected. Green: it passes.
 - P117: The version is 0.0.29, which releases P116 with `engines.soksak` `^0.0.41`.
 - P116: The plugin declares no dependency on the plugin API. The tests run the page modules in windows of the test process (`test/fixtures/page.mjs`), and the resolve hook `test/fixtures/plugin-api/register.mjs` maps the plugin API names to the fixture modules of `test/fixtures/plugin-api/`, which record each call of the page and take the answers that a test arranges. `test/fixtures/host.mjs` is removed. `pnpm test` passes 139 of 139 tests, as it did before, and the tree suite, the bookmarks suite and the section-diagnostics suite pass 20, 15 and 49 of their tests. The assertions that judged the host's wire, the host's error text and the core retry count of a data change are replaced by the calls of the page; the removed assertions are the element request of an index past the last element (`has no element at index N`), the host error text `surface <surface> <where>: <text>` (now the error call's `where` and `text`), and the `changed by other writers 64 times` count.
