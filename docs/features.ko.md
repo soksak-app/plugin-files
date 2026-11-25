@@ -1,7 +1,7 @@
 # 기능
 
 - [o] P120 — P0, P119를 위해: P118을 담은 0.0.30을 release한다.
-- [ ] P119 — P0, P118 다음: 펼친 빈 폴더는 설치된 애플리케이션에서 이름 없는 파일 행을 보이지 않는다. Input: mygo 애플리케이션의 files plugin 0.0.29는 `.soksak/messages`의 빈 폴더를 펼치면 각각 이름 없는 파일 행을 보인다. P118이 출시되지 않았고 그 그림을 창에서 확인한 적이 없기 때문이다. Expected: 빌드한 plugin으로 창에서 P118을 확인하고, 자식 행 없이 펼친 빈 폴더의 capture를 남긴 뒤 출시한다.
+- [o] P119 — P0, P118 다음: 펼친 빈 폴더는 설치된 애플리케이션에서 이름 없는 파일 행을 보이지 않는다. Input: mygo 애플리케이션의 files plugin 0.0.29는 `.soksak/messages`의 빈 폴더를 펼치면 각각 이름 없는 파일 행을 보인다. P118이 출시되지 않았고 그 그림을 창에서 확인한 적이 없기 때문이다. Expected: 빌드한 plugin으로 창에서 P118을 확인하고, 자식 행 없이 펼친 빈 폴더의 capture를 남긴 뒤 출시한다. Green: 이 저장소에서 빌드한 files plugin 0.0.30을 설치한 core 0.0.58 mygo 애플리케이션이 빈 폴더 `.soksak/messages/tab-2r366y`를 펼친다. `files.tree`는 그 바로 다음에 형제 폴더를 나열하고, 이름이 빈 행은 없으며, 창의 capture는 자식 행 없이 열린 폴더를 보인다.
 - [o] P118 — P1: tree는 listed child가 없는 expanded folder에 child row를 보이지 않는다. Input: `ui/tree-model.js`의 `treePaths`가 expanded folder에도 listed child가 없으면 placeholder child를 주어, expanded 빈 folder 아래에 이름 없는 file row가 보였다. Expected: placeholder는 expanded되지 않은 folder에만 있어 library가 그 folder를 expandable하게 유지하고, expanded folder에 listed child가 없으면 자기 path만 나열한다. Red: `test/tree-model.test.mjs`의 `an expanded folder with no listed child is listed by its own path and no placeholder child`가 `['empty/', 'empty/` + placeholder + `']`로 실패했고, `['empty/']`를 기대했다. Green: `treePaths`는 expanded되지 않은 folder에만 placeholder를 준다. `pnpm test`는 140 of 140을 통과하고, `make check`가 통과한다. Not verified: window에서 expanded 빈 folder가 그려지는 모습은 이 변경의 어떤 실행도 확인하지 않았다.
 
 - [o] P117 — P0: plugin API에 dependency를 선언하지 않는 P116를 `engines.soksak` `^0.0.41`로 release하고 registry에 올린다. main의 release run이 v 게시했고 registry가 올린다(registry G117).
